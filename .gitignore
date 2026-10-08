@@ -1,0 +1,13 @@
+.gradle/
+build/
+app/build/
+local.properties
+.kotlin/
+*.apk
+*.zip
+klipy.key
+# prywatne dane (klucz podpisu, hasła, klucz administratora)
+secrets.properties
+.env
+*.keystore
+*.jks
