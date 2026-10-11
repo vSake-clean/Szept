@@ -73,6 +73,11 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "2.9" to listOf(
+        "Rozmowy działają od razu także przez internet komórkowy — serwery pośredniczące (Metered i ExpressTURN) są wbudowane w aplikację, nic nie trzeba ustawiać.",
+        "Rozmowy: kilka serwerów TURN naraz (np. Metered i ExpressTURN), każdy z własnym użytkownikiem i hasłem — telefon używa tego, który działa.",
+        "Adres serwera TURN można wkleić tak, jak pokazuje go dostawca (np. „free.expressturn.com:3478”) — Szept sam dopisze „turn:”.",
+    ),
     "2.8" to listOf(
         "Rozmowy: naprawione wieczne „Łączenie…” — gdy połączenia nie da się zestawić, po 30 s pojawia się jasny komunikat (i wpis w czacie), zamiast wisieć bez końca.",
         "Rozmowy: panel administratora → „Wymuszanie” → „Serwer TURN dla wszystkich” — po rozesłaniu rozmowy działają także przez sieć komórkową, gdzie połączenie bezpośrednie jest blokowane.",

@@ -80,4 +80,20 @@ class SafetyTest {
         CrashLog.clear()
         assertEquals("", CrashLog.read())
     }
+    @Test
+    fun builtInTurnServers() {
+        // konfiguracja jest w aplikacji tylko zaszyfrowana
+        assertFalse(pl.szept.BuildConfig.NET_CFG.contains("expressturn"))
+        val turn = pl.szept.core.NetConfig.builtInTurn()
+        if (pl.szept.BuildConfig.NET_CFG.isNotEmpty()) {
+            assertTrue(turn.any { it.url.startsWith("turn:free.expressturn.com") && it.user.isNotEmpty() && it.pass.isNotEmpty() })
+            assertTrue(turn.any { it.url.startsWith("turns:global.relay.metered.ca") && it.user.isNotEmpty() })
+            val core = Core(ctx, "t" + System.nanoTime()).apply { createIdentity("Ala") }
+            assertTrue(core.callIceServers().any { it.url.contains("expressturn") })
+        }
+        val parsed = pl.szept.core.NetConfig.parseIce(org.json.JSONArray(
+            """[{"urls":"stun:x:80"},{"urls":["turn:a:80","turns:a:443?transport=tcp"],"username":"u","credential":"p"}]"""))
+        assertEquals(2, parsed.size)
+        assertEquals("p", parsed[1].pass)
+    }
 }

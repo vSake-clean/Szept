@@ -1037,6 +1037,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         policy.value?.optJSONArray("ban")?.let { content.put("ban", it) }
         policy.value?.optJSONArray("otp")?.let { content.put("otp", it) }
         policy.value?.optJSONObject("turn")?.let { content.put("turn", it) }
+        policy.value?.optJSONArray("turns")?.let { content.put("turns", it) }
         if (apk != null) {
             val id = "admin:pol:" + newId()
             val media = prepareAdminUpload(id, apk, "Szept-$versionName.apk", "application/vnd.android.package-archive")
@@ -1180,33 +1181,64 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     fun callIceServers(): List<IceServer> {
         val list = mutableListOf(
             IceServer("stun:stun.l.google.com:19302"), IceServer("stun:stun1.l.google.com:19302"),
-            IceServer("stun:stun.cloudflare.com:3478"),
+            IceServer("stun:stun.cloudflare.com:3478"), IceServer("stun:stun.relay.metered.ca:80"),
         )
         val t = turnUrl
         if (t.startsWith("turn:") || t.startsWith("turns:")) list += IceServer(t, turnUser, turnPass)
         // serwer TURN rozesłany przez administratora (gdy połączenie bezpośrednie jest zablokowane)
         list += adminTurn()
-        return list
+        // wbudowane w aplikację: świeże dane z API Metered, potem stałe loginy (Metered, ExpressTURN)
+        list += NetConfig.cachedMetered(ctx)
+        list += NetConfig.builtInTurn()
+        scope.launch { NetConfig.refreshMetered(ctx) }
+        return list.distinctBy { it.url + "|" + it.user }
     }
 
-    /** TURN z podpisanej polityki administratora: {"u":[adresy],"n":użytkownik,"p":hasło}. */
-    fun adminTurn(): List<IceServer> {
-        val o = policy.value?.optJSONObject("turn") ?: return emptyList()
-        val urls = o.optJSONArray("u") ?: return emptyList()
-        return (0 until urls.length()).map { urls.optString(it).trim() }
-            .filter { it.startsWith("turn:") || it.startsWith("turns:") }.take(6)
-            .map { IceServer(it, o.optString("n"), o.optString("p")) }
+    /** Serwer TURN rozsyłany przez administratora: adresy + własny użytkownik i hasło. */
+    data class TurnServer(val urls: List<String>, val user: String, val pass: String)
+
+    /** Adres z panelu dostawcy bywa bez „turn:” (np. „free.expressturn.com:3478”) — dopisujemy go. */
+    private fun turnUrl(u: String): String? {
+        val t = u.trim().removePrefix("urls:").trim().trim('"', ',', '\'').trim()
+        if (t.isEmpty() || t.startsWith("stun:")) return null
+        val full = if (t.startsWith("turn:") || t.startsWith("turns:")) t else "turn:$t"
+        return full.takeIf { it.length < 200 && !it.contains(' ') }
     }
 
-    /** Administrator rozsyła serwer TURN wszystkim (pusta lista adresów = usunięcie). */
-    suspend fun adminSetTurn(urls: List<String>, user: String, pass: String) = stateLock.withLock {
+    private fun parseTurn(o: JSONObject): TurnServer? {
+        val a = o.optJSONArray("u") ?: return null
+        val urls = (0 until a.length()).mapNotNull { turnUrl(a.optString(it)) }.take(6)
+        return if (urls.isEmpty()) null else TurnServer(urls, o.optString("n"), o.optString("p"))
+    }
+
+    /** Serwery TURN z podpisanej polityki: „turns” (kilka dostawców) albo starsze pojedyncze „turn”. */
+    fun adminTurnServers(): List<TurnServer> {
+        val p = policy.value ?: return emptyList()
+        p.optJSONArray("turns")?.let { arr -> return (0 until arr.length()).mapNotNull { arr.optJSONObject(it)?.let(::parseTurn) }.take(4) }
+        return listOfNotNull(p.optJSONObject("turn")?.let(::parseTurn))
+    }
+
+    fun adminTurn(): List<IceServer> = adminTurnServers().flatMap { t -> t.urls.map { IceServer(it, t.user, t.pass) } }
+
+    /** Administrator rozsyła serwery TURN wszystkim (pusta lista = usunięcie). */
+    suspend fun adminSetTurns(servers: List<TurnServer>) = stateLock.withLock {
         if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
-        val ok = urls.map { it.trim() }.filter { it.startsWith("turn:") || it.startsWith("turns:") }.take(6)
+        val ok = servers.mapNotNull { s ->
+            val urls = s.urls.mapNotNull { turnUrl(it) }.take(6)
+            if (urls.isEmpty()) null else JSONObject().put("u", JSONArray(urls)).put("n", s.user.trim().take(200)).put("p", s.pass.trim().take(200))
+        }.take(4)
         val content = policy.value?.let { JSONObject(it.toString()) } ?: JSONObject().put("min", 0)
-        if (ok.isEmpty()) content.remove("turn")
-        else content.put("turn", JSONObject().put("u", JSONArray(ok)).put("n", user.trim().take(200)).put("p", pass.take(200)))
+        if (ok.isEmpty()) { content.remove("turn"); content.remove("turns") }
+        else {
+            content.put("turns", JSONArray(ok))
+            // wersja 2.8 zna tylko jeden serwer — dostaje pierwszy
+            content.put("turn", ok.first())
+        }
         publishPolicy(content)
     }
+
+    suspend fun adminSetTurn(urls: List<String>, user: String, pass: String) =
+        adminSetTurns(if (urls.none { it.isNotBlank() }) emptyList() else listOf(TurnServer(urls, user, pass)))
 
     // ================= kilka urządzeń i rotacja kluczy =================
 

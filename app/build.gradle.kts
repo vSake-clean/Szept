@@ -1,4 +1,10 @@
 import java.util.Properties
+import java.security.SecureRandom
+import java.security.MessageDigest
+import java.util.Base64
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
+import javax.crypto.spec.GCMParameterSpec
 
 plugins {
     id("com.android.application")
@@ -12,6 +18,30 @@ val secrets = Properties().apply {
 }
 fun secret(name: String): String? = (System.getenv(name) ?: secrets.getProperty(name))?.trim()?.ifEmpty { null }
 
+/**
+ * Konfiguracja sieci (serwery TURN, API Metered) z secrets.properties → JSON zaszyfrowany AES-256-GCM.
+ * Klucz jest losowy dla każdej kompilacji i zapisany w aplikacji w postaci zamaskowanej (XOR ze stałą w kodzie).
+ */
+fun sealedNetConfig(): Pair<String, String> {
+    fun esc(v: String) = v.replace("\\", "\\\\").replace("\"", "\\\"")
+    val turns = (1..4).mapNotNull { i ->
+        val urls = secret("TURN${i}_URLS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() } ?: return@mapNotNull null
+        "{\"u\":[" + urls.joinToString(",") { "\"" + esc(it) + "\"" } + "],\"n\":\"" + esc(secret("TURN${i}_USER") ?: "") + "\",\"p\":\"" + esc(secret("TURN${i}_PASS") ?: "") + "\"}"
+    }
+    val json = "{\"turns\":[" + turns.joinToString(",") + "],\"mu\":\"" + esc(secret("METERED_API_URL") ?: "") + "\",\"mk\":\"" + esc(secret("METERED_API_KEY") ?: "") + "\"}"
+    val rnd = SecureRandom()
+    val key = ByteArray(32).also { rnd.nextBytes(it) }
+    val iv = ByteArray(12).also { rnd.nextBytes(it) }
+    val c = Cipher.getInstance("AES/GCM/NoPadding")
+    c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+    c.updateAAD("szept-net".toByteArray())
+    val ct = iv + c.doFinal(json.toByteArray(Charsets.UTF_8))
+    val pad = MessageDigest.getInstance("SHA-256").digest("szept/siec/2.9".toByteArray())
+    val masked = ByteArray(32) { (key[it].toInt() xor pad[it].toInt()).toByte() }
+    val b64 = Base64.getEncoder()
+    return b64.encodeToString(ct) to b64.encodeToString(masked)
+}
+
 android {
     namespace = "pl.szept"
     compileSdk = 35
@@ -20,14 +50,18 @@ android {
         applicationId = "pl.szept.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "2.8"
+        versionCode = 20
+        versionName = "2.9"
         // klucz KLIPY (GIF-y) — można też wpisać w aplikacji lub rozesłać z panelu administratora
         val klipy = rootProject.file("klipy.key").takeIf { it.exists() }?.readText()?.trim() ?: secret("KLIPY_KEY") ?: ""
         buildConfigField("String", "KLIPY_KEY", "\"" + klipy.filter { it.isLetterOrDigit() || it == '-' || it == '_' } + "\"")
         // zaszyfrowany klucz panelu administratora (bez niego panel jest niedostępny)
         val adminEnc = secret("SZEPT_ADMIN_ENC") ?: ""
         buildConfigField("String", "ADMIN_ENC", "\"" + adminEnc.filter { it.isLetterOrDigit() || it in "+/=" } + "\"")
+        // wbudowane serwery TURN i klucz API Metered — zaszyfrowane AES-GCM losowym kluczem tej kompilacji
+        val (blob, mask) = sealedNetConfig()
+        buildConfigField("String", "NET_CFG", "\"" + blob + "\"")
+        buildConfigField("String", "NET_K", "\"" + mask + "\"")
     }
 
     // podpis wydania: plik klucza i hasła z secrets.properties albo zmiennych środowiskowych (poza repozytorium)

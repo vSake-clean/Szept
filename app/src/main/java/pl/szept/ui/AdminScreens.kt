@@ -482,34 +482,47 @@ private fun AccessTab() {
     }
 }
 
-/** Serwer TURN dla wszystkich — potrzebny, gdy sieć (np. komórkowa) blokuje bezpośrednie połączenie rozmowy. */
+/** Serwery TURN dla wszystkich (kilku dostawców, każdy z własnym loginem) — potrzebne, gdy sieć blokuje połączenie bezpośrednie. */
 @Composable
 private fun TurnCard() {
     val ctx = LocalContext.current
     val core = App.core
     val scope = rememberCoroutineScope()
     val policy by core.policy.collectAsState()
-    val cur = policy?.optJSONObject("turn")
-    var urls by remember { mutableStateOf(cur?.optJSONArray("u")?.let { a -> List(a.length()) { a.optString(it) }.joinToString("\n") } ?: "") }
-    var user by remember { mutableStateOf(cur?.optString("n") ?: "") }
-    var pass by remember { mutableStateOf(cur?.optString("p") ?: "") }
+    val current = remember(policy) { core.adminTurnServers() }
+    data class Row(val urls: String, val user: String, val pass: String)
+    val rows = remember(current) {
+        androidx.compose.runtime.mutableStateListOf<Row>().apply {
+            current.forEach { add(Row(it.urls.joinToString("\n"), it.user, it.pass)) }
+            if (isEmpty()) add(Row("", "", ""))
+        }
+    }
     Card(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
         Column(Modifier.padding(12.dp)) {
-            Text("Rozmowy: serwer TURN dla wszystkich", style = MaterialTheme.typography.titleSmall)
+            Text("Rozmowy: serwery TURN dla wszystkich", style = MaterialTheme.typography.titleSmall)
             Text(
-                (if (cur != null) "Serwer jest rozesłany. " else "Brak serwera — rozmowy przez sieć komórkową często zostają na „Łączenie…”. ") +
-                    "TURN przekazuje zaszyfrowany dźwięk i obraz, gdy telefony nie mogą połączyć się bezpośrednio (nie widzi treści rozmów).",
+                (if (current.isNotEmpty()) "Rozesłane serwery: ${current.size}. " else "Brak serwera — rozmowy przez sieć komórkową często zostają na „Łączenie…”. ") +
+                    "TURN przekazuje zaszyfrowany dźwięk i obraz, gdy telefony nie mogą połączyć się bezpośrednio. Możesz dodać kilku dostawców — telefon użyje tego, który działa.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            OutlinedTextField(urls, { urls = it }, Modifier.fillMaxWidth(), label = { Text("Adresy (każdy w nowej linii), np. turn:serwer:3478") }, minLines = 2)
-            OutlinedTextField(user, { user = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Użytkownik") })
-            OutlinedTextField(pass, { pass = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Hasło") })
-            TextButton(onClick = {
-                scope.launch {
-                    try { core.adminSetTurn(urls.lines(), user, pass); toast(ctx, if (urls.isBlank()) "Usunięto serwer TURN" else "Rozesłano serwer TURN") }
-                    catch (e: Exception) { toast(ctx, e.message ?: "Błąd") }
-                }
-            }) { Text(if (urls.isBlank()) "Usuń u wszystkich" else "Roześlij wszystkim") }
+            rows.forEachIndexed { i, r ->
+                Text("Serwer ${i + 1}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
+                OutlinedTextField(r.urls, { v -> rows[i] = r.copy(urls = v) }, Modifier.fillMaxWidth(),
+                    label = { Text("Adresy (każdy w nowej linii), np. free.expressturn.com:3478") }, minLines = 2)
+                OutlinedTextField(r.user, { v -> rows[i] = r.copy(user = v.trim()) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Użytkownik (username)") })
+                OutlinedTextField(r.pass, { v -> rows[i] = r.copy(pass = v.trim()) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Hasło (password / credential)") })
+                if (rows.size > 1) TextButton(onClick = { rows.removeAt(i) }) { Text("Usuń ten serwer") }
+            }
+            Row {
+                if (rows.size < 4) TextButton(onClick = { rows.add(Row("", "", "")) }) { Text("+ Dodaj serwer") }
+                TextButton(onClick = {
+                    val list = rows.filter { it.urls.isNotBlank() }.map { pl.szept.core.Core.TurnServer(it.urls.lines(), it.user, it.pass) }
+                    scope.launch {
+                        try { core.adminSetTurns(list); toast(ctx, if (list.isEmpty()) "Usunięto serwery TURN" else "Rozesłano serwery TURN: ${list.size}") }
+                        catch (e: Exception) { toast(ctx, e.message ?: "Błąd") }
+                    }
+                }) { Text("Roześlij wszystkim") }
+            }
         }
     }
 }

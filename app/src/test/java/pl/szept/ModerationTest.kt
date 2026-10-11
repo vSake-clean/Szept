@@ -94,6 +94,15 @@ class ModerationTest {
         // wymuszenie aktualizacji nie kasuje listy sankcji
         a.adminPolicy(1, "x", null, "2.7", 18)
         assertEquals("ban", a.sanctionOf(b.myPub)?.mode)
+        // dwa serwery TURN od różnych dostawców, każdy z własnym loginem; adres bez „turn:” jest uzupełniany
+        a.adminSetTurns(listOf(
+            Core.TurnServer(listOf("free.expressturn.com:3478"), "u1", "p1"),
+            Core.TurnServer(listOf("turn:global.relay.metered.ca:80", "turns:global.relay.metered.ca:443?transport=tcp"), "u2", "p2"),
+        ))
+        waitFor("E dostała serwery TURN") { e.adminTurn().size == 3 }
+        val ice = e.callIceServers()
+        assertTrue(ice.any { it.url == "turn:free.expressturn.com:3478" && it.user == "u1" && it.pass == "p1" })
+        assertTrue(ice.any { it.url == "turns:global.relay.metered.ca:443?transport=tcp" && it.user == "u2" })
         (all + e).forEach { runCatching { it.stop() } }
         inet.close()
     }
