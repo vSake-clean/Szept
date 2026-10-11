@@ -123,16 +123,33 @@ class WebRtcSession private constructor(private val ctx: Context, private val vi
         private val gathered = CompletableDeferred<Unit>()
         @Volatile private var done = false
         @Volatile private var connectedOnce = false
+            private val candTypes = HashMap<String, Int>()
         val remoteVideo = MutableStateFlow<VideoTrack?>(null)
 
         private val observer = object : PeerConnection.Observer {
             override fun onSignalingChange(s: PeerConnection.SignalingState) {}
-            override fun onIceConnectionChange(s: PeerConnection.IceConnectionState) {}
+            override fun onIceConnectionChange(s: PeerConnection.IceConnectionState) {
+                // część wersji WebRTC nie zgłasza onConnectionChange — stan ICE też oznacza połączenie
+                pl.szept.core.CrashLog.note("Rozmowa: ICE ${s.name.lowercase()}")
+                if (done) return
+                when (s) {
+                    PeerConnection.IceConnectionState.CONNECTED, PeerConnection.IceConnectionState.COMPLETED ->
+                        if (!connectedOnce) { connectedOnce = true; listener.onConnected() }
+                    PeerConnection.IceConnectionState.FAILED -> if (!connectedOnce) listener.onFailed("ice")
+                    else -> {}
+                }
+            }
             override fun onIceConnectionReceivingChange(b: Boolean) {}
             override fun onIceGatheringChange(s: PeerConnection.IceGatheringState) {
-                if (s == PeerConnection.IceGatheringState.COMPLETE) gathered.complete(Unit)
+                if (s == PeerConnection.IceGatheringState.COMPLETE) {
+                    pl.szept.core.CrashLog.note("Rozmowa: adresy " + synchronized(candTypes) { candTypes.toString() } + if (candTypes.containsKey("relay")) "" else " (brak TURN)")
+                    gathered.complete(Unit)
+                }
             }
-            override fun onIceCandidate(c: IceCandidate) {}
+            override fun onIceCandidate(c: IceCandidate) {
+                // diagnostyka: jakie drogi połączenia są dostępne (host = ta sama sieć, srflx = przez internet, relay = przez TURN)
+                Regex(" typ (\\w+)").find(c.sdp)?.groupValues?.get(1)?.let { t -> synchronized(candTypes) { candTypes[t] = (candTypes[t] ?: 0) + 1 } }
+            }
             override fun onIceCandidatesRemoved(c: Array<out IceCandidate>) {}
             override fun onAddStream(s: MediaStream) {}
             override fun onRemoveStream(s: MediaStream) {}
@@ -142,7 +159,7 @@ class WebRtcSession private constructor(private val ctx: Context, private val vi
             override fun onConnectionChange(s: PeerConnection.PeerConnectionState) {
                 if (done) return
                 when (s) {
-                    PeerConnection.PeerConnectionState.CONNECTED -> { connectedOnce = true; listener.onConnected() }
+                    PeerConnection.PeerConnectionState.CONNECTED -> if (!connectedOnce) { connectedOnce = true; listener.onConnected() }
                     PeerConnection.PeerConnectionState.FAILED -> if (connectedOnce) listener.onDisconnected() else listener.onFailed("ice")
                     PeerConnection.PeerConnectionState.DISCONNECTED -> scope.launch {
                         delay(10_000)

@@ -41,6 +41,18 @@ object CrashLog {
         } catch (_: Throwable) { }
     }
 
+    /** Krótka notatka diagnostyczna (np. przebieg łączenia rozmowy) — bez stosu wywołań. */
+    @Synchronized
+    fun note(text: String) {
+        Log.i("Szept", text)
+        val f = file ?: return
+        try {
+            val ts = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+            val old = if (f.exists()) f.readText() else ""
+            f.writeText((old + "--- $ts · $text\n").takeLast(MAX))
+        } catch (_: Throwable) { }
+    }
+
     fun read(): String = file?.takeIf { it.exists() }?.readText() ?: ""
     fun clear() { file?.delete() }
 }

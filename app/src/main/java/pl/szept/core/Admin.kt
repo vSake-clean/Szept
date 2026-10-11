@@ -45,7 +45,7 @@ object Admin {
     /** Znane wersje aplikacji (nazwa → numer), do wyboru najstarszej dozwolonej. */
     val VERSIONS = listOf(
         "1.0" to 1, "1.1" to 2, "1.2" to 3, "1.3" to 4, "1.4" to 5, "1.5" to 6, "1.6" to 7, "1.7" to 8,
-        "1.8" to 9, "1.9" to 10, "2.0" to 11, "2.1" to 12, "2.2" to 13, "2.3" to 14, "2.4" to 15, "2.5" to 16, "2.6" to 17, "2.7" to 18,
+        "1.8" to 9, "1.9" to 10, "2.0" to 11, "2.1" to 12, "2.2" to 13, "2.3" to 14, "2.4" to 15, "2.5" to 16, "2.6" to 17, "2.7" to 18, "2.8" to 19,
     )
 
     fun versionName(code: Int) = VERSIONS.firstOrNull { it.second == code }?.first ?: code.toString()

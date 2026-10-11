@@ -510,6 +510,13 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
             }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 when {
+                    call.phase == GPhase.ENDED -> Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 28.dp)) {
+                        Icon(Icons.Default.CallEnd, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(56.dp))
+                        Spacer(Modifier.height(14.dp))
+                        Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(8.dp))
+                        Text(call.endReason.ifBlank { "Rozmowa zakończona" }, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
+                    }
                     call.phase == GPhase.RINGING || (call.phase == GPhase.ACTIVE && !fullVideo && others.size <= 1 && !(call.video && others.isNotEmpty())) -> {
                         // jedna osoba: duży awatar, imię i stan
                         val pk = if (call.phase == GPhase.RINGING) call.from else single?.pk ?: (call.room - core.myPub).firstOrNull() ?: call.from

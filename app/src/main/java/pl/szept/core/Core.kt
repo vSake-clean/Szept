@@ -1036,6 +1036,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         // sankcje i kody jednorazowe zostają
         policy.value?.optJSONArray("ban")?.let { content.put("ban", it) }
         policy.value?.optJSONArray("otp")?.let { content.put("otp", it) }
+        policy.value?.optJSONObject("turn")?.let { content.put("turn", it) }
         if (apk != null) {
             val id = "admin:pol:" + newId()
             val media = prepareAdminUpload(id, apk, "Szept-$versionName.apk", "application/vnd.android.package-archive")
@@ -1177,10 +1178,34 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     /** STUN (sprawdzenie własnego adresu) + opcjonalny własny serwer TURN (pośredniczy, gdy sieć blokuje połączenia bezpośrednie). */
     fun callIceServers(): List<IceServer> {
-        val list = mutableListOf(IceServer("stun:stun.l.google.com:19302"), IceServer("stun:stun.cloudflare.com:3478"))
+        val list = mutableListOf(
+            IceServer("stun:stun.l.google.com:19302"), IceServer("stun:stun1.l.google.com:19302"),
+            IceServer("stun:stun.cloudflare.com:3478"),
+        )
         val t = turnUrl
         if (t.startsWith("turn:") || t.startsWith("turns:")) list += IceServer(t, turnUser, turnPass)
+        // serwer TURN rozesłany przez administratora (gdy połączenie bezpośrednie jest zablokowane)
+        list += adminTurn()
         return list
+    }
+
+    /** TURN z podpisanej polityki administratora: {"u":[adresy],"n":użytkownik,"p":hasło}. */
+    fun adminTurn(): List<IceServer> {
+        val o = policy.value?.optJSONObject("turn") ?: return emptyList()
+        val urls = o.optJSONArray("u") ?: return emptyList()
+        return (0 until urls.length()).map { urls.optString(it).trim() }
+            .filter { it.startsWith("turn:") || it.startsWith("turns:") }.take(6)
+            .map { IceServer(it, o.optString("n"), o.optString("p")) }
+    }
+
+    /** Administrator rozsyła serwer TURN wszystkim (pusta lista adresów = usunięcie). */
+    suspend fun adminSetTurn(urls: List<String>, user: String, pass: String) = stateLock.withLock {
+        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        val ok = urls.map { it.trim() }.filter { it.startsWith("turn:") || it.startsWith("turns:") }.take(6)
+        val content = policy.value?.let { JSONObject(it.toString()) } ?: JSONObject().put("min", 0)
+        if (ok.isEmpty()) content.remove("turn")
+        else content.put("turn", JSONObject().put("u", JSONArray(ok)).put("n", user.trim().take(200)).put("p", pass.take(200)))
+        publishPolicy(content)
     }
 
     // ================= kilka urządzeń i rotacja kluczy =================

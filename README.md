@@ -14,6 +14,9 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 2.8
+- **Rozmowy** nie wiszą już na „Łączenie…”; administrator może rozesłać wszystkim **serwer TURN** (potrzebny w sieciach komórkowych).
+
 ### Nowe w 2.7
 - **Moderacja**: administrator aplikacji może wyciszyć, zablokować lub usunąć konto (podpisana lista sankcji, której pilnuje każda kopia aplikacji), podejrzeć hasło panelu i tworzyć **kody jednorazowe**; administratorzy grup mogą **wyciszać i banować** członków.
 

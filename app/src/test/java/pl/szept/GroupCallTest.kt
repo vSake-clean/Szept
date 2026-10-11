@@ -215,4 +215,40 @@ class GroupCallTest {
         assertTrue(a.knownPeople().none { it.pk == pk })
         a.stop(); inet.close()
     }
+    /** Sieć blokuje połączenie (brak TURN): po czasie rozmowa kończy się komunikatem zamiast wisieć na „Łączenie…”. */
+    @Test
+    fun blockedNetworkEndsWithMessage() = runBlocking {
+        val inet = LocalRelay(ctx, "gc5_${System.nanoTime()}.db")
+        val url = "ws://127.0.0.1:" + inet.start(0)
+        // połączenie nigdy się nie zestawia
+        val never = RtcSessionFactory { _, _ -> object : RtcSession {
+            override fun newPeer(listener: RtcEngine.Listener): RtcPeer = object : RtcPeer {
+                override suspend fun createOffer() = "oferta"
+                override suspend fun createAnswer(offer: String) = "odpowiedz"
+                override suspend fun applyAnswer(answer: String) {}
+                override fun close() {}
+            }
+            override fun setMuted(muted: Boolean) {}
+            override fun setVideoEnabled(on: Boolean) {}
+            override fun switchCamera() {}
+            override fun close() {}
+        } }
+        val a = core("Ala", url); val b = core("Bartek", url)
+        a.groupCalls.factory = never; b.groupCalls.factory = never
+        a.groupCalls.connectMs = 2_000; b.groupCalls.connectMs = 2_000
+        waitFor("połączeni") { a.connectedRelays().isNotEmpty() && b.connectedRelays().isNotEmpty() }
+        a.addContact(b.myPub, "Bartek"); b.addContact(a.myPub, "Ala")
+        a.startCall(b.myPub, false) { throw AssertionError(it) }
+        waitFor("dzwoni u B") { b.groupCalls.state.value?.phase == Phase.RINGING }
+        b.groupCalls.join()
+        waitFor("A: komunikat o zablokowanej sieci") {
+            a.groupCalls.state.value?.let { !it.active && it.endReason == pl.szept.call.GroupCallManager.NO_ROUTE } == true
+        }
+        waitFor("B też kończy") { b.groupCalls.state.value?.active != true }
+        assertTrue(a.db.messages(dmChatId(b.myPub), 20).any { it.body.contains("nie udało się połączyć") })
+        // serwer TURN z ustawień trafia do listy serwerów rozmowy
+        a.setTurn("turn:turn.example.org:3478", "u", "p")
+        assertTrue(a.callIceServers().any { it.url == "turn:turn.example.org:3478" && it.user == "u" })
+        a.stop(); b.stop(); inet.close()
+    }
 }

@@ -55,6 +55,8 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         val invited: Set<String> = emptySet(),
         /** Wszyscy w „pokoju” (rozmowa prywatna lub dodane osoby) — puste dla grup. */
         val room: Set<String> = emptySet(),
+        /** Ostatni problem z połączeniem (pokazywany na ekranie rozmowy). */
+        val notice: String = "",
     ) {
         val active get() = phase != Phase.ENDED
         /** Rozmowa poza grupą (zaczęta z rozmowy prywatnej). */
@@ -72,6 +74,9 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
 
     companion object {
         const val RING_MS = 45_000L
+        /** Ile czekamy na zestawienie połączenia z uczestnikiem, zanim uznamy, że sieć je blokuje. */
+        const val CONNECT_MS = 30_000L
+        const val NO_ROUTE = "Nie udało się połączyć — sieć blokuje bezpośrednie połączenie. Spróbujcie przez Wi-Fi albo poproś administratora o serwer TURN."
         const val MAX_AUDIO = 6
         const val MAX_VIDEO = 4
         private const val TAG = "Szept"
@@ -129,7 +134,9 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
 
     private fun ended(c: GroupCall) {
         state.value = c
-        scope.launch { delay(endedLingerMs); if (state.value === c) state.value = null }
+        // komunikat o problemie z siecią zostaje dłużej, żeby dało się go przeczytać
+        val linger = if (c.endReason == NO_ROUTE) maxOf(endedLingerMs, 8_000L) else endedLingerMs
+        scope.launch { delay(linger); if (state.value === c) state.value = null }
     }
 
     private fun remember(gid: String, cid: String, video: Boolean, add: String? = null, remove: String? = null) {
@@ -228,12 +235,14 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
     }
 
     /** Pokój, w którym nikogo już nie ma i do nikogo nie dzwonię — kończymy (bez okna „nikt nie odebrał”). */
-    private fun endIfAlone(c: GroupCall, why: String) {
+    private fun endIfAlone(c: GroupCall, why: String, failed: Boolean = false) {
         if (!c.isRoom || c.peers.isNotEmpty() || c.invited.isNotEmpty()) return
         val hadSomeone = c.joinedAt > 0 && everConnected.contains(c.id)
-        if (!hadSomeone && c.from == host.myPub) toAll("cancel", c)
-        close(c, if (hadSomeone) "Rozmowa zakończona" else why, quiet = !hadSomeone)
+        if (!hadSomeone && c.from == host.myPub && !failed) toAll("cancel", c)
+        if (failed && !hadSomeone) toAll("leave", c) { put("nr", true) }
+        close(c, if (hadSomeone) "Rozmowa zakończona" else why, quiet = !hadSomeone && !failed)
     }
+    var connectMs = CONNECT_MS
     private val everConnected = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
 
     /** Dołącza do rozmowy, która dzwoni albo trwa w grupie. */
@@ -297,6 +306,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         val kind = kindText(c)
         val talked = everConnected.contains(c.id)
         host.callLog(c.gid, logPeer(c), "gcall:${c.id}", when {
+            reason == NO_ROUTE && !talked -> "$kind · nie udało się połączyć (sieć blokuje połączenie)"
             talked || (!c.isRoom && c.joinedAt > 0) -> "$kind · ${secs / 60}:${"%02d".format(secs % 60)}"
             c.isRoom && c.from == host.myPub -> "$kind · brak odpowiedzi"
             else -> "$kind · nieodebrana"
@@ -314,7 +324,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
     private fun peerListener(cid: String, pid: String) = object : RtcEngine.Listener {
         override fun onConnected() { scope.launch { lock.withLock { setPeer(cid, pid, PeerPhase.CONNECTED) } } }
         override fun onDisconnected() { scope.launch { lock.withLock { dropPeer(cid, pid) } } }
-        override fun onFailed(reason: String) { scope.launch { lock.withLock { dropPeer(cid, pid) } } }
+        override fun onFailed(reason: String) { scope.launch { lock.withLock { dropPeer(cid, pid, failed = true) } } }
     }
 
     private fun setPeer(cid: String, pid: String, phase: PeerPhase) {
@@ -324,12 +334,12 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         state.value = c.copy(peers = c.peers + (pid to p.copy(phase = phase)), invited = c.invited - p.pk)
     }
 
-    private fun dropPeer(cid: String, pid: String) {
+    private fun dropPeer(cid: String, pid: String, failed: Boolean = false) {
         val c = cur(cid) ?: return
         links.remove(pid)?.close()
-        val now = c.copy(peers = c.peers - pid)
+        val now = c.copy(peers = c.peers - pid, notice = if (failed) NO_ROUTE else c.notice)
         state.value = now
-        endIfAlone(now, "Rozmowa zakończona")
+        endIfAlone(now, if (failed) NO_ROUTE else "Rozmowa zakończona", failed)
     }
 
     /** Nowe połączenie z uczestnikiem (null = już jest albo rozmowa pełna). */
@@ -341,6 +351,17 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         val s = session ?: return null
         val l = s.newPeer(peerListener(cid, pid))
         links[pid] = l
+        // nie wisimy w nieskończoność na „Łączenie…”
+        scope.launch {
+            kotlinx.coroutines.delay(connectMs)
+            lock.withLock {
+                val cc = cur(cid) ?: return@withLock
+                if (links[pid] === l && cc.peers[pid]?.phase == PeerPhase.CONNECTING) {
+                    pl.szept.core.CrashLog.note("Rozmowa: brak połączenia z uczestnikiem po ${connectMs / 1000} s")
+                    dropPeer(cid, pid, failed = true)
+                }
+            }
+        }
         state.value = c.copy(peers = c.peers + (pid to Peer(pk, dev, PeerPhase.CONNECTING)), invited = c.invited - pk)
         return l
     }
@@ -453,7 +474,8 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
             }
             "leave" -> {
                 remember(gid, cid, video, remove = pid)
-                if (c?.id == cid) dropPeer(cid, pid)
+                // „nr” — druga strona nie mogła się z nami połączyć (zablokowana sieć)
+                if (c?.id == cid) dropPeer(cid, pid, failed = p.optBoolean("nr") && c.peers[pid]?.phase != PeerPhase.CONNECTED)
             }
             "cancel" -> {
                 known.value = known.value - gid

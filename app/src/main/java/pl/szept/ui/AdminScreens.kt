@@ -277,6 +277,7 @@ private fun PolicyTab(apk: File) {
             }) { Text(if (gk.isBlank()) "Usuń klucz u wszystkich" else "Roześlij klucz") }
         }
     }
+    TurnCard()
     Card(Modifier.fillMaxWidth()) {
         Text(
             if (cur > 0) "Teraz: wersje starsze niż ${Admin.versionName(cur)} muszą się zaktualizować." else "Teraz: nic nie jest wymuszane.",
@@ -477,6 +478,38 @@ private fun AccessTab() {
                 Text((o.label.ifBlank { "kod" }) + " · ważny do " + fmt.format(java.util.Date(o.exp)), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                 TextButton(onClick = { scope.launch { core.adminRevokeOtp(o.id) } }) { Text("Unieważnij") }
             }
+        }
+    }
+}
+
+/** Serwer TURN dla wszystkich — potrzebny, gdy sieć (np. komórkowa) blokuje bezpośrednie połączenie rozmowy. */
+@Composable
+private fun TurnCard() {
+    val ctx = LocalContext.current
+    val core = App.core
+    val scope = rememberCoroutineScope()
+    val policy by core.policy.collectAsState()
+    val cur = policy?.optJSONObject("turn")
+    var urls by remember { mutableStateOf(cur?.optJSONArray("u")?.let { a -> List(a.length()) { a.optString(it) }.joinToString("\n") } ?: "") }
+    var user by remember { mutableStateOf(cur?.optString("n") ?: "") }
+    var pass by remember { mutableStateOf(cur?.optString("p") ?: "") }
+    Card(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Text("Rozmowy: serwer TURN dla wszystkich", style = MaterialTheme.typography.titleSmall)
+            Text(
+                (if (cur != null) "Serwer jest rozesłany. " else "Brak serwera — rozmowy przez sieć komórkową często zostają na „Łączenie…”. ") +
+                    "TURN przekazuje zaszyfrowany dźwięk i obraz, gdy telefony nie mogą połączyć się bezpośrednio (nie widzi treści rozmów).",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedTextField(urls, { urls = it }, Modifier.fillMaxWidth(), label = { Text("Adresy (każdy w nowej linii), np. turn:serwer:3478") }, minLines = 2)
+            OutlinedTextField(user, { user = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Użytkownik") })
+            OutlinedTextField(pass, { pass = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Hasło") })
+            TextButton(onClick = {
+                scope.launch {
+                    try { core.adminSetTurn(urls.lines(), user, pass); toast(ctx, if (urls.isBlank()) "Usunięto serwer TURN" else "Rozesłano serwer TURN") }
+                    catch (e: Exception) { toast(ctx, e.message ?: "Błąd") }
+                }
+            }) { Text(if (urls.isBlank()) "Usuń u wszystkich" else "Roześlij wszystkim") }
         }
     }
 }

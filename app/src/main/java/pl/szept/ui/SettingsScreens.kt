@@ -73,6 +73,12 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "2.8" to listOf(
+        "Rozmowy: naprawione wieczne „Łączenie…” — gdy połączenia nie da się zestawić, po 30 s pojawia się jasny komunikat (i wpis w czacie), zamiast wisieć bez końca.",
+        "Rozmowy: panel administratora → „Wymuszanie” → „Serwer TURN dla wszystkich” — po rozesłaniu rozmowy działają także przez sieć komórkową, gdzie połączenie bezpośrednie jest blokowane.",
+        "Rozmowy: pewniejsze wykrywanie nawiązania połączenia i więcej serwerów STUN.",
+        "Dziennik błędów (Ustawienia → Pomoc) zapisuje przebieg łączenia rozmowy — łatwiej znaleźć przyczynę, gdy coś nie działa.",
+    ),
     "2.7" to listOf(
         "Panel administratora → „Konta”: wyciszenie osoby (1 h – 30 dni albo na zawsze), blokada pisania (ban) i usunięcie konta — z powodem, który zobaczy ta osoba. Każdą sankcję można cofnąć.",
         "Panel administratora → „Dostęp”: podgląd hasła panelu (zapisanego zaszyfrowanie na tym telefonie) i kody jednorazowe — wejście do panelu bez hasła, działają tylko raz.",
