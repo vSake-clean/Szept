@@ -73,6 +73,16 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.0" to listOf(
+        "Wyślij, gdy będzie online: przytrzymaj przycisk wysyłania → „🟢 Wyślij, gdy będzie online” — wiadomość czeka i wychodzi sama, gdy rozmówca otworzy Szept.",
+        "Tłumaczenie w telefonie: przytrzymaj wiadomość → „🌐 Przetłumacz”. Treść nie opuszcza telefonu — internet potrzebny tylko raz, do pobrania pakietu języka.",
+        "Formatowanie tekstu: *pogrubienie*, _kursywa_, ~przekreślenie~, `kod` i ||spoiler|| (ukryty tekst — odkrywa się po dotknięciu, w powiadomieniach jest zakryty).",
+        "Fałszywy PIN (Prywatność i blokada): drugi PIN otwiera „pusty” Szept bez Twoich rozmów i kontaktów. Prawdziwe wiadomości przychodzą dalej, ale bez powiadomień, dopóki nie wpiszesz prawdziwego PIN-u.",
+        "Zamaskowana ikona: Szept może udawać działający „Kalkulator” — otwiera się dopiero po wpisaniu Twojego kodu i „=”.",
+        "Automatyczne czyszczenie: w profilu osoby lub informacjach o grupie ustawisz, żeby wiadomości starsze niż 7, 30 albo 90 dni same znikały z tego telefonu.",
+        "Podgląd Szeptu na liście ostatnich aplikacji jest zasłonięty (można wyłączyć w Prywatność i blokada → Zrzuty ekranu).",
+        "Gry w czacie (📎 → 🎮 Gra): kółko i krzyżyk, rzut kośćmi i „Kto szybciej?” — grane wiadomościami, bez żadnego serwera.",
+    ),
     "2.9" to listOf(
         "Rozmowy działają od razu także przez internet komórkowy — serwery pośredniczące (Metered i ExpressTURN) są wbudowane w aplikację, nic nie trzeba ustawiać.",
         "Rozmowy: kilka serwerów TURN naraz (np. Metered i ExpressTURN), każdy z własnym użytkownikiem i hasłem — telefon używa tego, który działa.",

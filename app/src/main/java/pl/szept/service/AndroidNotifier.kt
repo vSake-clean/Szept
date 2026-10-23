@@ -172,21 +172,21 @@ class AndroidNotifier(private val ctx: Context) : Notifier {
 class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val chatId = intent.getStringExtra("chat") ?: return
-        if (!App.core.hasIdentity) return
+        if (!App.real.hasIdentity) return
         when (intent.action) {
-            AndroidNotifier.ACTION_READ -> App.core.markChatRead(chatId)
+            AndroidNotifier.ACTION_READ -> App.real.markChatRead(chatId)
             AndroidNotifier.ACTION_REPLY -> {
                 val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(AndroidNotifier.KEY_REPLY)?.toString()?.trim()
                 if (text.isNullOrEmpty()) return
                 val pending = goAsync()
                 CoroutineScope(Dispatchers.IO + pl.szept.core.CrashLog.handler).launch {
                     try {
-                        App.core.start()
-                        App.core.sendText(chatId, text)
-                        App.core.markChatRead(chatId)
-                        App.core.keepalive()
+                        App.real.start()
+                        App.real.sendText(chatId, text)
+                        App.real.markChatRead(chatId)
+                        App.real.keepalive()
                     } catch (e: Core.SendException) {
-                        App.core.notifier?.onMessage(chatId, App.core.db.chat(chatId)?.name ?: "", "Szept", "Nie wysłano: ${e.message}", false)
+                        App.real.notifier?.onMessage(chatId, App.real.db.chat(chatId)?.name ?: "", "Szept", "Nie wysłano: ${e.message}", false)
                     } finally {
                         pending.finish()
                     }

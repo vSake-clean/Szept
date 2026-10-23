@@ -64,4 +64,28 @@ class UiLockTest {
         }
         println("LOCK OK")
     }
+
+    @Test
+    fun decoyPin() {
+        val core = App.core
+        core.createIdentity("Tester")
+        val peer = Crypto.publicKey(Crypto.newPrivateKey()).hex()
+        core.addContact(peer, "Kasia")
+        core.setPin("1234")
+        core.setDecoyPin("5555")
+        ActivityScenario.launch(MainActivity::class.java).use { sc ->
+            waitText("Szept jest zablokowany")
+            rule.onNode(hasText("PIN")).performTextInput("5555")   // fałszywy PIN
+            waitText("Nie masz jeszcze rozmów")
+            check(App.decoyActive) { "nie włączono pustego Szeptu" }
+            check(rule.onAllNodesWithText("Kasia").fetchSemanticsNodes().isEmpty()) { "prawdziwe czaty widoczne w pustym Szepcie" }
+            check(core.notifier == null) { "powiadomienia prawdziwego konta powinny milczeć" }
+            sc.onActivity { it.relock() }
+            waitText("Szept jest zablokowany")
+            rule.onNode(hasText("PIN")).performTextInput("1234")
+            waitText("Kasia")
+            check(!App.decoyActive && App.core === core)
+        }
+        println("DECOY OK")
+    }
 }

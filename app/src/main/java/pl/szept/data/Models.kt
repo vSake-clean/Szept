@@ -189,6 +189,8 @@ data class Extra(
     val album: String? = null, val albumIdx: Int = 0, val albumN: Int = 0,
     /** Okrągła notatka wideo (kwadratowe wideo pokazywane w kółku). */
     val round: Boolean = false,
+    /** Gra w czacie (JSON: {"g":"ttt"|"dice"|"fast", …}). */
+    val game: String? = null,
 ) {
     fun isEmpty() = this == NONE
     fun putInto(o: JSONObject): JSONObject {
@@ -196,6 +198,7 @@ data class Extra(
         if (mentions.isNotEmpty()) o.put("mn", org.json.JSONArray(mentions))
         if (album != null) { o.put("al", album); o.put("ai", albumIdx); o.put("an", albumN) }
         if (round) o.put("vn", 1)
+        if (game != null) o.put("gm", JSONObject(game))
         return o
     }
     fun toJson(): String? = if (isEmpty()) null else putInto(JSONObject()).toString()
@@ -210,6 +213,7 @@ data class Extra(
                 if (mn == null) emptyList() else List(mn.length()) { mn.optString(it) }.filter { it.isNotEmpty() }.take(100),
                 o.optString("al").take(32).ifEmpty { null }, o.optInt("ai").coerceIn(0, 99), o.optInt("an").coerceIn(0, 100),
                 o.optInt("vn") == 1,
+                o.optJSONObject("gm")?.toString()?.takeIf { it.length < 2000 },
             )
             return if (e == NONE) NONE else e
         }

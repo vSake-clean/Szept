@@ -13,8 +13,8 @@ import pl.szept.App
 /** Po włączeniu telefonu automatycznie uruchamia odbieranie wiadomości. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (!App.core.hasIdentity) return
-        App.core.start()
+        if (!App.real.hasIdentity) return
+        App.real.start()
         MessengerService.start(context)
         SyncWorker.schedule(context)
     }
@@ -22,11 +22,11 @@ class BootReceiver : BroadcastReceiver() {
 
 class KeepAliveReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (!App.core.hasIdentity) return
+        if (!App.real.hasIdentity) return
         val pending = goAsync()
         val wl = context.getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "szept:keepalive").apply { acquire(30_000) }
-        App.core.keepalive()
+        App.real.keepalive()
         MessengerService.start(context)
         MessengerService.scheduleKeepAlive(context)
         CoroutineScope(Dispatchers.IO + pl.szept.core.CrashLog.handler).launch {

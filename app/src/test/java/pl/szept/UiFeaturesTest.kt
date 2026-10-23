@@ -242,10 +242,18 @@ class UiFeaturesTest {
         rule.onNodeWithText("Opublikuj").performClick()
         until("relacja zapisana") { core.db.stories().any { it.body == "Piękny dzień!" } }
         waitGone("Nowa relacja")
+        // zegar stoi — relacja sama by się przewinęła i zamknęła po kilku sekundach
+        rule.mainClock.autoAdvance = false
         rule.onNodeWithText("Twoja relacja").performClick()
-        waitText("Piękny dzień!")
-        waitText("wyświetle")
+        // relacje wczytują się w tle — przesuwamy zegar po klatce, aż się pojawi
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && rule.onAllNodesWithText("Piękny dzień!").fetchSemanticsNodes().isEmpty()) {
+            rule.mainClock.advanceTimeByFrame(); rule.waitForIdle(); Thread.sleep(50)
+        }
+        check(rule.onAllNodesWithText("Piękny dzień!").fetchSemanticsNodes().isNotEmpty()) { "brak treści relacji" }
+        check(rule.onAllNodesWithText("wyświetle", substring = true).fetchSemanticsNodes().isNotEmpty()) { "brak licznika wyświetleń" }
         rule.onNodeWithContentDescription("Zamknij").performClick()
+        rule.mainClock.autoAdvance = true
 
         // ---- wiadomość do wielu ----
         go(Screen.Broadcast)

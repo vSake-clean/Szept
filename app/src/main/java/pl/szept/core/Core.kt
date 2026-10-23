@@ -478,6 +478,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         try { courierForward(); refreshCourierSubs() } catch (e: Exception) { Log.w(TAG, "kurier", e) }
         try { rotatePrekey() } catch (e: Exception) { Log.w(TAG, "rotacja kluczy", e) }
         try { sendPresence() } catch (e: Exception) { Log.w(TAG, "status", e) }
+        try { runAutoClean() } catch (e: Exception) { Log.w(TAG, "czyszczenie", e) }
         try {
             purgeStories()
             val now = System.currentTimeMillis()
@@ -738,6 +739,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             else if (st == "x" && old?.state == "x") cur // „nieaktywny od…” — zachowujemy pierwszy moment
             else cur + (from to Presence(st, System.currentTimeMillis() - age))
         }
+        // rozmówca wszedł do aplikacji — wysyłamy wiadomości „gdy będzie online”
+        if (st == "a") releaseWhenOnline(from)
     }
 
     /** Stan rozmówcy do pokazania (null = nie udostępnia albo jeszcze nie wiadomo). */
@@ -823,7 +826,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     fun wipeByAdmin() { if (sanctionOf(myPub)?.mode == "del") wipeAccount() }
 
     /** Typy kopert odrzucane od osoby wyciszonej (od zablokowanej/usuniętej — wszystkie). */
-    private val MUTED_TYPES = setOf("msg", "react", "edit", "vote", "pin", "story", "typ", "call", "gcall", "loc", "shot", "pres")
+    private val MUTED_TYPES = setOf("msg", "react", "edit", "vote", "pin", "story", "typ", "call", "gcall", "loc", "shot", "pres", "gmv")
 
     /**
      * Nakłada (albo zdejmuje — mode „none”) sankcję. Ukarana osoba dostaje też wiadomość od konta „Szept”.
@@ -1427,6 +1430,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     if (m == null) db.addTombstone(id, myPub) else deleteLocal(m)
                 }
             }
+            "gmv" -> handleSelfGameMove(p)
             "react" -> {
                 val chatId = selfChat(p, gid) ?: return
                 val m = db.message(p.optString("id"))?.takeIf { it.chat == chatId } ?: return
@@ -1579,6 +1583,94 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (media != null) { db.addDownload("story:$id", media); kickDownloads() }
     }
 
+    // ================= 3.0: wyślij gdy online, automatyczne czyszczenie, gry =================
+
+    /** Czas „zaplanowania” wiadomości czekającej, aż rozmówca będzie online (daleka przyszłość). */
+    private val WHEN_ONLINE_AT = 4_000_000_000_000L
+
+    fun isWhenOnline(s: Scheduled) = s.at >= WHEN_ONLINE_AT
+
+    /** Wiadomość czeka i wysyła się, gdy rozmówca otworzy Szepta (status „aktywny”). */
+    fun scheduleWhenOnline(chatId: String, text: String, replyTo: Message? = null, extra: Extra = Extra.NONE): Scheduled? {
+        val peer = db.chat(chatId)?.peer ?: return null
+        if (seenOf(peer)?.first == Seen.ACTIVE) {
+            scope.launch { try { sendText(chatId, text, replyTo = replyTo, extra = extra) } catch (_: SendException) {} }
+            return null
+        }
+        return schedule(chatId, WHEN_ONLINE_AT, Kind.TEXT, text, null, null, null, replyTo, extra)
+    }
+
+    private fun releaseWhenOnline(pk: String) {
+        val waiting = db.scheduled(dmChatId(pk)).filter { isWhenOnline(it) }
+        if (waiting.isEmpty()) return
+        val now = System.currentTimeMillis()
+        waiting.forEach { db.addScheduled(it.copy(at = now)) }
+        scheduleKick.trySend(Unit)
+    }
+
+    /** Automatyczne usuwanie starych wiadomości w rozmowie: 0 = wyłączone, inaczej liczba dni. */
+    fun autoCleanDays(chatId: String): Int = try { JSONObject(prefs.getString("autoclean", "{}")!!).optInt(chatId) } catch (e: Exception) { 0 }
+
+    fun setAutoClean(chatId: String, days: Int) {
+        val o = try { JSONObject(prefs.getString("autoclean", "{}")!!) } catch (e: Exception) { JSONObject() }
+        if (days <= 0) o.remove(chatId) else o.put(chatId, days)
+        prefs.edit().putString("autoclean", o.toString()).apply()
+        if (days > 0) scope.launch { runAutoClean(force = true) }
+    }
+
+    /** Usuwa u mnie wiadomości starsze niż ustawiona liczba dni (raz na godzinę). */
+    fun runAutoClean(force: Boolean = false): Int {
+        val now = System.currentTimeMillis()
+        if (!force && now - prefs.getLong("autoclean_at", 0) < 3600_000L) return 0
+        prefs.edit().putLong("autoclean_at", now).apply()
+        val o = try { JSONObject(prefs.getString("autoclean", "{}")!!) } catch (e: Exception) { return 0 }
+        var n = 0
+        for (chatId in o.keys().asSequence().toList()) {
+            val days = o.optInt(chatId); if (days <= 0) continue
+            val old = db.messagesBefore(chatId, now - days * 86400_000L)
+            old.forEach { m -> try { deleteLocal(m); n++ } catch (e: Exception) { CrashLog.record("Automatyczne czyszczenie", e) } }
+        }
+        return n
+    }
+
+    /** Nowa gra w rozmowie. */
+    suspend fun startGame(chatId: String, type: String): Message {
+        val (body, game) = when (type) {
+            Games.DICE -> {
+                val v = Games.rollDice()
+                "🎲 Rzut kośćmi: ${v.joinToString(" i ")} (razem ${v.sum()})" to JSONObject().put("g", Games.DICE).put("v", org.json.JSONArray(v))
+            }
+            Games.TTT -> "❌⭕ Kółko i krzyżyk — zagraj w aktualnej wersji Szepta" to JSONObject().put("g", Games.TTT)
+            Games.FAST -> "⚡ Kto szybciej? — zagraj w aktualnej wersji Szepta" to JSONObject().put("g", Games.FAST)
+            else -> throw SendException("Nieznana gra")
+        }
+        return send(chatId, Kind.TEXT, body, null, extra = Extra(game = game.toString()))
+    }
+
+    /** Ruch w grze (pole w kółku i krzyżyku, czas reakcji w „kto szybciej”). */
+    fun gameMove(msgId: String, mv: String) = scope.launch {
+        val m = db.message(msgId) ?: return@launch
+        if (m.ex.game == null) return@launch
+        canWrite(m.chat)?.let { return@launch }
+        val seq = db.gameMoves(msgId).count { it.sender == myPub }
+        val now = Clock.now()
+        if (!db.addGameMove(msgId, myPub, seq, mv, now)) return@launch
+        dispatch(target(JSONObject().put("t", "gmv").put("id", msgId).put("mv", mv.take(64)).put("sq", seq).put("ts", now), m.chat), participants(m.chat), null)
+    }
+
+    private fun handleGameMove(from: String, p: JSONObject, gid: String?) {
+        val chatId = chatOf(from, gid) ?: return
+        val m = db.message(p.optString("id")) ?: return
+        if (m.chat != chatId || m.ex.game == null) return
+        db.addGameMove(m.id, from, p.optInt("sq").coerceIn(0, 100), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
+    }
+
+    private fun handleSelfGameMove(p: JSONObject) {
+        val m = db.message(p.optString("id")) ?: return
+        if (m.ex.game == null) return
+        db.addGameMove(m.id, myPub, p.optInt("sq").coerceIn(0, 100), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
+    }
+
     // ================= odbiór =================
 
     private suspend fun processIncoming() {
@@ -1661,6 +1753,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             "call" -> calls.onSignal(from, p)
             "gcall" -> groupCalls.onSignal(from, p)
             "pres" -> handlePresence(from, p)
+            "gmv" -> handleGameMove(from, p, gid)
         }
     }
 
@@ -2686,6 +2779,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     fun setPin(code: String?, biometric: Boolean = biometricEnabled, autoLock: Long = autoLockMs) {
         val e = prefs.edit()
         if (code.isNullOrBlank()) e.putBoolean("lock", false).remove("pin_h").remove("pin_s").putBoolean("biometric", false)
+            .remove("decoy_h").remove("decoy_s")
         else {
             val salt = Crypto.randomBytes(8).hex()
             e.putBoolean("lock", true).putString("pin_s", salt).putString("pin_h", hashCode(salt, code))
@@ -2717,6 +2811,44 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     fun isWipeCode(code: String): Boolean {
         val salt = prefs.getString("wipe_s", null) ?: return false
         return prefs.getString("wipe_h", null) == hashCode(salt, code)
+    }
+
+    // ---- fałszywy PIN: otwiera osobny, „pusty” Szept ----
+
+    val hasDecoyPin: Boolean get() = prefs.getString("decoy_h", null) != null
+
+    fun setDecoyPin(code: String?) {
+        val e = prefs.edit()
+        if (code.isNullOrBlank()) e.remove("decoy_h").remove("decoy_s")
+        else {
+            val salt = Crypto.randomBytes(8).hex()
+            e.putString("decoy_s", salt).putString("decoy_h", hashCode(salt, code))
+        }
+        e.apply()
+    }
+
+    fun isDecoyPin(code: String): Boolean {
+        val salt = prefs.getString("decoy_s", null) ?: return false
+        return prefs.getString("decoy_h", null) == hashCode(salt, code)
+    }
+
+    // ---- zamaskowana ikona: kod, który w „kalkulatorze” otwiera Szept ----
+
+    val hasCalcCode: Boolean get() = prefs.getString("calc_h", null) != null
+
+    fun setCalcCode(code: String?) {
+        val e = prefs.edit()
+        if (code.isNullOrBlank()) e.remove("calc_h").remove("calc_s")
+        else {
+            val salt = Crypto.randomBytes(8).hex()
+            e.putString("calc_s", salt).putString("calc_h", hashCode(salt, code))
+        }
+        e.apply()
+    }
+
+    fun isCalcCode(code: String): Boolean {
+        val salt = prefs.getString("calc_s", null) ?: return false
+        return prefs.getString("calc_h", null) == hashCode(salt, code)
     }
 
     /** Wykonuje kod awaryjny. Zwraca true, jeśli usunięto też konto (trzeba wrócić do ekranu powitalnego). */

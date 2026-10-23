@@ -218,7 +218,7 @@ class CallService : Service() {
     override fun onCreate() {
         super.onCreate()
         CallNotifications.channels(this)
-        val core = App.core
+        val core = App.real
         val call = core.calls.state.value?.takeIf { it.active }
         val group = core.groupCalls.state.value?.takeIf { it.phase == pl.szept.call.GroupCallManager.Phase.ACTIVE }
         // startForegroundService wymaga startForeground — także gdy rozmowa zdążyła się skończyć (inaczej system wywraca aplikację)
@@ -269,10 +269,10 @@ class CallActionReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO + pl.szept.core.CrashLog.handler).launch {
             try {
                 when (intent.action) {
-                    CallNotifications.ACTION_DECLINE -> App.core.calls.decline()
-                    CallNotifications.ACTION_HANGUP -> { App.core.calls.hangup(); App.core.groupCalls.leave() }
-                    CallNotifications.ACTION_GDECLINE -> App.core.groupCalls.decline()
-                    CallNotifications.ACTION_GLEAVE -> App.core.groupCalls.leave()
+                    CallNotifications.ACTION_DECLINE -> App.real.calls.decline()
+                    CallNotifications.ACTION_HANGUP -> { App.real.calls.hangup(); App.real.groupCalls.leave() }
+                    CallNotifications.ACTION_GDECLINE -> App.real.groupCalls.decline()
+                    CallNotifications.ACTION_GLEAVE -> App.real.groupCalls.leave()
                 }
             } finally { pending.finish() }
         }

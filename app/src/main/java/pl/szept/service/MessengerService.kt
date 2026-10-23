@@ -54,9 +54,9 @@ class MessengerService : Service() {
             stopSelf()
             return
         }
-        App.core.start()
+        App.real.start()
         watch = scope.launch {
-            combine(App.core.relayStates, App.core.trimmed) { states, trimmed -> states to trimmed }.collectLatest { (states, trimmed) ->
+            combine(App.real.relayStates, App.real.trimmed) { states, trimmed -> states to trimmed }.collectLatest { (states, trimmed) ->
                 val ok = states.values.count { it == Relay.State.CONNECTED }
                 lastOk = ok; lastTotal = states.size; lastTrimmed = trimmed
                 try {
@@ -65,7 +65,7 @@ class MessengerService : Service() {
             }
         }
         // udostępnianie lokalizacji na żywo: odbiornik GPS działa tylko wtedy
-        liveWatch = scope.launch { App.core.liveActive.collect { on -> setLive(on) } }
+        liveWatch = scope.launch { App.real.liveActive.collect { on -> setLive(on) } }
         scheduleKeepAlive(this)
     }
 
@@ -81,7 +81,7 @@ class MessengerService : Service() {
             try {
                 ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(lastOk, lastTotal, lastTrimmed, true), fgsTypes(true))
             } catch (e: Exception) { Log.w("Szept", "usługa lokalizacji", e) }
-            locationOn = LocationHelper.startTracking(this) { l -> App.core.onLocation(l.latitude, l.longitude, l.accuracy) }
+            locationOn = LocationHelper.startTracking(this) { l -> App.real.onLocation(l.latitude, l.longitude, l.accuracy) }
         } else {
             LocationHelper.stopTracking(this)
             locationOn = false
@@ -90,7 +90,7 @@ class MessengerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        App.core.keepalive()
+        App.real.keepalive()
         return START_STICKY
     }
 
@@ -100,14 +100,14 @@ class MessengerService : Service() {
         super.onDestroy()
     }
 
-    private fun buildNotification(ok: Int, total: Int, trimmed: Boolean = false, live: Boolean = locationOn || App.core.liveActive.value): Notification =
+    private fun buildNotification(ok: Int, total: Int, trimmed: Boolean = false, live: Boolean = locationOn || App.real.liveActive.value): Notification =
         NotificationCompat.Builder(this, AndroidNotifier.CH_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_msg)
             .setContentTitle(if (live) "Szept: udostępniasz lokalizację na żywo" else "Szept odbiera wiadomości")
             .setContentText(
                 when {
                     total == 0 -> "Łączenie…"
-                    trimmed && App.core.bgMode == Core.BG_SAVER -> "Tryb oszczędny · sprawdzanie co ok. 10–15 min"
+                    trimmed && App.real.bgMode == Core.BG_SAVER -> "Tryb oszczędny · sprawdzanie co ok. 10–15 min"
                     trimmed -> "Tryb zrównoważony · $ok na żywo, pełna synchronizacja co ok. 10 min"
                     else -> "Połączono z $ok/$total przekaźnikami"
                 },

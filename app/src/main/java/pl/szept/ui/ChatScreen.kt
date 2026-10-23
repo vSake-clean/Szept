@@ -240,6 +240,9 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     var albumPreview by remember { mutableStateOf<List<Core.Attachment>?>(null) }
     // edytor zdjęcia: (indeks w albumie albo -1 = pojedyncze zdjęcie, plik)
     var gifPicker by remember { mutableStateOf(false) }
+    var gamePicker by remember { mutableStateOf(false) }
+    // tłumaczenie: (id wiadomości, wynik; null = trwa)
+    var translation by remember { mutableStateOf<Pair<String, String?>?>(null) }
     // GIF z rozmowy: podgląd z opcją „Zapisz w moich”
     var gifFor by remember { mutableStateOf<Pair<File, Message>?>(null) }
     var schedulePick by remember { mutableStateOf<((Long) -> Unit)?>(null) }
@@ -849,6 +852,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                     pickFile.launch(arrayOf("*/*"))
                                 }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) })
                                 DropdownMenuItem({ Text("GIF") }, { attachMenu = false; gifPicker = true }, leadingIcon = { Icon(Icons.Default.Gif, null) })
+                                DropdownMenuItem({ Text("🎮 Gra") }, { attachMenu = false; gamePicker = true })
                                 DropdownMenuItem({ Text("Ankieta") }, { attachMenu = false; pollDialog = true }, leadingIcon = { Icon(Icons.Default.BarChart, null) })
                                 DropdownMenuItem({ Text("Lokalizacja") }, { attachMenu = false; locationDialog = true }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
                             }
@@ -884,6 +888,16 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                 DropdownMenuItem({ Text("🕓 Zaplanuj wysłanie…") }, {
                                     sendMenu = false
                                     schedulePick = { at -> scheduleText(at) }
+                                })
+                                if (chat?.isGroup == false && !official) DropdownMenuItem({ Text("🟢 Wyślij, gdy będzie online") }, {
+                                    sendMenu = false
+                                    val t = text.trim()
+                                    if (t.isNotEmpty()) {
+                                        text = ""
+                                        val r = replyTo; replyTo = null
+                                        val s = core.scheduleWhenOnline(chatId, t, r)
+                                        toast(ctx, if (s == null) "Rozmówca jest teraz w aplikacji — wysłano" else "Wyślę, gdy rozmówca otworzy Szepta")
+                                    }
                                 })
                                 HorizontalDivider()
                                 Text(
@@ -940,6 +954,19 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             }) else null,
             onPickPeople = { pickDeleteFor = m; actionsFor = null },
             onTranscribe = if (pl.szept.core.Transcriber.available(ctx)) ({ actionsFor = null; transcribe(m) }) else null,
+            onTranslate = {
+                actionsFor = null
+                translation = m.id to null
+                work.launch {
+                    translation = try {
+                        val r = pl.szept.core.MessageTranslator.translate(pl.szept.data.Db.hideSpoilers(m.body))
+                        m.id to ("${pl.szept.core.MessageTranslator.languageName(r.from)} → ${pl.szept.core.MessageTranslator.languageName(r.to)}\n\n" + r.text)
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        m.id to ("⚠ " + (e.message ?: "Nie udało się przetłumaczyć"))
+                    }
+                }
+            },
         )
     }
     reactionsFor?.let { (m, l) -> ReactionsDialog(m, l) { reactionsFor = null } }
@@ -972,6 +999,24 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             onSchedule = { caption ->
                 schedulePick = { at -> albumPreview = null; text = ""; scheduleAtts(at, Kind.IMAGE, atts, caption) }
             },
+        )
+    }
+    if (gamePicker) GamePickerDialog(onDismiss = { gamePicker = false }) { type ->
+        gamePicker = false
+        work.launch { try { core.startGame(chatId, type) } catch (e: Exception) { toast(ctx, sendError(e)) } }
+    }
+    translation?.let { (_, res) ->
+        AlertDialog(
+            onDismissRequest = { translation = null },
+            title = { Text("🌐 Tłumaczenie") },
+            text = {
+                if (res == null) Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.CircularProgressIndicator(Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
+                    Text("Tłumaczę w telefonie… (za pierwszym razem pobieram pakiet języka)")
+                } else androidx.compose.foundation.text.selection.SelectionContainer { Text(res) }
+            },
+            confirmButton = { TextButton(onClick = { translation = null }) { Text("Zamknij") } },
+            dismissButton = { if (res != null && !res.startsWith("⚠")) TextButton(onClick = { copyText(ctx, res.substringAfter("\n\n")) }) { Text("Kopiuj") } },
         )
     }
     if (gifPicker) GifPickerDialog(onDismiss = { gifPicker = false }) { f ->

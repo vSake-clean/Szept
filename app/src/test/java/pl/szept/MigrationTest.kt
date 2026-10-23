@@ -60,7 +60,7 @@ class MigrationTest {
         assertEquals(listOf("b".repeat(64)), db.group("g1")!!.removed)
         db.insertMessage(m.copy(id = "m2", reply = Reply("m1", m.sender, "cześć", "text")))
         assertEquals("m1", db.message("m2")!!.reply!!.id)
-        assertEquals(7, db.dbVersion)
+        assertEquals(8, db.dbVersion)
         // v7: moderacja w grupach — zapis i odczyt
         val g0 = db.group("g1")!!
         db.saveGroup(g0.copy(muted = mapOf("c".repeat(64) to Long.MAX_VALUE), banned = listOf("b".repeat(64))))

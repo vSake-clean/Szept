@@ -15,10 +15,10 @@ import java.util.concurrent.TimeUnit
 /** Zapasowy mechanizm: co 15 min sprawdza wiadomości, nawet gdy system zabił usługę. */
 class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
-        if (!App.core.hasIdentity) return Result.success()
-        App.core.start()
+        if (!App.real.hasIdentity) return Result.success()
+        App.real.start()
         MessengerService.start(applicationContext)
-        App.core.keepalive()
+        App.real.keepalive()
         delay(25_000)
         return Result.success()
     }

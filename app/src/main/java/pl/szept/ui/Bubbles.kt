@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -243,7 +244,7 @@ private fun AlbumTile(m: Message, modifier: Modifier) {
 @Composable
 private fun Content(m: Message, votes: List<Vote>, onVote: (List<Int>) -> Unit) {
     when (m.kind) {
-        Kind.TEXT -> RichText(m.body)
+        Kind.TEXT -> if (m.ex.game != null) GameContent(m) else RichText(m.body)
         Kind.IMAGE -> { ImageContent(m); Caption(m) }
         Kind.VIDEO -> if (m.ex.round) RoundVideoContent(m) else { VideoContent(m); Caption(m) }
         Kind.VOICE -> VoiceContent(m)
@@ -258,24 +259,17 @@ private fun Content(m: Message, votes: List<Vote>, onVote: (List<Int>) -> Unit) 
 
 private val linkRx = Regex("""(https?://[^\s]+)|(@[\p{L}\p{N}_.\-]+)""")
 
-/** Tekst z klikalnymi linkami i wyróżnionymi wzmiankami @. */
+/** Tekst z linkami, wzmiankami @ i formatowaniem (*pogrubienie*, _kursywa_, ~przekreślenie~, `kod`, ||spoiler||). */
 @Composable
 fun RichText(text: String, style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge) {
     val primary = MaterialTheme.colorScheme.primary
-    val annotated = remember(text, primary) {
-        buildAnnotatedString {
-            var last = 0
-            for (mt in linkRx.findAll(text)) {
-                append(text.substring(last, mt.range.first))
-                val v = mt.value
-                if (v.startsWith("@")) withStyle(SpanStyle(color = primary, fontWeight = FontWeight.Bold)) { append(v) }
-                else withLink(LinkAnnotation.Url(v.trimEnd('.', ',', ')', '!', '?'), TextLinkStyles(SpanStyle(color = primary, textDecoration = TextDecoration.Underline)))) {
-                    append(v)
-                }
-                last = mt.range.last + 1
-            }
-            append(text.substring(last))
-        }
+    val spoilerBg = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+    val codeBg = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    val parts = remember(text) { TextFormat.parse(text) }
+    // odsłonięte spoilery (dotknięcie)
+    var revealed by remember(text) { mutableStateOf(emptySet<Int>()) }
+    val annotated = remember(parts, primary, revealed) {
+        TextFormat.annotate(parts, primary, spoilerBg, codeBg, revealed) { id -> revealed = revealed + id }
     }
     Text(annotated, style = style)
 }

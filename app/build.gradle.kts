@@ -50,8 +50,8 @@ android {
         applicationId = "pl.szept.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "2.9"
+        versionCode = 21
+        versionName = "3.0"
         // klucz KLIPY (GIF-y) — można też wpisać w aplikacji lub rozesłać z panelu administratora
         val klipy = rootProject.file("klipy.key").takeIf { it.exists() }?.readText()?.trim() ?: secret("KLIPY_KEY") ?: ""
         buildConfigField("String", "KLIPY_KEY", "\"" + klipy.filter { it.isLetterOrDigit() || it == '-' || it == '_' } + "\"")
@@ -162,6 +162,9 @@ dependencies {
     implementation("fr.acinq.secp256k1:secp256k1-kmp-jni-android:0.20.0")
     // szyfrowanie bazy w telefonie
     implementation("net.zetetic:sqlcipher-android:4.16.0@aar")
+    // tłumaczenie wiadomości w telefonie (pakiety językowe pobierane raz, potem offline)
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
     implementation("androidx.sqlite:sqlite:2.6.2")
     // okrągłe notatki wideo (kamera w aplikacji)
     val camerax = "1.4.2"

@@ -14,7 +14,7 @@ import org.json.JSONObject
  */
 class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
 
-    override val version = 7
+    override val version = 8
     private val helper: DbHelper
     /** Czy baza jest zaszyfrowana w telefonie. */
     val encrypted: Boolean
@@ -121,9 +121,15 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         createV5Tables(db)
         createV6(db)
         createV7(db)
+        createV8(db)
     }
 
     /** Wersja 6: znaczek weryfikacji, oznaczenie „usunięte u rozmówcy”. */
+    /** v8: ruchy w grach w czacie. */
+    private fun createV8(db: Sql) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS gmoves(game TEXT, sender TEXT, seq INTEGER, mv TEXT, ts INTEGER, PRIMARY KEY(game, sender, seq))")
+    }
+
     /** v7: moderacja w grupach (wyciszeni, zbanowani). */
     private fun createV7(db: Sql) {
         db.execSQL("ALTER TABLE grps ADD COLUMN moder TEXT DEFAULT '{}'")
@@ -177,6 +183,7 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         if (oldVersion < 5) createV5Tables(db)
         if (oldVersion < 6) createV6(db)
         if (oldVersion < 7) createV7(db)
+        if (oldVersion < 8) createV8(db)
     }
 
     private val w: Sql get() = helper.writable
@@ -431,6 +438,26 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         if (ok) changed()
         return ok
     }
+
+    // ---------------- gry ----------------
+
+    data class GameMove(val sender: String, val seq: Int, val mv: String, val ts: Long)
+
+    fun addGameMove(game: String, sender: String, seq: Int, mv: String, ts: Long): Boolean {
+        val r = w.insertWithOnConflict("gmoves", null, ContentValues().apply {
+            put("game", game); put("sender", sender); put("seq", seq); put("mv", mv.take(64)); put("ts", ts)
+        }, SQLiteDatabase.CONFLICT_IGNORE)
+        if (r != -1L) changed()
+        return r != -1L
+    }
+
+    fun gameMoves(game: String): List<GameMove> = q("SELECT * FROM gmoves WHERE game=? ORDER BY ts, sender, seq", game) { c ->
+        buildList { while (c.moveToNext()) add(GameMove(c.str("sender") ?: "", c.int("seq"), c.str("mv") ?: "", c.lng("ts"))) }
+    }
+
+    /** Wiadomości starsze niż [before] (do automatycznego czyszczenia). */
+    fun messagesBefore(chat: String, before: Long, limit: Int = 300): List<Message> =
+        q("SELECT * FROM messages WHERE chat=? AND ts<? ORDER BY ts LIMIT $limit", chat, before) { c -> buildList { while (c.moveToNext()) add(c.toMessage()) } }
 
     fun message(id: String): Message? = q("SELECT * FROM messages WHERE id=?", id) { c -> if (c.moveToFirst()) c.toMessage() else null }
 
@@ -906,12 +933,17 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
             else -> "Wiadomość czasowa"
         }
 
+        private val spoilerRx = Regex("""\|\|(.+?)\|\|""")
+        /** Spoiler (||tekst||) nie może wyciec w powiadomieniu ani na liście rozmów. */
+        fun hideSpoilers(t: String) = t.replace(spoilerRx) { "▒".repeat(it.groupValues[1].length.coerceIn(3, 8)) }
+
         fun preview(m: Message): String = when {
             // treści czasowych/znikających nie pokazujemy na liście czatów ani w powiadomieniach
             m.xmode == XMode.AFTER_OPEN -> "⏱ " + timedLabel(m.kind)
             m.xmode == XMode.AFTER_SEND -> "⏱ Wiadomość znikająca"
-            m.kind == Kind.TEXT -> m.body
-            m.kind == Kind.IMAGE -> "📷 Zdjęcie" + if (m.body.isNotEmpty()) ": " + m.body else ""
+            m.kind == Kind.TEXT && m.ex.game != null -> m.body.substringBefore(" — ")
+            m.kind == Kind.TEXT -> hideSpoilers(m.body)
+            m.kind == Kind.IMAGE -> "📷 Zdjęcie" + if (m.body.isNotEmpty()) ": " + hideSpoilers(m.body) else ""
             m.kind == Kind.VOICE -> "🎤 Wiadomość głosowa"
             m.kind == Kind.VIDEO -> "🎬 Wideo" + if (m.body.isNotEmpty()) ": " + m.body else ""
             m.kind == Kind.FILE -> "📎 " + (m.media?.name ?: "Plik")

@@ -95,6 +95,8 @@ object UiPrefs {
     var delMark by mutableIntStateOf(0)
     /** Całkowity zakaz zrzutów ekranu w Szepcie. */
     var noShots by mutableStateOf(false)
+    /** Na liście ostatnich aplikacji widać tylko logo Szepta, bez treści rozmów. */
+    var hideRecents by mutableStateOf(true)
     private var loaded = false
 
     fun load(ctx: Context) {
@@ -104,12 +106,13 @@ object UiPrefs {
         theme = p.getInt("theme", 0); accent = p.getInt("accent", 0)
         fontScale = p.getFloat("font", 1f); wallpaper = p.getString("wall", "") ?: ""
         delMark = p.getInt("delmark", 0); noShots = p.getBoolean("noshots", false)
+        hideRecents = p.getBoolean("hiderecents", true)
     }
 
     fun save(ctx: Context) {
         ctx.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
             .putInt("theme", theme).putInt("accent", accent).putFloat("font", fontScale).putString("wall", wallpaper)
-            .putInt("delmark", delMark).putBoolean("noshots", noShots).apply()
+            .putInt("delmark", delMark).putBoolean("noshots", noShots).putBoolean("hiderecents", hideRecents).apply()
     }
 
     fun wallpaperFile(ctx: Context) = File(ctx.filesDir, "wallpaper.jpg")

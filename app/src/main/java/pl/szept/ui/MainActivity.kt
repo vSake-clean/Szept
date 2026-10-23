@@ -63,13 +63,13 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) handleIntent(intent)
-        locked = App.core.hasIdentity && App.core.lockEnabled && !vm.unlocked
+        locked = App.real.hasIdentity && App.real.lockEnabled && !vm.unlocked
         UiPrefs.load(this)
         setSecure(false)
-        setContent { SzeptTheme { Root(this) } }
+        setContent { SzeptTheme { androidx.compose.runtime.key(App.decoyActive) { Root(this) } } }
         // przychodzące połączenie: pokaż się nad ekranem blokady i zapal ekran
         lifecycleScope.launch {
-            kotlinx.coroutines.flow.combine(App.core.calls.state, App.core.groupCalls.state) { c, g -> c to g }.collect { (c, g) ->
+            kotlinx.coroutines.flow.combine(App.real.calls.state, App.real.groupCalls.state) { c, g -> c to g }.collect { (c, g) ->
                 val on = c?.active == true || g?.active == true
                 if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(on); setTurnScreenOn(on) }
                 else @Suppress("DEPRECATION") {
@@ -79,12 +79,12 @@ class MainActivity : FragmentActivity() {
                 when (c?.phase) {
                     pl.szept.call.CallManager.Phase.RINGING, pl.szept.call.CallManager.Phase.DIALING -> callHidden = false
                     // zakończona w tle (ekran schowany) — nie ma czego pokazywać
-                    pl.szept.call.CallManager.Phase.ENDED -> if (callHidden) App.core.calls.clearEnded()
+                    pl.szept.call.CallManager.Phase.ENDED -> if (callHidden) App.real.calls.clearEnded()
                     else -> {}
                 }
                 when (g?.phase) {
                     pl.szept.call.GroupCallManager.Phase.RINGING -> if (c?.active != true) callHidden = false
-                    pl.szept.call.GroupCallManager.Phase.ENDED -> if (callHidden) App.core.groupCalls.clearEnded()
+                    pl.szept.call.GroupCallManager.Phase.ENDED -> if (callHidden) App.real.groupCalls.clearEnded()
                     else -> {}
                 }
                 if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -98,6 +98,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onPause() {
+        if (Build.VERSION.SDK_INT < 33 && UiPrefs.hideRecents) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         super.onPause()
         vm.lastPause = SystemClock.elapsedRealtime()
     }
@@ -177,17 +178,22 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (Build.VERSION.SDK_INT < 33 && UiPrefs.hideRecents) setSecure(secureWanted)
         if (externalLaunch) { externalLaunch = false; vm.lastPause = 0L }
         // ponowna blokada po czasie bezczynności (autoLockMs; 0 = natychmiast)
-        if (App.core.hasIdentity && App.core.lockEnabled && vm.unlocked) {
+        if (App.real.hasIdentity && App.real.lockEnabled && vm.unlocked) {
             val idle = SystemClock.elapsedRealtime() - vm.lastPause
-            if (vm.lastPause > 0 && idle >= App.core.autoLockMs) { vm.unlocked = false; locked = true }
+            if (vm.lastPause > 0 && idle >= App.real.autoLockMs) { vm.unlocked = false; locked = true }
         }
     }
 
     fun isLocked() = locked
-    fun unlock() { vm.unlocked = true; locked = false }
-    fun relock() { vm.unlocked = false; locked = App.core.lockEnabled }
+    /** decoy = wpisano fałszywy PIN — pokaż „pusty” Szept. */
+    fun unlock(decoy: Boolean = false) {
+        if (decoy != App.decoyActive) { nav.home(); if (decoy) App.enterDecoy(this) else App.exitDecoy() }
+        vm.unlocked = true; locked = false
+    }
+    fun relock() { vm.unlocked = false; locked = App.real.lockEnabled }
 
     /** Po wpisaniu kodu-wipe, który usunął konto — wróć do ekranu powitalnego. */
     fun onWiped() {
@@ -212,9 +218,18 @@ class MainActivity : FragmentActivity() {
     }
 
     /** Blokada zrzutów ekranu: na życzenie ekranu albo zawsze (ustawienie „Zakaz zrzutów ekranu”). */
+    private var secureWanted = false
+
     fun setSecure(on0: Boolean) {
+        secureWanted = on0
         val on = on0 || UiPrefs.noShots
         if (on) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        applyRecents()
+    }
+
+    /** Podgląd w „ostatnich aplikacjach”: bez treści (Android 13+ wprost, starsze — zasłona przy wyjściu). */
+    fun applyRecents() {
+        if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!UiPrefs.hideRecents)
     }
 
     fun askNotifications() {
@@ -286,7 +301,7 @@ fun Root(act: MainActivity) {
         return
     }
     if (act.isLocked()) {
-        LockScreen(act) { act.unlock() }
+        LockScreen(act) { decoy -> act.unlock(decoy) }
         return
     }
     val nav = act.nav

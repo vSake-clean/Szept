@@ -59,10 +59,6 @@
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -74,6 +70,41 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!-- zwykła ikona Szeptu; wyłączana, gdy Szept udaje kalkulator -->
+        <activity-alias
+            android:name=".Launcher"
+            android:enabled="true"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity
+            android:name=".ui.CalculatorActivity"
+            android:exported="false"
+            android:label="Kalkulator"
+            android:icon="@mipmap/ic_calc"
+            android:roundIcon="@mipmap/ic_calc"
+            android:theme="@style/Theme.Szept" />
+
+        <!-- zamaskowana ikona: „Kalkulator”, który otwiera Szept po wpisaniu kodu -->
+        <activity-alias
+            android:name=".Calculator"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Kalkulator"
+            android:icon="@mipmap/ic_calc"
+            android:roundIcon="@mipmap/ic_calc"
+            android:targetActivity=".ui.CalculatorActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".service.CallService"

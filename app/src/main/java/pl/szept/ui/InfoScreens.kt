@@ -225,6 +225,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
                     supportingContent = { Text("Wiadomości nadal przychodzą, ale bez dźwięku i powiadomień") },
                     trailingContent = { Switch(chat?.muted == true, { on -> core.setMuted("g:$gid", on) }) },
                 )
+                AutoCleanRow("g:$gid")
             }
             items(group.members.sortedWith(compareBy({ !group.isAdmin(it.pk) }, { it.name.lowercase() })), key = { it.pk }) { mem ->
                 val name = if (mem.pk == me) "Ty" else names?.get(mem.pk) ?: mem.name.ifBlank { mem.pk.take(8) }

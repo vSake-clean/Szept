@@ -286,6 +286,7 @@ fun ProfileView(nav: Nav, pk: String) {
                     OutlinedButton(onClick = { pl.szept.service.AndroidNotifier.openChatSound(ctx, dmChatId(pk), contact?.display ?: "") }, Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.MusicNote, null); Spacer(Modifier.width(6.dp)); Text("Własny dźwięk powiadomień")
                     }
+                    AutoCleanRow(dmChatId(pk))
                 }
                 OutlinedButton(onClick = { core.setBlocked(pk, !(contact?.blocked ?: false)) }, Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Block, null); Spacer(Modifier.width(6.dp))
@@ -447,6 +448,11 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
     var wipeDialog by remember { mutableStateOf(false) }
     var hiddenDialog by remember { mutableStateOf(false) }
     var revealDialog by remember { mutableStateOf(false) }
+    var decoyDialog by remember { mutableStateOf(false) }
+    var calcDialog by remember { mutableStateOf(false) }
+    // w „pustym” Szepcie (fałszywy PIN) nie pokazujemy ustawień prawdziwego konta
+    val decoy = App.decoyActive
+    var hideRecents by remember { mutableStateOf(UiPrefs.hideRecents) }
     var notifLevel by remember { mutableStateOf(core.notifPrivacy) }
     var fsOn by remember { mutableStateOf(core.forwardSecrecy) }
     var noShots by remember { mutableStateOf(UiPrefs.noShots) }
@@ -462,7 +468,9 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
     var secVer by remember { mutableIntStateOf(0) }
     var confirm by remember { mutableStateOf<String?>(null) }
     val hasHidden = remember(changes, hiddenDialog, secVer) { core.hasHiddenPin }
-    val lockOn = remember(changes, pinDialog, secVer) { core.lockEnabled }
+    val lockOn = remember(changes, pinDialog, secVer) { decoy || core.lockEnabled }
+    val decoyOn = remember(changes, decoyDialog, secVer) { App.real.hasDecoyPin }
+    var calcOn by remember { mutableStateOf(Disguise.isOn(ctx)) }
     val wipeOn = remember(changes, wipeDialog, secVer) { core.hasWipeCode }
     val bioOn = remember(secVer) { core.biometricEnabled }
     val canBiometric = remember {
@@ -484,19 +492,21 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
                         headlineContent = { Text("PIN jest włączony") },
                         supportingContent = { Text("Aplikacja prosi o PIN przy każdym otwarciu") },
                         trailingContent = {
-                            Row {
+                            if (!decoy) Row {
                                 IconButton(onClick = { pinDialog = true }) { Icon(Icons.Default.Edit, "Zmień PIN") }
                                 IconButton(onClick = { confirm = "pin" }) { Icon(Icons.Default.Delete, "Usuń PIN", tint = MaterialTheme.colorScheme.error) }
                             }
                         },
                     )
-                    if (canBiometric) ListItem(
+                    if (canBiometric && !decoy) ListItem(
                         leadingContent = { Icon(Icons.Default.Fingerprint, null) },
                         headlineContent = { Text("Odblokowanie odciskiem palca / twarzą") },
                         trailingContent = { Switch(bioOn, { on -> core.setBiometric(on); secVer++ }) },
                     )
                 }
                 HorizontalDivider()
+            }
+            if (!decoy) item {
                 SectionTitle("Kod awaryjny (wipe)")
                 Text(
                     "Drugi, osobny kod. Gdy ktoś Cię zmusi do odblokowania, wpisz go zamiast PIN-u — aplikacja po cichu usunie wybrane dane.",
@@ -512,6 +522,45 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
                             IconButton(onClick = { wipeDialog = true }) { Icon(Icons.Default.Edit, "Zmień kod awaryjny") }
                             IconButton(onClick = { confirm = "wipe" }) { Icon(Icons.Default.Delete, "Usuń kod awaryjny", tint = MaterialTheme.colorScheme.error) }
                         }
+                    },
+                )
+                HorizontalDivider(Modifier.padding(top = 8.dp))
+                SectionTitle("Fałszywy PIN")
+                Text(
+                    "Drugi PIN, który otwiera „pusty” Szept — bez Twoich rozmów i kontaktów. Prawdziwe wiadomości dalej przychodzą, " +
+                        "ale bez powiadomień, dopóki nie wpiszesz prawdziwego PIN-u (np. po zablokowaniu ekranu).",
+                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (!lockOn) Text("Najpierw ustaw PIN powyżej.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                else if (!decoyOn) OutlinedButton(onClick = { decoyDialog = true }, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("Ustaw fałszywy PIN")
+                } else ListItem(
+                    headlineContent = { Text("Fałszywy PIN jest ustawiony") },
+                    trailingContent = {
+                        Row {
+                            IconButton(onClick = { decoyDialog = true }) { Icon(Icons.Default.Edit, "Zmień fałszywy PIN") }
+                            IconButton(onClick = { core.setDecoyPin(null); secVer++; toast(ctx, "Fałszywy PIN usunięty") }) {
+                                Icon(Icons.Default.Delete, "Usuń fałszywy PIN", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    },
+                )
+                HorizontalDivider(Modifier.padding(top = 8.dp))
+                SectionTitle("Zamaskowana ikona")
+                Text(
+                    "Na ekranie głównym zamiast Szeptu widać „Kalkulator”, który naprawdę liczy. Szept otwiera się dopiero, " +
+                        "gdy wpiszesz swój kod i naciśniesz „=”. Zmiana ikony może potrwać kilka sekund; czasem trzeba ją od nowa dodać na ekran główny.",
+                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ListItem(
+                    headlineContent = { Text("Udawaj kalkulator") },
+                    supportingContent = { Text(if (core.hasCalcCode) "Kod ustawiony — dotknij, aby zmienić" else "Najpierw ustaw kod (dotknij)") },
+                    modifier = Modifier.clickable { calcDialog = true },
+                    trailingContent = {
+                        Switch(calcOn, { v ->
+                            if (v && !core.hasCalcCode) calcDialog = true
+                            else { Disguise.set(ctx, v); calcOn = v; toast(ctx, if (v) "Szept udaje teraz kalkulator" else "Przywrócono ikonę Szeptu") }
+                        })
                     },
                 )
                 HorizontalDivider(Modifier.padding(top = 8.dp))
@@ -531,6 +580,8 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
                     TextButton(onClick = { core.setHiddenPin(null); toast(ctx, "Wyłączono — wszystkie czaty są znowu widoczne") }) { Text("Wyłącz ukrywanie") }
                 }
                 HorizontalDivider(Modifier.padding(top = 8.dp))
+            }
+            item {
                 SectionTitle("Treść powiadomień")
                 listOf(
                     pl.szept.core.Core.NOTIF_FULL to "Nadawca i treść",
@@ -551,6 +602,11 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
                     headlineContent = { Text("Zakaz zrzutów ekranu w Szepcie") },
                     supportingContent = { Text("Nikt (także Ty) nie zrobi zrzutu ani nagrania ekranu żadnej rozmowy.") },
                     trailingContent = { Switch(noShots, { v -> noShots = v; UiPrefs.noShots = v; UiPrefs.save(ctx); act.setSecure(false) }) },
+                )
+                ListItem(
+                    headlineContent = { Text("Ukryj podgląd w ostatnich aplikacjach") },
+                    supportingContent = { Text("Na liście ostatnio używanych aplikacji Szept jest zasłonięty, więc nikt nie podejrzy rozmowy.") },
+                    trailingContent = { Switch(hideRecents, { v -> hideRecents = v; UiPrefs.hideRecents = v; UiPrefs.save(ctx); act.applyRecents() }) },
                 )
                 Text(
                     "Wiadomości czasowych i zdjęć czasowych nie da się zrobić zrzutem ekranu nigdy. Gdy ktoś zrobi zrzut rozmowy, w czacie pojawia się o tym informacja.",
@@ -616,6 +672,7 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
     }
     if (pinDialog) SetPinDialog(canBiometric, onDismiss = { pinDialog = false }) { pin, bio ->
         if (core.isWipeCode(pin)) toast(ctx, "PIN musi być inny niż kod awaryjny")
+        else if (core.isDecoyPin(pin)) toast(ctx, "PIN musi być inny niż fałszywy PIN")
         else { core.setPin(pin, bio); pinDialog = false; secVer++; toast(ctx, "PIN zapisany") }
     }
     confirm?.let { what ->
@@ -645,10 +702,29 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Anuluj") } },
         )
     }
+    if (decoyDialog) HiddenPinDialog(
+        onDismiss = { decoyDialog = false }, title = "Fałszywy PIN",
+        note = "Wpisz go na ekranie blokady zamiast prawdziwego PIN-u, a otworzy się pusty Szept.",
+    ) { pin ->
+        when {
+            core.verifyPin(pin) -> toast(ctx, "Fałszywy PIN musi być inny niż prawdziwy")
+            core.isWipeCode(pin) -> toast(ctx, "Fałszywy PIN musi być inny niż kod awaryjny")
+            else -> { core.setDecoyPin(pin); decoyDialog = false; secVer++; toast(ctx, "Fałszywy PIN zapisany") }
+        }
+    }
+    if (calcDialog) HiddenPinDialog(
+        onDismiss = { calcDialog = false }, title = "Kod do kalkulatora",
+        note = "W kalkulatorze wpisz ten kod i naciśnij „=”, żeby otworzyć Szept. Zapamiętaj go!",
+    ) { code ->
+        core.setCalcCode(code); calcDialog = false
+        Disguise.set(ctx, true); calcOn = true
+        toast(ctx, "Szept udaje teraz kalkulator")
+    }
     if (hiddenDialog) HiddenPinDialog(onDismiss = { hiddenDialog = false }) { pin ->
         when {
             core.verifyPin(pin) -> toast(ctx, "Użyj innego kodu niż PIN blokady")
             core.isWipeCode(pin) -> toast(ctx, "Użyj innego kodu niż kod awaryjny")
+            core.isDecoyPin(pin) -> toast(ctx, "Użyj innego kodu niż fałszywy PIN")
             else -> { core.setHiddenPin(pin); hiddenDialog = false; toast(ctx, "Ustawiono PIN ukrytych czatów") }
         }
     }
@@ -704,15 +780,16 @@ private fun SetPinDialog(canBiometric: Boolean, onDismiss: () -> Unit, onSave: (
 }
 
 @Composable
-private fun HiddenPinDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+private fun HiddenPinDialog(onDismiss: () -> Unit, title: String = "PIN ukrytych czatów", note: String? = null, onSave: (String) -> Unit) {
     var pin by remember { mutableStateOf("") }
     var again by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("PIN ukrytych czatów") },
+        title = { Text(title) },
         text = {
             Column {
+                note?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp)) }
                 PinField(pin, "PIN (4–8 cyfr)") { pin = it }
                 Spacer(Modifier.height(8.dp))
                 PinField(again, "Powtórz PIN") { again = it }
@@ -798,6 +875,7 @@ private fun WipeDialog(onDismiss: () -> Unit) {
                     code.length < 4 -> err = "Kod za krótki"
                     code != again -> err = "Kody się różnią"
                     core.verifyPin(code) -> err = "Kod awaryjny musi być inny niż PIN"
+                    core.isDecoyPin(code) -> err = "Kod awaryjny musi być inny niż fałszywy PIN"
                     else -> {
                         val c = JSONObject().put("scope", if (scopeAll) "all" else "sel").put("block", block).put("account", account)
                         if (!scopeAll) c.put("chats", JSONArray(selChats))
@@ -818,9 +896,10 @@ private fun WipeDialog(onDismiss: () -> Unit) {
 // ======================= ekran blokady =======================
 
 @Composable
-fun LockScreen(act: MainActivity, onUnlock: () -> Unit) {
+fun LockScreen(act: MainActivity, onUnlock: (decoy: Boolean) -> Unit) {
     val ctx = LocalContext.current
-    val core = App.core
+    // blokada należy zawsze do prawdziwego konta (także gdy otwarty jest „pusty” Szept)
+    val core = App.real
     var pin by remember { mutableStateOf("") }
     var err by remember { mutableStateOf(false) }
     var wiped by remember { mutableStateOf(false) }
@@ -829,7 +908,7 @@ fun LockScreen(act: MainActivity, onUnlock: () -> Unit) {
         if (!core.biometricEnabled) return
         val prompt = BiometricPrompt(act as FragmentActivity, androidx.core.content.ContextCompat.getMainExecutor(ctx),
             object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onUnlock() }
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onUnlock(false) }
             })
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder().setTitle("Szept").setSubtitle("Odblokuj aplikację")
@@ -853,8 +932,9 @@ fun LockScreen(act: MainActivity, onUnlock: () -> Unit) {
                     pin = it.filter { ch -> ch.isDigit() }.take(8); err = false
                     if (pin.length >= 4) {
                         when {
-                            core.verifyPin(pin) -> onUnlock()
-                            core.isWipeCode(pin) -> { wiped = true; if (core.applyWipe()) act.onWiped() else onUnlock() }
+                            core.verifyPin(pin) -> onUnlock(false)
+                            core.isDecoyPin(pin) -> onUnlock(true)
+                            core.isWipeCode(pin) -> { wiped = true; if (core.applyWipe()) act.onWiped() else onUnlock(false) }
                         }
                     }
                 },
@@ -866,8 +946,9 @@ fun LockScreen(act: MainActivity, onUnlock: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Button(onClick = {
                 when {
-                    core.verifyPin(pin) -> onUnlock()
-                    core.isWipeCode(pin) -> { if (core.applyWipe()) act.onWiped() else onUnlock() }
+                    core.verifyPin(pin) -> onUnlock(false)
+                    core.isDecoyPin(pin) -> onUnlock(true)
+                    core.isWipeCode(pin) -> { if (core.applyWipe()) act.onWiped() else onUnlock(false) }
                     else -> { err = true; pin = "" }
                 }
             }) { Text("Odblokuj") }

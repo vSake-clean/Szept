@@ -125,6 +125,7 @@ fun MessageActionsDialog(
     onDismiss: () -> Unit,
     onReply: (() -> Unit)?, onEdit: () -> Unit, onForward: () -> Unit, onInfo: () -> Unit, onVoters: () -> Unit,
     onSave: () -> Unit, onPickPeople: () -> Unit, onTranscribe: (() -> Unit)? = null, onSaveGif: (() -> Unit)? = null,
+    onTranslate: (() -> Unit)? = null,
 ) {
     val ctx = LocalContext.current
     val core = App.core
@@ -177,6 +178,7 @@ fun MessageActionsDialog(
                     }
                 }
                 if (m.kind == Kind.POLL) DialogItem("Kto głosował") { onVoters() }
+                if (onTranslate != null && m.kind == Kind.TEXT && m.ex.game == null && m.body.isNotBlank() && !ephemeral) DialogItem("🌐 Przetłumacz (w telefonie)") { onTranslate() }
                 if (onTranscribe != null && m.kind == Kind.VOICE && m.path != null && !ephemeral) {
                     DialogItem(if (m.body.isBlank()) "📝 Zamień na tekst (w telefonie)" else "📝 Zamień na tekst ponownie") { onTranscribe() }
                 }
@@ -468,7 +470,7 @@ fun ScheduledListDialog(list: List<Scheduled>, onDismiss: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Schedule, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text(formatWhen(s.at), fontWeight = FontWeight.Bold)
+                                Text(if (App.core.isWhenOnline(s)) "🟢 Gdy będzie online" else formatWhen(s.at), fontWeight = FontWeight.Bold)
                                 if (s.xmode == XMode.AFTER_OPEN) Text("  ⏱", color = Fire)
                             }
                             Text(scheduledPreview(s), maxLines = 3, overflow = TextOverflow.Ellipsis)

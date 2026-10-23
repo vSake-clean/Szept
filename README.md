@@ -14,6 +14,14 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.0
+- **Wyślij, gdy będzie online**, **tłumaczenie wiadomości w telefonie** (bez wysyłania treści do internetu), **formatowanie** (*pogrubienie*, _kursywa_, ~przekreślenie~, `kod`, ||spoiler||).
+- **Fałszywy PIN** otwierający pusty Szept, **zamaskowana ikona** (działający kalkulator, który otwiera Szept po wpisaniu kodu), **automatyczne usuwanie** starych wiadomości osobno dla każdej rozmowy, zasłonięty podgląd na liście ostatnich aplikacji.
+- **Gry w czacie**: kółko i krzyżyk, kości, „Kto szybciej?” — grane wiadomościami, bez serwera.
+
+### Nowe w 2.9
+- **Wbudowane (zaszyfrowane) serwery TURN** — rozmowy działają od razu także przez internet komórkowy.
+
 ### Nowe w 2.8
 - **Rozmowy** nie wiszą już na „Łączenie…”; administrator może rozesłać wszystkim **serwer TURN** (potrzebny w sieciach komórkowych).
 
