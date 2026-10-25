@@ -83,6 +83,14 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- gry w Pythonie (pygame w WebView, bez dostępu do internetu) -->
+        <activity
+            android:name=".ui.PyGameActivity"
+            android:exported="false"
+            android:label="Gra"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:theme="@style/Theme.Szept" />
+
         <activity
             android:name=".ui.CalculatorActivity"
             android:exported="false"

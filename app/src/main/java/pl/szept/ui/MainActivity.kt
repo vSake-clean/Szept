@@ -325,11 +325,15 @@ fun Root(act: MainActivity) {
         )
     }
     val s = nav.current
-    Column(Modifier.fillMaxSize()) {
-        if (c != null && c.active) CallBanner(c) { act.callHidden = false }
-        else if (g != null && g.phase == pl.szept.call.GroupCallManager.Phase.ACTIVE) GroupCallBanner(g) { act.callHidden = false }
-        // osobny stan dla każdego ekranu (np. przejście z jednej rozmowy prosto do innej)
-        Box(Modifier.weight(1f)) { key(s) { Route(s, nav, act) } }
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            if (c != null && c.active) CallBanner(c) { act.callHidden = false }
+            else if (g != null && g.phase == pl.szept.call.GroupCallManager.Phase.ACTIVE) GroupCallBanner(g) { act.callHidden = false }
+            // osobny stan dla każdego ekranu (np. przejście z jednej rozmowy prosto do innej)
+            Box(Modifier.weight(1f)) { key(s) { Route(s, nav, act) } }
+        }
+        // gra na pełnym ekranie (nad rozmową — po zamknięciu wracasz tam, gdzie byłeś)
+        pl.szept.ui.games.PlayHost()
     }
 }
 
@@ -367,5 +371,6 @@ private fun Route(s: Screen, nav: Nav, act: MainActivity) {
         Screen.WhatsNew -> WhatsNewScreen(nav)
         Screen.Connection -> ConnectionScreen(nav)
         Screen.Help -> HelpScreen(nav)
+        Screen.Games -> pl.szept.ui.games.GamesScreen(nav)
     }
 }

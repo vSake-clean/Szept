@@ -14,7 +14,7 @@ import org.json.JSONObject
  */
 class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
 
-    override val version = 8
+    override val version = 9
     private val helper: DbHelper
     /** Czy baza jest zaszyfrowana w telefonie. */
     val encrypted: Boolean
@@ -122,6 +122,13 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         createV6(db)
         createV7(db)
         createV8(db)
+        createV9(db)
+    }
+
+    /** v9: wyniki gier zapisane w tym telefonie (rekordy, tabela „Łącznie”). */
+    private fun createV9(db: Sql) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS gscores(id INTEGER PRIMARY KEY AUTOINCREMENT, game TEXT, score REAL, ts INTEGER, ctx TEXT DEFAULT '', label TEXT DEFAULT '')")
+        db.execSQL("CREATE INDEX IF NOT EXISTS gscores_game ON gscores(game, ts)")
     }
 
     /** Wersja 6: znaczek weryfikacji, oznaczenie „usunięte u rozmówcy”. */
@@ -184,6 +191,7 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         if (oldVersion < 6) createV6(db)
         if (oldVersion < 7) createV7(db)
         if (oldVersion < 8) createV8(db)
+        if (oldVersion < 9) createV9(db)
     }
 
     private val w: Sql get() = helper.writable
@@ -454,6 +462,49 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
     fun gameMoves(game: String): List<GameMove> = q("SELECT * FROM gmoves WHERE game=? ORDER BY ts, sender, seq", game) { c ->
         buildList { while (c.moveToNext()) add(GameMove(c.str("sender") ?: "", c.int("seq"), c.str("mv") ?: "", c.lng("ts"))) }
     }
+
+    /** Ruchy wielu gier naraz (gra → ruchy), np. do tabeli „Łącznie” całej rozmowy. */
+    fun gameMovesOf(games: Collection<String>): Map<String, List<GameMove>> {
+        if (games.isEmpty()) return emptyMap()
+        val out = HashMap<String, MutableList<GameMove>>()
+        for (part in games.chunked(400)) {
+            q("SELECT * FROM gmoves WHERE game IN (" + part.joinToString(",") { "?" } + ") ORDER BY ts, sender, seq", *part.toTypedArray()) { c ->
+                while (c.moveToNext()) out.getOrPut(c.str("game") ?: "") { mutableListOf() }.add(GameMove(c.str("sender") ?: "", c.int("seq"), c.str("mv") ?: "", c.lng("ts")))
+            }
+        }
+        return out
+    }
+
+    /** Wiadomości z grą danego rodzaju w rozmowie (od najstarszej). */
+    fun gameMessages(chat: String, type: String, limit: Int = 500): List<Message> =
+        q("SELECT * FROM messages WHERE chat=? AND extra LIKE ? ORDER BY ts DESC LIMIT $limit", chat, "%\"g\":\"$type\"%") { c ->
+            buildList { while (c.moveToNext()) add(c.toMessage()) }
+        }.filter { m -> m.ex.game?.let { try { JSONObject(it).optString("g") == type } catch (e: Exception) { false } } == true }.reversed()
+
+    /** Wynik gry zapisany w tym telefonie. [ctx]: „solo”, „ai” albo id rozmowy (wyzwanie). */
+    data class GameScore(val id: Long, val game: String, val score: Double, val ts: Long, val ctx: String, val label: String)
+
+    fun addGameScore(game: String, score: Double, ctx: String, label: String = "", ts: Long = System.currentTimeMillis()) {
+        if (score.isNaN() || score.isInfinite()) return
+        w.insert("gscores", null, ContentValues().apply {
+            put("game", game.take(64)); put("score", score); put("ts", ts); put("ctx", ctx.take(80)); put("label", label.take(80))
+        })
+        changed()
+    }
+
+    fun gameScores(game: String, limit: Int = 2000): List<GameScore> =
+        q("SELECT * FROM gscores WHERE game=? ORDER BY ts DESC LIMIT $limit", game) { c -> buildList { while (c.moveToNext()) add(c.toScore()) } }
+
+    /** Podsumowanie wszystkich gier: gra → (liczba wyników, ostatni czas). */
+    fun gameScoreCounts(): Map<String, Pair<Int, Long>> =
+        q("SELECT game, COUNT(*) AS n, MAX(ts) AS last FROM gscores GROUP BY game") { c ->
+            buildMap { while (c.moveToNext()) put(c.str("game") ?: "", c.int("n") to c.lng("last")) }
+        }
+
+    fun clearGameScores(game: String) { w.delete("gscores", "game=?", arrayOf(game)); changed() }
+
+    private fun Cursor.toScore() = GameScore(lng("id"), str("game") ?: "", getColumnIndex("score").let { if (it < 0 || isNull(it)) 0.0 else getDouble(it) },
+        lng("ts"), str("ctx") ?: "", str("label") ?: "")
 
     /** Wiadomości starsze niż [before] (do automatycznego czyszczenia). */
     fun messagesBefore(chat: String, before: Long, limit: Int = 300): List<Message> =

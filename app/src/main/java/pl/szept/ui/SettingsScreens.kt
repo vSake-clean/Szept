@@ -73,6 +73,16 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.1" to listOf(
+        "Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python.",
+        "Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”.",
+        "Gry dla jednej osoby: 2048, Wąż, Klocki, Arkanoid, Saper, Sudoku, Literaki, Generał, Oczko, Łap jajka i wiele innych — z menu ⋮ → Gry albo z rozmowy.",
+        "Wyzwania w rozmowie: wyślij grę z wynikiem — każdy gra ten sam układ, a w dymku widać ranking.",
+        "Gry we dwoje ruch po ruchu: szachy, warcaby, czwórki, reversi, pięć w rzędzie, statki, młynek, kalaha, kropki i kreski, zapałki, kamień-papier-nożyce — także z komputerem.",
+        "Gry w grupie: wisielec, emoji-zagadki, pytanie na czas, kto pierwszy napisze, co wolisz, nigdy przenigdy, prawda czy wyzwanie, kto z nas…, ruletka, oczko, karty i więcej.",
+        "Wynik i „Łącznie”: po każdej grze najpierw widać bieżący wynik, a przycisk „Łącznie” pokazuje tabelę wszystkich wyników, rekord, średnią i ranking osób w rozmowie.",
+        "Gry w Pythonie (pygame) działają w telefonie: wbudowany „Wheelie Simulator 2D”, a administrator może rozsyłać kolejne gry (panel administratora → Gry).",
+    ),
     "3.0" to listOf(
         "Wyślij, gdy będzie online: przytrzymaj przycisk wysyłania → „🟢 Wyślij, gdy będzie online” — wiadomość czeka i wychodzi sama, gdy rozmówca otworzy Szept.",
         "Tłumaczenie w telefonie: przytrzymaj wiadomość → „🌐 Przetłumacz”. Treść nie opuszcza telefonu — internet potrzebny tylko raz, do pobrania pakietu języka.",

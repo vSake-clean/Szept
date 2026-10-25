@@ -12,3 +12,8 @@
 # czytelne nazwy w dzienniku błędów (kod nadal jest odchudzany, tylko bez zmiany nazw)
 -dontobfuscate
 -keepattributes SourceFile,LineNumberTable
+
+# gry w Pythonie: metody wywoływane z JavaScriptu (WebView)
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
