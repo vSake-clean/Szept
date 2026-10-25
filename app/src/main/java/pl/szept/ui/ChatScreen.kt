@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Gif
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationOn
@@ -852,7 +853,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                     pickFile.launch(arrayOf("*/*"))
                                 }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) })
                                 DropdownMenuItem({ Text("GIF") }, { attachMenu = false; gifPicker = true }, leadingIcon = { Icon(Icons.Default.Gif, null) })
-                                DropdownMenuItem({ Text("🎮 Gra") }, { attachMenu = false; gamePicker = true })
+                                DropdownMenuItem({ Text("Gra") }, { attachMenu = false; gamePicker = true }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
                                 DropdownMenuItem({ Text("Ankieta") }, { attachMenu = false; pollDialog = true }, leadingIcon = { Icon(Icons.Default.BarChart, null) })
                                 DropdownMenuItem({ Text("Lokalizacja") }, { attachMenu = false; locationDialog = true }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
                             }
@@ -1001,10 +1002,8 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             },
         )
     }
-    if (gamePicker) GamePickerDialog(onDismiss = { gamePicker = false }) { type ->
-        gamePicker = false
-        work.launch { try { core.startGame(chatId, type) } catch (e: Exception) { toast(ctx, sendError(e)) } }
-    }
+    if (gamePicker) pl.szept.ui.games.GamePickerDialog(chatId, chat?.isGroup == true) { gamePicker = false }
+
     translation?.let { (_, res) ->
         AlertDialog(
             onDismissRequest = { translation = null },

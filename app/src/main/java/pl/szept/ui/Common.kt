@@ -231,6 +231,7 @@ sealed class Screen {
     data object WhatsNew : Screen()
     data object Connection : Screen()
     data object Help : Screen()
+    data object Games : Screen()
 }
 
 class Nav {

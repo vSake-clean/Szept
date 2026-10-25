@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PushPin
@@ -288,6 +289,7 @@ fun HomeScreen(nav: Nav) {
                             DropdownMenuItem({ Text("Nowa grupa") }, { menu = false; nav.go(Screen.NewGroup) }, leadingIcon = { Icon(Icons.Default.GroupAdd, null) })
                             DropdownMenuItem({ Text("Wiadomość do wielu") }, { menu = false; nav.go(Screen.Broadcast) }, leadingIcon = { Icon(Icons.Default.Campaign, null) })
                             DropdownMenuItem({ Text("Archiwum") }, { menu = false; nav.go(Screen.Archive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
+                            DropdownMenuItem({ Text("Gry") }, { menu = false; nav.go(Screen.Games) }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
                             DropdownMenuItem({ Text("Dołącz do grupy (link)") }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.Link, null) })
                             DropdownMenuItem({ Text("Wyślij aplikację znajomym") }, { menu = false; shareApp(ctx) }, leadingIcon = { Icon(Icons.Default.Share, null) })
                             DropdownMenuItem({ Text("Ustawienia") }, { menu = false; nav.go(Screen.Settings) }, leadingIcon = { Icon(Icons.Default.Settings, null) })

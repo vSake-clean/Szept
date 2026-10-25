@@ -87,6 +87,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         const val CHUNK_KIND = 4334
         const val INNER_KIND = 14
         const val EXPIRE_SEC = 21L * 86400
+        /** Najwięcej ruchów jednej osoby w jednej grze (szachy, warcaby, wyniki w wyzwaniu). */
+        const val MAX_GAME_MOVES = 400
         const val CHUNK_RAW = 44_000
         const val MEDIA_RELAYS = 5
         const val MAX_MEDIA = 16L * 1024 * 1024
@@ -127,6 +129,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     val db = Db(ctx, dbName, encrypt = true)
     val prefs = ctx.getSharedPreferences("szept_$profile", Context.MODE_PRIVATE)
     val mediaDir = File(ctx.filesDir, if (profile == "main") "media" else "media_$profile").apply { mkdirs() }
+    init { PyGames.init(ctx) }
     private val tmpDir = File(ctx.cacheDir, "dl_$profile").apply { mkdirs() }
 
     // CrashLog.handler: błąd w zadaniu w tle trafia do dziennika zamiast wyłączać aplikację
@@ -1041,6 +1044,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         policy.value?.optJSONArray("otp")?.let { content.put("otp", it) }
         policy.value?.optJSONObject("turn")?.let { content.put("turn", it) }
         policy.value?.optJSONArray("turns")?.let { content.put("turns", it) }
+        policy.value?.optJSONArray("pyg")?.let { content.put("pyg", it) }
         if (apk != null) {
             val id = "admin:pol:" + newId()
             val media = prepareAdminUpload(id, apk, "Szept-$versionName.apk", "application/vnd.android.package-archive")
@@ -1057,6 +1061,78 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val content = policy.value?.let { JSONObject(it.toString()) } ?: JSONObject().put("min", 0)
         if (key.isBlank()) content.remove("gk") else content.put("gk", key.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(128))
         publishPolicy(content)
+    }
+
+    // ---- gry w Pythonie ----
+
+    /** Gry z polityki: brakujące pliki trafiają do pobrania (tylko na prawdziwym koncie — lista gier jest wspólna). */
+    private fun syncPyGames(c: JSONObject) {
+        if (profile != "main") return
+        try {
+            for (g in PyGames.sync(c.optJSONArray("pyg"))) {
+                val meta = try { MediaMeta.fromNetwork(g.media!!) } catch (e: Exception) { CrashLog.record("Gra Python: zły plik", e); continue }
+                db.addDownload("pyg:" + g.id.removePrefix("py:"), meta)
+            }
+            kickDownloads()
+        } catch (e: Exception) { CrashLog.record("Gry Python", e) }
+    }
+
+    /**
+     * Rozsyła wszystkim grę w Pythonie (plik .py albo .zip z main.py). [id] = zmiana istniejącej gry (null = nowa).
+     * Plik idzie w zaszyfrowanych paczkach, a opis gry — w podpisanej polityce administratora.
+     */
+    suspend fun adminPublishPyGame(src: File, zip: Boolean, id: String?, name: String, desc: String, sk: String, unit: String, higher: Boolean, decimals: Int, args: String) = stateLock.withLock {
+        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        if (!src.isFile || src.length() == 0L) throw SendException("Nie wybrano pliku gry")
+        if (src.length() > 8L * 1024 * 1024) throw SendException("Plik gry może mieć najwyżej 8 MB")
+        if (name.isBlank()) throw SendException("Podaj nazwę gry")
+        val gid = id?.removePrefix("py:")?.takeIf { it.matches(Regex("[a-z0-9]{3,24}")) } ?: ("g" + newId().take(10))
+        val jobId = "admin:pyg:" + newId()
+        val media = prepareAdminUpload(jobId, src, "$gid." + (if (zip) "zip" else "py"), if (zip) "application/zip" else "text/x-python")
+        val entry = PyGames.Game("py:$gid", name.trim().take(40), desc.trim().take(400), sk, unit.trim().take(12), higher, decimals.coerceIn(0, 3),
+            args.replace(Regex("[^A-Za-z0-9 _=.-]"), "").take(80), zip, System.currentTimeMillis(), media = media.toJson())
+        // u administratora gra jest od razu (bez pobierania)
+        if (profile == "main") PyGames.addLocal(entry, src, media.sha)
+        db.addPending(jobId, entry.toJson().put("id", gid).toString(), emptyList())
+        adminJobs.update { it + (jobId to "Gra „${entry.name}” dla wszystkich") }
+        kickUploads()
+    }
+
+    /** Paczki gry wgrane — gra trafia do polityki (zastępuje wersję o tym samym id). */
+    private fun publishPyGame(entry: JSONObject) {
+        val content = policy.value?.let { JSONObject(it.toString()) } ?: JSONObject().put("min", 0)
+        val arr = JSONArray()
+        content.optJSONArray("pyg")?.let { a -> for (i in 0 until a.length()) a.optJSONObject(i)?.takeIf { it.optString("id") != entry.optString("id") }?.let { arr.put(it) } }
+        arr.put(entry)
+        content.put("pyg", arr)
+        publishPolicy(content)
+    }
+
+    /** Gry w Pythonie rozesłane przez administratora (z polityki). */
+    fun adminPyGames(): List<PyGames.Game> = policy.value?.optJSONArray("pyg")?.let { a ->
+        (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(PyGames.Game::fromJson) }
+    } ?: emptyList()
+
+    /** Usuwa grę z listy u wszystkich. */
+    suspend fun adminRemovePyGame(id: String) = stateLock.withLock {
+        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        val content = policy.value?.let { JSONObject(it.toString()) } ?: return@withLock
+        val raw = id.removePrefix("py:")
+        val arr = JSONArray()
+        content.optJSONArray("pyg")?.let { a -> for (i in 0 until a.length()) a.optJSONObject(i)?.takeIf { it.optString("id") != raw }?.let { arr.put(it) } }
+        content.put("pyg", arr)
+        publishPolicy(content)
+    }
+
+    /**
+     * Wysyła plik gry jeszcze raz (paczki na przekaźnikach znikają po 21 dniach — nowe telefony nie mogłyby jej pobrać).
+     * Opis gry zostaje ten sam.
+     */
+    suspend fun adminRefreshPyGame(id: String) {
+        val g = adminPyGames().firstOrNull { it.id == id } ?: throw SendException("Nie ma takiej gry")
+        val f = PyGames.fileOf(g) ?: throw SendException("Tej gry nie ma w tym telefonie — wybierz plik jeszcze raz")
+        val copy = File(ctx.cacheDir, "pyg_refresh_${System.nanoTime()}").also { f.copyTo(it, overwrite = true) }
+        try { adminPublishPyGame(copy, g.zip, g.id, g.name, g.desc, g.sk, g.unit, g.higher, g.decimals, g.args) } finally { copy.delete() }
     }
 
     /** Klucz KLIPY w użyciu (telefon → administrator → wbudowany). */
@@ -1084,6 +1160,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             val c = JSONObject(ev.content)
             policy.value = c
             checkMySanction()
+            syncPyGames(c)
             // nowsza wersja do pobrania: pojawia się w czacie „Szept” z przyciskiem instalacji
             val code = c.optInt("code")
             val meta = c.optJSONObject("m")?.let { MediaMeta.fromNetwork(it) }
@@ -1633,17 +1710,15 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         return n
     }
 
-    /** Nowa gra w rozmowie. */
-    suspend fun startGame(chatId: String, type: String): Message {
-        val (body, game) = when (type) {
-            Games.DICE -> {
-                val v = Games.rollDice()
-                "🎲 Rzut kośćmi: ${v.joinToString(" i ")} (razem ${v.sum()})" to JSONObject().put("g", Games.DICE).put("v", org.json.JSONArray(v))
-            }
-            Games.TTT -> "❌⭕ Kółko i krzyżyk — zagraj w aktualnej wersji Szepta" to JSONObject().put("g", Games.TTT)
-            Games.FAST -> "⚡ Kto szybciej? — zagraj w aktualnej wersji Szepta" to JSONObject().put("g", Games.FAST)
-            else -> throw SendException("Nieznana gra")
-        }
+    /**
+     * Nowa gra w rozmowie. [extra] — dodatkowe dane gry (np. słowo w wisielcu); losowe dane i ziarno układu
+     * (ten sam układ planszy dla wszystkich w wyzwaniu) dopisuje [Games.newGame].
+     */
+    suspend fun startGame(chatId: String, type: String, extra: JSONObject? = null): Message {
+        val info = GameCatalog.byId(type)?.takeIf { it.inChat } ?: throw SendException("Nieznana gra")
+        val members = participants(chatId) + myPub
+        val game = Games.newGame(info, extra, members.distinct())
+        val body = Games.fallbackText(info, game)
         return send(chatId, Kind.TEXT, body, null, extra = Extra(game = game.toString()))
     }
 
@@ -1653,6 +1728,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (m.ex.game == null) return@launch
         canWrite(m.chat)?.let { return@launch }
         val seq = db.gameMoves(msgId).count { it.sender == myPub }
+        if (seq > MAX_GAME_MOVES) return@launch
         val now = Clock.now()
         if (!db.addGameMove(msgId, myPub, seq, mv, now)) return@launch
         dispatch(target(JSONObject().put("t", "gmv").put("id", msgId).put("mv", mv.take(64)).put("sq", seq).put("ts", now), m.chat), participants(m.chat), null)
@@ -1662,13 +1738,13 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val chatId = chatOf(from, gid) ?: return
         val m = db.message(p.optString("id")) ?: return
         if (m.chat != chatId || m.ex.game == null) return
-        db.addGameMove(m.id, from, p.optInt("sq").coerceIn(0, 100), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
+        db.addGameMove(m.id, from, p.optInt("sq").coerceIn(0, MAX_GAME_MOVES), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
     }
 
     private fun handleSelfGameMove(p: JSONObject) {
         val m = db.message(p.optString("id")) ?: return
         if (m.ex.game == null) return
-        db.addGameMove(m.id, myPub, p.optInt("sq").coerceIn(0, 100), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
+        db.addGameMove(m.id, myPub, p.optInt("sq").coerceIn(0, MAX_GAME_MOVES), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
     }
 
     // ================= odbiór =================
@@ -2103,7 +2179,11 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     /** Wysyła koperty z wiadomością (dla mediów — po wgraniu paczek). */
     private fun release(msgId: String, payload: JSONObject, recipients: List<String>) {
         if (msgId.startsWith("admin:")) {
-            if (msgId.startsWith("admin:pol")) publishPolicy(payload) else dispatch(payload, recipients, null, EXPIRE_SEC, asAdmin = true, sync = false)
+            when {
+                msgId.startsWith("admin:pol") -> publishPolicy(payload)
+                msgId.startsWith("admin:pyg") -> publishPyGame(payload)
+                else -> dispatch(payload, recipients, null, EXPIRE_SEC, asAdmin = true, sync = false)
+            }
             adminJobs.update { it - msgId }
             return
         }
@@ -3419,6 +3499,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         }
 
         private fun finish() {
+            if (d.msg.startsWith("pyg:")) { finishPyGame(); return }
             val isStory = d.msg.startsWith("story:")
             val exists = if (isStory) db.story(d.msg.removePrefix("story:")) != null else db.message(d.msg) != null
             if (!exists) { db.removeDownload(d.media); dir.deleteRecursively(); return }
@@ -3439,6 +3520,18 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             }
             val owner = db.message(d.msg) ?: run { out.delete(); return }
             db.setPath(d.msg, out.absolutePath, if (owner.mine) St.SENT else St.RECEIVED)
+        }
+
+        /** Gra w Pythonie od administratora — trafia na listę gier. */
+        private fun finishPyGame() {
+            val gameId = "py:" + d.msg.removePrefix("pyg:")
+            val out = File(tmpDir, safeName(d.msg) + ".bin")
+            out.outputStream().use { os -> for (i in 0 until d.meta.chunks) File(dir, i.toString()).inputStream().use { it.copyTo(os) } }
+            dir.deleteRecursively()
+            db.removeDownload(d.media)
+            val g = PyGames.remoteGames().firstOrNull { it.id == gameId }
+            if (g == null || sha256File(out) != d.meta.sha || g.sha != d.meta.sha) { out.delete(); return }
+            PyGames.install(gameId, out, d.meta.sha)
         }
     }
 

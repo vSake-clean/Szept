@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<!-- gra nie może łączyć się z internetem: tylko pliki podawane przez Szept -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: data:; img-src 'self' blob: data:; media-src 'self' blob: data:">
+<title>Gra</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); outline: none; image-rendering: auto; }
+  #msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+         color: #eee; font: 16px/1.4 sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  #msg pre { text-align: left; white-space: pre-wrap; font-size: 11px; max-height: 60vh; overflow: auto; background: #222; padding: 8px; border-radius: 8px; width: 100%; box-sizing: border-box; }
+  #msg button { margin-top: 16px; font-size: 16px; padding: 10px 22px; border-radius: 22px; border: 0; background: #4f7cff; color: #fff; }
+  .spin { width: 36px; height: 36px; border: 4px solid #555; border-top-color: #9cf; border-radius: 50%; animation: s 1s linear infinite; margin-bottom: 14px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="msg"><div class="spin"></div><div id="status">Uruchamiam Pythona…</div></div>
+<script src="/py/pyodide.js"></script>
+<script src="runner.js"></script>
+</body>
+</html>

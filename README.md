@@ -16,6 +16,12 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.1
+- **Prawie 80 gier** (spinacz → Gra albo menu ⋮ → Gry): zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe i imprezowe. Nowy wybór gry z wyszukiwarką i ikonami w stylu reszty menu.
+- **Sam, we dwoje albo w grupie**: gry jednoosobowe na pełnym ekranie, **wyzwania** w rozmowie (ten sam układ dla wszystkich, ranking w dymku), gry planszowe ruch po ruchu (szachy, warcaby, czwórki, statki…, także z komputerem) i gry imprezowe dla grupy.
+- **Wynik i „Łącznie”**: po grze najpierw widać bieżący wynik, a „Łącznie” pokazuje tabelę wszystkich wyników, rekord, średnią i kto ile razy wygrał w danej rozmowie.
+- **Gry w Pythonie (pygame)** działają w telefonie (Pyodide, środowisko pobierane raz, ok. 18 MB, sprawdzane sumami SHA-256; gra nie ma dostępu do internetu). Wbudowany **Wheelie Simulator 2D**; administrator rozsyła kolejne gry w panelu → „Gry” (plik `.py` albo `.zip` z `main.py`). Wynik do tabeli: `import szept; szept.score(wynik)`.
+
 ### Nowe w 3.0
 - **Wyślij, gdy będzie online**, **tłumaczenie wiadomości w telefonie** (bez wysyłania treści do internetu), **formatowanie** (*pogrubienie*, _kursywa_, ~przekreślenie~, `kod`, ||spoiler||).
 - **Fałszywy PIN** otwierający pusty Szept, **zamaskowana ikona** (działający kalkulator, który otwiera Szept po wpisaniu kodu), **automatyczne usuwanie** starych wiadomości osobno dla każdej rozmowy, zasłonięty podgląd na liście ostatnich aplikacji.

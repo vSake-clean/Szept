@@ -1,0 +1,400 @@
+package pl.szept.core
+
+/** Słowa, pytania i zadania do gier (wszystko w aplikacji — bez internetu). */
+object GameData {
+
+    /** Pięcioliterowe słowa do „Literaków”. */
+    val WORDS5: List<String> = """
+        AKTOR ALBUM ANIOŁ ARBUZ AUTOR BALET BANAN BATON BERET BIURO BLASK BLUZA BOMBA BRAMA BRODA BUDKA BURZA CEGŁA CHATA CHLEB
+        DESKA DRZWI DUSZA DYNIA DZBAN DZIÓB FARBA FOTEL GÓRAL HASŁO HOTEL KABEL KAJAK KANAŁ KAPEĆ KARTA KASZA KLASA KOBRA KOGUT
+        KOMAR KONIK KOTEK KREDA KROWA KRZYŻ KUBEK KWIAT LALKA LAMPA LISEK ŁAPKA ŁAWKA ŁÓDKA ŁYŻKA MASŁO MATKA MEBEL METRO MIARA
+        MIECZ MISKA MLEKO MOTYL MUCHA NOTES OBIAD OGIEŃ OPERA ORZEŁ OSIOŁ PALEC PANDA PASEK PIŁKA PIÓRO PIZZA PLAŻA POMPA POWÓZ
+        PUDŁO RADIO RAMKA ROBOT ROWER RYBAK RZEKA SANKI SEREK SKAŁA SKARB SŁOIK STRUŚ SZAFA SZKŁO SZOPA SZYJA ŚWIAT TEATR TEKST
+        TORBA TRAWA ULICA WAFEL WAGON WANNA WAZON WIDOK WIEŻA WINDA WOJNA WÓZEK WYSPA ZAMEK ZEBRA ZEGAR ŻABKA ŻUREK ŻYCIE AGENT
+        AKCJA BAGNO BAJKA BALON BARAN BEKON DROGA FLAGA GARAŻ GLINA GRZYB HAMAK HUMOR KAKAO KAWKA KLUCZ KOLEJ LASER MAGIA MORZE
+        NAPÓJ NIEBO NUTKA OCEAN OKRĘT OSOBA PAJĄK PAŁAC POKÓJ RĘKAW ROZUM SALON SAMBA SERCE SIANO SOSNA SPORT STRAŻ TAJGA TANGO
+        TĘCZA TUNEL TUBKA UCZEŃ URLOP WIATR WIRUS WOREK ZAJĄC ZORZA AKORD ALARM ARENA ATLAS BARWA BITWA BRZEG CYTAT DESER DIETA
+        DOBRO DOLAR DOMEK EKRAN FAJKA FORMA FRAZA GALOP GRUPA GUZIK HONOR IKONA IMBIR JAZDA KAMYK KLAUN KOCYK KOMIN KONTO KOPIA
+        LIANA LILIA LINKA LOTOS ŁOSOŚ MAMUT MANGO MEDAL METAL MOTOR NAUKA OBRAZ PASJA PAUZA PERŁA PIRAT POTOK RANEK RUINA SAPER
+        SŁOWO STADO SUSZA ŚNIEG TRASA TWARZ WALEC WĄTEK WIDEO ŻETON
+    """.trim().split(Regex("\\s+"))
+
+    /** Dłuższe słowa: wisielec, anagramy, „kto pierwszy napisze”. */
+    val WORDS: List<String> = """
+        KOMPUTER TELEFON CZEKOLADA PARASOL MOTOCYKL SAMOLOT BIEDRONKA ŻYRAFA KANGUR WIEWIÓRKA TRUSKAWKA POMARAŃCZA HELIKOPTER
+        PINGWIN KROKODYL HIPOPOTAM DINOZAUR BIBLIOTEKA PIEKARNIA LATARNIA LODÓWKA PRALKA ODKURZACZ KALENDARZ OKULARY RĘKAWICZKI
+        SKARPETKI PIŻAMA ŚNIADANIE KOLACJA PIEROGI BIGOS NALEŚNIKI KANAPKA HERBATA KAWIARNIA RESTAURACJA LOTNISKO DWORZEC TRAMWAJ
+        AUTOBUS ROWERZYSTA KIEROWCA STRAŻAK POLICJANT NAUCZYCIEL LEKARZ PIELĘGNIARKA OGRODNIK MALARZ MUZYKANT GITARA PERKUSJA
+        TRĄBKA SKRZYPCE FORTEPIAN KONCERT FESTIWAL WAKACJE PLECAK NAMIOT OGNISKO JEZIORO WODOSPAD WULKAN PUSTYNIA DŻUNGLA LODOWIEC
+        ATLANTYK KONTYNENT PLANETA GALAKTYKA ASTRONAUTA RAKIETA SATELITA TELESKOP MIKROSKOP LABORATORIUM CHEMIA FIZYKA GEOGRAFIA
+        HISTORIA MATEMATYKA KALKULATOR LINIJKA KREDKI PLASTELINA NOŻYCZKI ZESZYT PODRĘCZNIK TABLICA SZKOŁA PRZERWA ZAKŁADKA
+        KOSZYKÓWKA SIATKÓWKA PIŁKARZ BRAMKARZ STADION OLIMPIADA MEDALISTA MARATON PŁYWALNIA ŁYŻWY NARCIARZ SNOWBOARD HULAJNOGA
+        DESKOROLKA TRAMPOLINA HUŚTAWKA PIASKOWNICA ZJEŻDŻALNIA KARUZELA CYRKOWIEC ILUZJONISTA CZARODZIEJ KSIĘŻNICZKA
+        RYCERZ ZAMCZYSKO SKARBIEC KOMPAS LATAWIEC BALONIK CUKIERNIA TORCIK PĄCZEK SERNIK SZARLOTKA MANDARYNKA
+        CYTRYNA BANANOWIEC ANANAS KOKOS AWOKADO BRZOSKWINIA MORELA WINOGRONO POMIDOR OGÓREK MARCHEWKA ZIEMNIAK KALAFIOR BROKUŁ
+        PIETRUSZKA CEBULKA CZOSNEK RZODKIEWKA SAŁATA KUKURYDZA FASOLKA GROSZEK SŁONECZNIK TULIPAN STOKROTKA KONWALIA SASANKA
+        PAPROĆ KAKTUS STORCZYK DĄB BRZOZA KASZTAN JARZĘBINA ŻOŁĄDŹ MUCHOMOR BOROWIK KURKI BOCIAN JASKÓŁKA SKOWRONEK DZIĘCIOŁ
+        SOKÓŁ JASTRZĄB SOWA PAPUGA FLAMING DELFIN WIELORYB REKIN OŚMIORNICA MEDUZA ROZGWIAZDA HOMAR KRAB ŻÓŁW JASZCZURKA
+        KAMELEON WĄŻ PYTON TYGRYS LEOPARD GEPARD NOSOROŻEC SŁOŃ WIELBŁĄD ZEBRA LAMA ALPAKA BÓBR WYDRA BORSUK JEŻOZWIERZ NIEDŹWIEDŹ
+    """.trim().split(Regex("\\s+")).filter { it.length in 4..13 && it.all { c -> c.isLetter() } }
+
+    /** Zdania do szybkiego pisania. */
+    val SENTENCES = listOf(
+        "Szybki brązowy lis przeskoczył nad leniwym psem.",
+        "Zażółć gęślą jaźń.",
+        "W Szczebrzeszynie chrząszcz brzmi w trzcinie.",
+        "Kto rano wstaje, temu Pan Bóg daje.",
+        "Nie ma róży bez kolców.",
+        "Lepszy wróbel w garści niż gołąb na dachu.",
+        "Co ma wisieć, nie utonie.",
+        "Gdzie kucharek sześć, tam nie ma co jeść.",
+        "Darowanemu koniowi w zęby się nie zagląda.",
+        "Kto pod kim dołki kopie, ten sam w nie wpada.",
+        "Apetyt rośnie w miarę jedzenia.",
+        "Nie wszystko złoto, co się świeci.",
+        "Prawdziwych przyjaciół poznaje się w biedzie.",
+        "Bez pracy nie ma kołaczy.",
+        "Mądry Polak po szkodzie.",
+        "Jak sobie pościelesz, tak się wyśpisz.",
+        "Fortuna kołem się toczy.",
+        "Wszystkie drogi prowadzą do Rzymu.",
+        "Raz na wozie, raz pod wozem.",
+        "Niedaleko pada jabłko od jabłoni.",
+        "Kropla drąży skałę.",
+        "Czego Jaś się nie nauczy, tego Jan nie będzie umiał.",
+        "Dzisiaj gramy w Szepcie i świetnie się bawimy.",
+        "Wysłałem wiadomość, która dotarła bez żadnego serwera.",
+        "Mój telefon potrafi uruchomić grę w Pythonie.",
+    )
+
+    /** Pytanie: treść, cztery odpowiedzi, numer dobrej. */
+    data class Question(val q: String, val o: List<String>, val c: Int)
+
+    val QUIZ: List<Question> = listOf(
+        Question("Stolica Australii to:", listOf("Sydney", "Canberra", "Melbourne", "Perth"), 1),
+        Question("Ile nóg ma pająk?", listOf("6", "8", "10", "12"), 1),
+        Question("Najdłuższa rzeka w Polsce to:", listOf("Odra", "Warta", "Wisła", "Bug"), 2),
+        Question("Kto napisał „Pana Tadeusza”?", listOf("Juliusz Słowacki", "Adam Mickiewicz", "Henryk Sienkiewicz", "Bolesław Prus"), 1),
+        Question("Ile wynosi 7 × 8?", listOf("54", "56", "58", "64"), 1),
+        Question("Najwyższy szczyt Polski to:", listOf("Śnieżka", "Giewont", "Rysy", "Kasprowy Wierch"), 2),
+        Question("Symbol chemiczny złota to:", listOf("Ag", "Au", "Fe", "Zn"), 1),
+        Question("Która planeta jest najbliżej Słońca?", listOf("Wenus", "Mars", "Merkury", "Ziemia"), 2),
+        Question("W którym roku Polska wstąpiła do Unii Europejskiej?", listOf("1999", "2004", "2007", "2010"), 1),
+        Question("Ile kontynentów jest na Ziemi (w polskiej szkole)?", listOf("5", "6", "7", "8"), 2),
+        Question("Kto namalował „Mona Lisę”?", listOf("Michał Anioł", "Leonardo da Vinci", "Rafael", "Rembrandt"), 1),
+        Question("Największy ocean na Ziemi to:", listOf("Atlantycki", "Indyjski", "Spokojny", "Arktyczny"), 2),
+        Question("Ile minut ma doba?", listOf("1240", "1440", "1640", "2400"), 1),
+        Question("Stolica Kanady to:", listOf("Toronto", "Vancouver", "Ottawa", "Montreal"), 2),
+        Question("Ile kości ma dorosły człowiek?", listOf("186", "206", "226", "256"), 1),
+        Question("Kto odkrył polon i rad?", listOf("Maria Skłodowska-Curie", "Mikołaj Kopernik", "Albert Einstein", "Isaac Newton"), 0),
+        Question("Ile boków ma sześciokąt?", listOf("5", "6", "7", "8"), 1),
+        Question("Który pierwiastek ma symbol O?", listOf("Złoto", "Osm", "Tlen", "Ołów"), 2),
+        Question("Stolica Hiszpanii to:", listOf("Barcelona", "Madryt", "Sewilla", "Walencja"), 1),
+        Question("Ile wynosi pierwiastek kwadratowy ze 144?", listOf("11", "12", "13", "14"), 1),
+        Question("Największe zwierzę na świecie to:", listOf("Słoń afrykański", "Płetwal błękitny", "Rekin wielorybi", "Żyrafa"), 1),
+        Question("Kto był pierwszym królem Polski?", listOf("Mieszko I", "Bolesław Chrobry", "Kazimierz Wielki", "Władysław Łokietek"), 1),
+        Question("W którym roku wybuchła II wojna światowa?", listOf("1914", "1939", "1945", "1920"), 1),
+        Question("Ile serc ma ośmiornica?", listOf("1", "2", "3", "8"), 2),
+        Question("Jak nazywa się waluta Japonii?", listOf("Juan", "Won", "Jen", "Rupia"), 2),
+        Question("Który kraj ma kształt buta?", listOf("Hiszpania", "Grecja", "Włochy", "Portugalia"), 2),
+        Question("Ile graczy jednej drużyny jest na boisku w piłce nożnej?", listOf("9", "10", "11", "12"), 2),
+        Question("Stolica Norwegii to:", listOf("Sztokholm", "Oslo", "Helsinki", "Kopenhaga"), 1),
+        Question("Ile wynosi 15% ze 200?", listOf("20", "25", "30", "35"), 2),
+        Question("Mikołaj Kopernik urodził się w:", listOf("Krakowie", "Toruniu", "Fromborku", "Gdańsku"), 1),
+        Question("Najmniejsze państwo świata to:", listOf("Monako", "San Marino", "Watykan", "Liechtenstein"), 2),
+        Question("Który gaz rośliny pobierają do fotosyntezy?", listOf("Tlen", "Azot", "Dwutlenek węgla", "Wodór"), 2),
+        Question("Ile województw ma Polska?", listOf("14", "16", "18", "49"), 1),
+        Question("Autor „Quo vadis” to:", listOf("Henryk Sienkiewicz", "Stefan Żeromski", "Władysław Reymont", "Eliza Orzeszkowa"), 0),
+        Question("Stolica Egiptu to:", listOf("Aleksandria", "Kair", "Luksor", "Giza"), 1),
+        Question("Ile zer ma milion?", listOf("5", "6", "7", "9"), 1),
+        Question("Jaki kolor powstaje z połączenia niebieskiego i żółtego?", listOf("Fioletowy", "Pomarańczowy", "Zielony", "Brązowy"), 2),
+        Question("Najszybsze zwierzę lądowe to:", listOf("Lew", "Gepard", "Antylopa", "Koń"), 1),
+        Question("Kto skomponował „Polonez As-dur” op. 53?", listOf("Stanisław Moniuszko", "Fryderyk Chopin", "Karol Szymanowski", "Wojciech Kilar"), 1),
+        Question("Ile dni ma rok przestępny?", listOf("364", "365", "366", "367"), 2),
+        Question("Stolica Portugalii to:", listOf("Porto", "Lizbona", "Faro", "Coimbra"), 1),
+        Question("Z ilu pól składa się szachownica?", listOf("36", "49", "64", "81"), 2),
+        Question("W jakim mieście stoi Wawel?", listOf("Warszawa", "Kraków", "Gniezno", "Poznań"), 1),
+        Question("Ile wynosi suma kątów w trójkącie?", listOf("90°", "180°", "270°", "360°"), 1),
+        Question("Który ptak jest symbolem Polski?", listOf("Sokół", "Bocian", "Orzeł biały", "Jastrząb"), 2),
+        Question("Ile planet ma Układ Słoneczny?", listOf("7", "8", "9", "10"), 1),
+        Question("Największa pustynia gorąca na świecie to:", listOf("Gobi", "Kalahari", "Sahara", "Atakama"), 2),
+        Question("Stolica Grecji to:", listOf("Saloniki", "Ateny", "Sparta", "Korynt"), 1),
+        Question("Ile strun ma klasyczna gitara?", listOf("4", "5", "6", "7"), 2),
+        Question("Kto wynalazł żarówkę (najbardziej znany wynalazca)?", listOf("Nikola Tesla", "Thomas Edison", "Graham Bell", "James Watt"), 1),
+        Question("Ile wynosi 2 do potęgi 10?", listOf("512", "1000", "1024", "2048"), 2),
+        Question("Morze, nad którym leży Polska, to:", listOf("Morze Północne", "Morze Bałtyckie", "Morze Czarne", "Morze Śródziemne"), 1),
+        Question("Ile godzin ma tydzień?", listOf("148", "158", "168", "178"), 2),
+        Question("Stolica Węgier to:", listOf("Praga", "Budapeszt", "Bukareszt", "Wiedeń"), 1),
+        Question("Kto napisał „Romea i Julię”?", listOf("Charles Dickens", "William Szekspir", "Johann Goethe", "Victor Hugo"), 1),
+        Question("Najtwardszy naturalny minerał to:", listOf("Kwarc", "Diament", "Topaz", "Grafit"), 1),
+        Question("Ile wynosi 9 × 9?", listOf("72", "81", "90", "99"), 1),
+        Question("Stolica Ukrainy to:", listOf("Lwów", "Kijów", "Odessa", "Charków"), 1),
+        Question("Który narząd pompuje krew?", listOf("Płuca", "Wątroba", "Serce", "Nerki"), 2),
+        Question("Ile pól ma plansza do kółka i krzyżyka?", listOf("6", "8", "9", "12"), 2),
+        Question("Wisła wpada do:", listOf("Morza Bałtyckiego", "Odry", "Morza Czarnego", "Zalewu Wiślanego tylko"), 0),
+        Question("Stolica Czech to:", listOf("Brno", "Bratysława", "Praga", "Ostrawa"), 2),
+        Question("Ile nóg ma owad?", listOf("4", "6", "8", "10"), 1),
+        Question("Który miesiąc ma najmniej dni?", listOf("Kwiecień", "Luty", "Listopad", "Czerwiec"), 1),
+        Question("Język programowania z logo węża to:", listOf("Java", "Python", "Kotlin", "Ruby"), 1),
+        Question("Ile wynosi liczba π w przybliżeniu?", listOf("2,14", "3,14", "3,41", "4,13"), 1),
+        Question("Kto był pierwszym człowiekiem na Księżycu?", listOf("Jurij Gagarin", "Neil Armstrong", "Buzz Aldrin", "Mirosław Hermaszewski"), 1),
+        Question("Stolica Litwy to:", listOf("Ryga", "Wilno", "Tallin", "Kowno"), 1),
+        Question("Ile zębów ma dorosły człowiek (z zębami mądrości)?", listOf("28", "30", "32", "36"), 2),
+        Question("Z czego robi się tradycyjny oscypek?", listOf("Z mleka krowiego", "Z mleka owczego", "Z mleka koziego", "Z soi"), 1),
+        Question("Najdłuższa rzeka świata (według większości źródeł) to:", listOf("Amazonka", "Nil", "Jangcy", "Missisipi"), 1),
+        Question("Ile wynosi 1000 metrów?", listOf("1 dm", "1 km", "10 km", "100 m"), 1),
+        Question("Stolica Słowacji to:", listOf("Koszyce", "Bratysława", "Żylina", "Preszów"), 1),
+        Question("Kto namalował „Bitwę pod Grunwaldem”?", listOf("Jan Matejko", "Józef Chełmoński", "Stanisław Wyspiański", "Jacek Malczewski"), 0),
+        Question("Który metal jest płynny w temperaturze pokojowej?", listOf("Ołów", "Rtęć", "Cyna", "Sód"), 1),
+        Question("Ile sekund ma godzina?", listOf("360", "3600", "6000", "36000"), 1),
+        Question("Stolica Holandii to:", listOf("Rotterdam", "Haga", "Amsterdam", "Utrecht"), 2),
+        Question("Jak nazywa się młode konia?", listOf("Cielę", "Źrebię", "Koźlę", "Prosię"), 1),
+        Question("Ile kolorów ma tęcza (tradycyjnie)?", listOf("5", "6", "7", "8"), 2),
+        Question("Polskie miasto nazywane „miastem Kopernika” to:", listOf("Olsztyn", "Toruń", "Bydgoszcz", "Płock"), 1),
+        Question("W jakim kraju leży Machu Picchu?", listOf("Meksyk", "Peru", "Chile", "Boliwia"), 1),
+        Question("Ile wynosi 100 − 37?", listOf("53", "63", "67", "73"), 1),
+        Question("Stolica Szwecji to:", listOf("Göteborg", "Sztokholm", "Malmö", "Uppsala"), 1),
+        Question("Który instrument ma klawisze i pedały?", listOf("Skrzypce", "Fortepian", "Flet", "Bęben"), 1),
+        Question("Ile lat trwa wiek?", listOf("10", "50", "100", "1000"), 2),
+        Question("Największe jezioro w Polsce to:", listOf("Mamry", "Śniardwy", "Hańcza", "Wigry"), 1),
+        Question("Który ptak nie lata?", listOf("Bocian", "Pingwin", "Wróbel", "Jaskółka"), 1),
+        Question("Ile boków ma kwadrat?", listOf("3", "4", "5", "6"), 1),
+        Question("Stolica Francji to:", listOf("Lyon", "Marsylia", "Paryż", "Nicea"), 2),
+        Question("Twórca teorii względności to:", listOf("Isaac Newton", "Albert Einstein", "Niels Bohr", "Stephen Hawking"), 1),
+        Question("Ile wynosi 12 × 12?", listOf("124", "144", "156", "164"), 1),
+        Question("Która z tych gier pochodzi z Rosji?", listOf("Tetris", "Pac-Man", "Mario", "Pong"), 0),
+        Question("Ile oczek ma kostka do gry łącznie?", listOf("18", "21", "24", "36"), 1),
+        Question("Stolica Austrii to:", listOf("Salzburg", "Graz", "Wiedeń", "Innsbruck"), 2),
+        Question("Ile wynosi temperatura wrzenia wody na poziomie morza?", listOf("90°C", "100°C", "110°C", "120°C"), 1),
+        Question("Smok Wawelski mieszkał w:", listOf("Gdańsku", "Krakowie", "Warszawie", "Wrocławiu"), 1),
+        Question("Ile kart jest w standardowej talii (bez jokerów)?", listOf("32", "48", "52", "54"), 2),
+        Question("Stolica Niemiec to:", listOf("Monachium", "Hamburg", "Berlin", "Frankfurt"), 2),
+        Question("Ile nut jest w gamie (bez powtórzenia oktawy)?", listOf("5", "7", "8", "12"), 1),
+        Question("Który kontynent jest największy?", listOf("Afryka", "Azja", "Ameryka Północna", "Europa"), 1),
+    )
+
+    /** Zdania do „Prawda czy fałsz” (zdanie, czy prawdziwe). */
+    val TRUE_FALSE: List<Pair<String, Boolean>> = listOf(
+        "Wieloryb jest ssakiem." to true,
+        "Pająk jest owadem." to false,
+        "Warszawa leży nad Wisłą." to true,
+        "Słońce jest gwiazdą." to true,
+        "Pingwiny żyją na biegunie północnym." to false,
+        "Woda wrze w 100°C na poziomie morza." to true,
+        "Mount Everest to najwyższa góra na Ziemi." to true,
+        "Delfin jest rybą." to false,
+        "Kraków był kiedyś stolicą Polski." to true,
+        "Ludzie mają 4 płuca." to false,
+        "Księżyc świeci własnym światłem." to false,
+        "Diament jest odmianą węgla." to true,
+        "Pomidor botanicznie jest owocem." to true,
+        "Wenus jest najgorętszą planetą Układu Słonecznego." to true,
+        "Struś potrafi latać." to false,
+        "Chopin urodził się w Żelazowej Woli." to true,
+        "Nietoperz jest ptakiem." to false,
+        "Bałtyk jest morzem słonym jak ocean." to false,
+        "W roku jest 12 miesięcy." to true,
+        "Złoto przewodzi prąd." to true,
+        "Koala jest niedźwiedziem." to false,
+        "Ośmiornica ma osiem ramion." to true,
+        "Szklanka wody zamarza w 10°C." to false,
+        "Tlen jest gazem." to true,
+        "Pierwszy człowiek w kosmosie to Jurij Gagarin." to true,
+        "Australia jest kontynentem i państwem." to true,
+        "Rekiny są ssakami." to false,
+        "Trójkąt może mieć dwa kąty proste." to false,
+        "Liczba 17 jest liczbą pierwszą." to true,
+        "Liczba 21 jest liczbą pierwszą." to false,
+        "Sahara jest największą pustynią gorącą." to true,
+        "Bocian odlatuje na zimę do Afryki." to true,
+        "Pszczoły robią miód z nektaru." to true,
+        "Ludzkie serce ma dwa przedsionki i dwie komory." to true,
+        "Ryby oddychają skrzelami." to true,
+        "Kangur pochodzi z Ameryki Południowej." to false,
+        "Mars nazywany jest Czerwoną Planetą." to true,
+        "Morze Martwe jest bardzo słone." to true,
+        "Nil płynie przez Egipt." to true,
+        "Tatry leżą w Polsce i na Słowacji." to true,
+        "Banany rosną na drzewach liściastych jak jabłonie." to false,
+        "Igrzyska olimpijskie pochodzą ze starożytnej Grecji." to true,
+        "Ślimak ma szkielet wewnętrzny." to false,
+        "Żaba jest płazem." to true,
+        "Wąż ma powieki." to false,
+        "Jedna godzina ma 3600 sekund." to true,
+        "Kwadrat jest prostokątem." to true,
+        "Prostokąt zawsze jest kwadratem." to false,
+        "Na Antarktydzie żyją niedźwiedzie polarne." to false,
+        "Kopernik twierdził, że Ziemia krąży wokół Słońca." to true,
+        "Rtęć jest metalem." to true,
+        "Hel jest cięższy od powietrza." to false,
+        "Polska graniczy z Węgrami." to false,
+        "Polska graniczy z Litwą." to true,
+        "Kot ma zwykle 5 palców w przednich łapach." to true,
+        "Pająki mają osiem oczu (większość gatunków)." to true,
+        "Liczba 0 jest liczbą parzystą." to true,
+        "Wieża Eiffla stoi w Londynie." to false,
+        "Mleko krowie jest źródłem wapnia." to true,
+        "Dźwięk rozchodzi się w próżni." to false,
+    )
+
+    /** Emoji-zagadki: emoji, odpowiedź, podpowiedź. */
+    val EMOJI: List<Triple<String, String, String>> = listOf(
+        Triple("🦁👑", "Król Lew", "film"),
+        Triple("❄️👸", "Kraina Lodu", "film"),
+        Triple("🕷️🧑", "Spider-Man", "film"),
+        Triple("🧙‍♂️💍🌋", "Władca Pierścieni", "film"),
+        Triple("🚢🧊💔", "Titanic", "film"),
+        Triple("🦖🏝️", "Park Jurajski", "film"),
+        Triple("👻🚫", "Pogromcy duchów", "film"),
+        Triple("🐠🔍", "Gdzie jest Nemo", "film"),
+        Triple("🧸🍯", "Kubuś Puchatek", "bajka"),
+        Triple("🐉🏰🐑", "Smok Wawelski", "legenda"),
+        Triple("🧜‍♀️🗡️🌊", "Syrenka Warszawska", "legenda"),
+        Triple("🐻🐻🐻👧", "Złotowłosa i trzy niedźwiadki", "bajka"),
+        Triple("🍎👸💤", "Królewna Śnieżka", "bajka"),
+        Triple("👠🎃🕛", "Kopciuszek", "bajka"),
+        Triple("🐺👵🧺", "Czerwony Kapturek", "bajka"),
+        Triple("🤥👃", "Pinokio", "bajka"),
+        Triple("🧑‍🚀🌕", "Lądowanie na Księżycu", "wydarzenie"),
+        Triple("⚡🧙‍♂️👓", "Harry Potter", "film"),
+        Triple("🦇🧑", "Batman", "film"),
+        Triple("🐼🥋", "Kung Fu Panda", "film"),
+        Triple("🚗⚡", "Auta", "film"),
+        Triple("🐀👨‍🍳", "Ratatuj", "film"),
+        Triple("🎈🏠👴", "Odlot", "film"),
+        Triple("🤖🌱", "WALL-E", "film"),
+        Triple("🐦🌅", "Kto rano wstaje, temu Pan Bóg daje", "przysłowie"),
+        Triple("🐴🎁🦷", "Darowanemu koniowi w zęby się nie zagląda", "przysłowie"),
+        Triple("🍎🌳", "Niedaleko pada jabłko od jabłoni", "przysłowie"),
+        Triple("🌹🌵", "Nie ma róży bez kolców", "przysłowie"),
+        Triple("💧🪨", "Kropla drąży skałę", "przysłowie"),
+        Triple("🐦✋🕊️🏠", "Lepszy wróbel w garści niż gołąb na dachu", "przysłowie"),
+        Triple("🍕🇮🇹", "Pizza", "jedzenie"),
+        Triple("🥟🥟🥟", "Pierogi", "jedzenie"),
+        Triple("🍫🏭", "Charlie i fabryka czekolady", "film"),
+        Triple("🎄🏠👦", "Kevin sam w domu", "film"),
+        Triple("🦈🌊🏖️", "Szczęki", "film"),
+        Triple("🐒🏙️", "King Kong", "film"),
+        Triple("🧟‍♂️🌍", "Apokalipsa zombie", "film"),
+        Triple("🕵️‍♂️🔍🎻", "Sherlock Holmes", "postać"),
+        Triple("🏴‍☠️🌊💀", "Piraci z Karaibów", "film"),
+        Triple("🐝🎬", "Pszczółka Maja", "bajka"),
+        Triple("👨‍🔬⏰🚗", "Powrót do przyszłości", "film"),
+        Triple("🦸‍♂️🛡️🇺🇸", "Kapitan Ameryka", "film"),
+        Triple("🔨⚡", "Thor", "film"),
+        Triple("🐸👑💋", "Żabi książę", "bajka"),
+        Triple("🍀🌈💰", "Szczęście", "rzecz"),
+        Triple("☔🎶", "Deszczowa piosenka", "film"),
+        Triple("🧀🐭", "Mysz i ser", "rzecz"),
+        Triple("🎅🦌🎁", "Święty Mikołaj", "postać"),
+        Triple("🐣🥚🐰", "Wielkanoc", "święto"),
+        Triple("🎃👻🍬", "Halloween", "święto"),
+    )
+
+    /** „Co wolisz?” */
+    val WYR: List<Pair<String, String>> = listOf(
+        "Umieć latać" to "Być niewidzialnym",
+        "Mieszkać nad morzem" to "Mieszkać w górach",
+        "Zawsze lato" to "Zawsze zima",
+        "Pizza do końca życia" to "Lody do końca życia",
+        "Czytać w myślach" to "Przewidywać przyszłość",
+        "Podróż w przeszłość" to "Podróż w przyszłość",
+        "Mieć smoka" to "Mieć jednorożca",
+        "Nigdy nie spać" to "Nigdy nie jeść",
+        "Mówić wszystkimi językami" to "Rozmawiać ze zwierzętami",
+        "Rok bez telefonu" to "Rok bez słodyczy",
+        "Wakacje w namiocie" to "Wakacje w hotelu",
+        "Być bardzo mądrym" to "Być bardzo zabawnym",
+        "Mieszkać w mieście" to "Mieszkać na wsi",
+        "Kot" to "Pies",
+        "Kawa" to "Herbata",
+        "Książka" to "Film",
+        "Zawsze się spóźniać o 10 minut" to "Zawsze być godzinę za wcześnie",
+        "Teleportacja" to "Superszybkość",
+        "Śpiewać zamiast mówić" to "Tańczyć zamiast chodzić",
+        "Wygrać na loterii" to "Żyć dwa razy dłużej",
+        "Być sławnym" to "Być bogatym",
+        "Zjeść cytrynę" to "Zjeść łyżkę musztardy",
+        "Mieć własną wyspę" to "Mieć własny samolot",
+        "Pracować w nocy" to "Pracować bardzo wcześnie rano",
+        "Góry" to "Jeziora",
+        "Słodkie" to "Słone",
+        "Być kapitanem statku kosmicznego" to "Być kapitanem pirackiego statku",
+        "Nie móc się śmiać" to "Nie móc płakać",
+        "Mieć pamięć absolutną" to "Umieć zapominać, co się chce",
+        "Mieszkać w zamku" to "Mieszkać w domku na drzewie",
+        "Dzień bez internetu" to "Dzień bez prądu",
+        "Rower" to "Hulajnoga",
+        "Biegać maraton" to "Przepłynąć jezioro",
+        "Mieć supermoc na jeden dzień" to "Mieć milion złotych na jeden dzień",
+        "Zawsze mówić prawdę" to "Zawsze kłamać",
+        "Żyć bez muzyki" to "Żyć bez filmów",
+        "Jeść tylko na zimno" to "Jeść tylko na ciepło",
+        "Mieć rację" to "Mieć spokój",
+        "Spotkać kosmitę" to "Spotkać dinozaura",
+        "Być najlepszym graczem w drużynie" to "Być w najlepszej drużynie",
+    )
+
+    /** „Nigdy przenigdy…” */
+    val NEVER: List<String> = listOf(
+        "…nie zasnąłem/zasnęłam w kinie.", "…nie zgubiłem/zgubiłam kluczy.", "…nie śpiewałem/śpiewałam pod prysznicem.",
+        "…nie jadłem/jadłam pizzy z ananasem.", "…nie wysłałem/wysłałam wiadomości do złej osoby.", "…nie spóźniłem/spóźniłam się na pociąg.",
+        "…nie skakałem/skakałam na bungee.", "…nie byłem/byłam za granicą.", "…nie płakałem/płakałam na bajce.",
+        "…nie udawałem/udawałam, że mnie nie ma w domu.", "…nie zjadłem/zjadłam czegoś, co spadło na podłogę.",
+        "…nie zapomniałem/zapomniałam czyichś urodzin.", "…nie grałem/grałam w grę całą noc.", "…nie tańczyłem/tańczyłam na stole.",
+        "…nie przewróciłem/przewróciłam się na lodzie.", "…nie mówiłem/mówiłam przez sen.", "…nie gotowałem/gotowałam dla więcej niż 10 osób.",
+        "…nie widziałem/widziałam zorzy polarnej.", "…nie spałem/spałam pod namiotem.", "…nie złamałem/złamałam kości.",
+        "…nie byłem/byłam w telewizji.", "…nie wygrałem/wygrałam żadnego konkursu.", "…nie zgubiłem/zgubiłam się w obcym mieście.",
+        "…nie jechałem/jechałam na koniu.", "…nie pływałem/pływałam w morzu nocą.", "…nie zrobiłem/zrobiłam sobie tatuażu.",
+        "…nie przeczytałem/przeczytałam książki w jeden dzień.", "…nie oglądałem/oglądałam serialu do rana.",
+        "…nie wysłałem/wysłałam głosówki dłuższej niż 5 minut.", "…nie zapomniałem/zapomniałam hasła do telefonu.",
+        "…nie śmiałem/śmiałam się w nieodpowiednim momencie.", "…nie farbowałem/farbowałam włosów.",
+        "…nie byłem/byłam na koncercie.", "…nie latałem/latałam samolotem.", "…nie wspinałem/wspinałam się na górę powyżej 2000 m.",
+        "…nie zjadłem/zjadłam całej pizzy sam/sama.", "…nie dostałem/dostałam mandatu.", "…nie zrobiłem/zrobiłam nikomu dowcipu na prima aprilis.",
+        "…nie zapomniałem/zapomniałam, po co wszedłem/weszłam do pokoju.", "…nie pisałem/pisałam wiersza.",
+    )
+
+    val TRUTHS: List<String> = listOf(
+        "Jaka jest Twoja ulubiona piosenka, do której wstyd się przyznać?", "Co najdziwniejszego zdarzyło Ci się zjeść?",
+        "Kim chciałeś/chciałaś zostać jako dziecko?", "Jaki był Twój najgorszy prezent?", "Czego boisz się najbardziej?",
+        "Jakie jest Twoje najśmieszniejsze wspomnienie ze szkoły?", "Jaką supermoc chciałbyś/chciałabyś mieć?",
+        "Gdybyś mógł/mogła zjeść tylko jedną potrawę do końca życia, co by to było?", "Jaki jest Twój ukryty talent?",
+        "Komu z tej rozmowy powierzyłbyś/powierzyłabyś sekret?", "Co robisz, gdy nikt nie patrzy?", "Jaki film widziałeś/widziałaś najwięcej razy?",
+        "Jaki był Twój najbardziej żenujący moment?", "Gdzie chciałbyś/chciałabyś pojechać w podróż marzeń?",
+        "Co ostatnio Cię naprawdę rozśmieszyło?", "Jakie jest Twoje najdziwniejsze przyzwyczajenie?", "Za co jesteś dziś wdzięczny/wdzięczna?",
+        "Jaką grę lubisz najbardziej?", "Czego nauczyłeś/nauczyłaś się ostatnio?", "Jaki jest Twój ulubiony emoji i dlaczego?",
+        "Opowiedz o swojej pierwszej pracy albo pierwszym zarobionym pieniądzu.", "Jaki był najlepszy dzień w tym roku?",
+        "Z jaką postacią z bajki się utożsamiasz?", "Jaką aplikację otwierasz najczęściej?", "Co zrobiłbyś/zrobiłabyś z milionem złotych?",
+    )
+
+    val DARES: List<String> = listOf(
+        "Wyślij głosówkę, w której śpiewasz refren dowolnej piosenki.", "Napisz następną wiadomość tylko emoji.",
+        "Wyślij zdjęcie rzeczy, która stoi najbliżej Ciebie.", "Opowiedz kawał (najlepiej suchy).", "Napisz wierszyk o osobie powyżej.",
+        "Zrób 10 przysiadów i daj znać, że skończyłeś/skończyłaś.", "Przez 10 minut kończ każdą wiadomość słowem „ziemniak”.",
+        "Wyślij zdjęcie swojej najśmieszniejszej miny.", "Powiedz komplement każdej osobie w tej rozmowie.",
+        "Napisz zdanie od tyłu.", "Wyślij głosówkę z najlepszą imitacją zwierzęcia.", "Ustaw sobie status „🐧 jestem pingwinem” na godzinę.",
+        "Opisz swój dzień w trzech słowach.", "Wyślij zdjęcie widoku z okna.", "Zaproponuj grę, w którą wszyscy zagrają w tej rozmowie.",
+        "Napisz wiadomość, używając tylko słów na literę „P”.", "Wyślij GIF, który najlepiej opisuje Twój nastrój.",
+        "Udawaj przez 5 minut, że jesteś prezenterem pogody.", "Wymyśl nowe imię dla każdego w rozmowie.", "Zanuć melodię w głosówce — reszta zgaduje.",
+    )
+
+    /** „Kto z nas…?” */
+    val WHO: List<String> = listOf(
+        "…najczęściej się spóźnia?", "…pierwszy przeżyłby apokalipsę zombie?", "…najlepiej gotuje?", "…zostanie milionerem?",
+        "…najszybciej odpisuje?", "…najczęściej zapomina o urodzinach?", "…byłby najlepszym prezydentem?", "…ma najlepsze poczucie humoru?",
+        "…najdłużej śpi w weekend?", "…najchętniej pojechałby w kosmos?", "…ma najwięcej zdjęć w telefonie?", "…najgłośniej się śmieje?",
+        "…zje najwięcej pierogów?", "…najlepiej tańczy?", "…zgubi telefon na imprezie?", "…pierwszy zasypia na filmie?",
+        "…najlepiej zna się na grach?", "…napisałby najlepszą książkę?", "…najczęściej wysyła głosówki?", "…byłby najlepszym detektywem?",
+        "…wygrałby w teleturnieju?", "…ma najlepszy gust muzyczny?", "…najbardziej lubi zwierzęta?", "…najszybciej wyda wypłatę?",
+        "…jest największym optymistą?", "…pierwszy pobiegłby maraton?", "…ma najwięcej nieprzeczytanych wiadomości?",
+        "…zostałby gwiazdą internetu?", "…najlepiej dotrzymuje tajemnic?", "…najczęściej wymyśla zabawy?",
+    )
+
+    val BALL8: List<String> = listOf(
+        "Zdecydowanie tak.", "Bez wątpienia.", "Tak — na pewno.", "Możesz na to liczyć.", "Wygląda na to, że tak.",
+        "Najprawdopodobniej.", "Perspektywy są dobre.", "Tak.", "Znaki wskazują, że tak.", "Spróbuj zapytać później.",
+        "Lepiej teraz nie mówić.", "Nie mogę tego teraz przewidzieć.", "Skup się i zapytaj ponownie.", "Nie licz na to.",
+        "Moja odpowiedź brzmi: nie.", "Moje źródła mówią, że nie.", "Perspektywy nie są zbyt dobre.", "Bardzo wątpliwe.",
+        "Gwiazdy mówią: zdecydowanie!", "Hmm… zapytaj kota.",
+    )
+}

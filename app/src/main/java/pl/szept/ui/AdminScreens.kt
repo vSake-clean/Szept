@@ -170,7 +170,7 @@ fun AdminScreen(nav: Nav) {
                 return@Column
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                listOf("Aktualizacja", "Wiadomość", "Znaczki", "Wymuszanie", "Konta", "Dostęp").forEachIndexed { i, t ->
+                listOf("Aktualizacja", "Wiadomość", "Znaczki", "Wymuszanie", "Konta", "Dostęp", "Gry").forEachIndexed { i, t ->
                     FilterChip(tab == i, { tab = i }, { Text(t, style = MaterialTheme.typography.labelSmall) })
                 }
             }
@@ -207,6 +207,7 @@ fun AdminScreen(nav: Nav) {
                 3 -> PolicyTab(apk)
                 4 -> ModerationTab()
                 5 -> AccessTab()
+                6 -> PyGamesTab()
             }
             if (jobs.isNotEmpty()) {
                 HorizontalDivider(Modifier.padding(vertical = 12.dp))
@@ -526,3 +527,130 @@ private fun TurnCard() {
         }
     }
 }
+
+/** Gry w Pythonie dla wszystkich: plik .py (albo .zip z main.py) trafia do każdego telefonu. */
+@Composable
+private fun PyGamesTab() {
+    val ctx = LocalContext.current
+    val core = App.core
+    val scope = rememberCoroutineScope()
+    val policy by core.policy.collectAsState()
+    val games = remember(policy) { core.adminPyGames() }
+    var editing by remember { mutableStateOf<pl.szept.core.PyGames.Game?>(null) }
+    var file by remember { mutableStateOf<File?>(null) }
+    var fileName by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var desc by remember { mutableStateOf("") }
+    var sk by remember { mutableStateOf("pts") }
+    var unit by remember { mutableStateOf("") }
+    var higher by remember { mutableStateOf(true) }
+    var decimals by remember { mutableIntStateOf(0) }
+    var args by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var confirmDel by remember { mutableStateOf<pl.szept.core.PyGames.Game?>(null) }
+    fun reset() { editing = null; file = null; fileName = ""; name = ""; desc = ""; sk = "pts"; unit = ""; higher = true; decimals = 0; args = "" }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val (f, n) = withContext(Dispatchers.IO) {
+                    val n = ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "gra.py"
+                    val dest = File(ctx.cacheDir, "pyg_pick_${System.nanoTime()}")
+                    ctx.contentResolver.openInputStream(uri)?.use { ins -> dest.outputStream().use { ins.copyTo(it) } }
+                    dest to n
+                }
+                if (f.length() > 8L * 1024 * 1024) { f.delete(); toast(ctx, "Plik gry może mieć najwyżej 8 MB"); return@launch }
+                file = f; fileName = n
+                if (name.isBlank()) name = n.substringBeforeLast('.').replace('_', ' ').replaceFirstChar { it.uppercase() }.take(40)
+            } catch (e: Exception) { toast(ctx, "Nie udało się wczytać pliku") }
+        }
+    }
+    Text(
+        "Gry w Pythonie (pygame) działają w telefonie każdej osoby — bez serwera. Plik .py albo .zip (z main.py i obrazkami/dźwiękami) trafia do wszystkich " +
+            "i pojawia się w Gry oraz w spinacz → Gra. Pierwsze uruchomienie pobiera raz środowisko Pythona (ok. 18 MB).",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Text(
+        "Wskazówki: najlepiej pętla jak w pygbag — „async def main()” i „await asyncio.sleep(0)” w każdej klatce. Wynik do tabeli „Łącznie” zgłaszasz tak: " +
+            "„import szept” i „szept.score(wynik)” (poza Szeptem moduł nie istnieje — użyj try/except ImportError).",
+        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp),
+    )
+    HorizontalDivider(Modifier.padding(vertical = 10.dp))
+    Text("Rozesłane gry (${games.size})", style = MaterialTheme.typography.titleSmall)
+    if (games.isEmpty()) Text("Brak — dodaj pierwszą grę poniżej. Wbudowany jest „Wheelie Simulator 2D”.", style = MaterialTheme.typography.bodySmall)
+    games.forEach { g ->
+        Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Column(Modifier.padding(10.dp)) {
+                Text(g.name, fontWeight = FontWeight.Bold)
+                if (g.desc.isNotBlank()) Text(g.desc, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                Text("Wynik: " + pl.szept.ui.games.scoreLabel(g.score) + " · " + (if (g.zip) "ZIP" else "plik .py") + " · " +
+                    java.text.SimpleDateFormat("d.MM.yyyy", java.util.Locale("pl")).format(java.util.Date(g.ver)),
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row {
+                    TextButton(onClick = { pl.szept.ui.games.Play.start(ctx, g.id) }, enabled = pl.szept.core.PyGames.isReady(g)) { Text("Zagraj") }
+                    TextButton(onClick = {
+                        editing = g; file = null; fileName = ""; name = g.name; desc = g.desc; sk = g.sk; unit = g.unit; higher = g.higher; decimals = g.decimals; args = g.args
+                    }) { Text("Zmień") }
+                    TextButton(onClick = {
+                        scope.launch { try { core.adminRefreshPyGame(g.id); toast(ctx, "Wysyłam plik gry ponownie") } catch (e: Exception) { toast(ctx, e.message ?: "Błąd") } }
+                    }) { Text("Wyślij ponownie") }
+                    TextButton(onClick = { confirmDel = g }) { Text("Usuń", color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+    }
+    Text("Paczki z plikiem są na przekaźnikach 21 dni — później użyj „Wyślij ponownie”, żeby nowe telefony też mogły pobrać grę.",
+        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    HorizontalDivider(Modifier.padding(vertical = 10.dp))
+    Text(if (editing != null) "Zmień grę „${editing!!.name}”" else "Dodaj grę w Pythonie", style = MaterialTheme.typography.titleSmall)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = { pick.launch(arrayOf("*/*")) }) { Text(if (file == null) "Wybierz plik .py / .zip" else "Zmień plik") }
+        Spacer(Modifier.width(8.dp))
+        Text(fileName.ifEmpty { if (editing != null) "(bez zmiany pliku)" else "" }, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    }
+    OutlinedTextField(name, { name = it.take(40) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nazwa gry") })
+    OutlinedTextField(desc, { desc = it.take(400) }, Modifier.fillMaxWidth(), label = { Text("Opis (jak grać)") }, minLines = 2)
+    Text("Wynik w grze", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+    listOf("pts" to "Punkty (więcej = lepiej)", "time" to "Czas w ms (szybciej = lepiej)", "timehi" to "Czas w ms (dłużej = lepiej)",
+        "m" to "Metry (więcej = lepiej)", "custom" to "Własna jednostka", "none" to "Bez wyniku").forEach { (k, t) ->
+        Row(Modifier.fillMaxWidth().clickable { sk = k }, verticalAlignment = Alignment.CenterVertically) { RadioButton(sk == k, { sk = k }); Text(t) }
+    }
+    if (sk == "custom") {
+        OutlinedTextField(unit, { unit = it.take(12) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Jednostka, np. „monet”") })
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { higher = !higher }) { Checkbox(higher, { higher = it }); Text("Więcej = lepiej") }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Miejsca po przecinku: ")
+            listOf(0, 1, 2).forEach { d -> FilterChip(decimals == d, { decimals = d }, { Text("$d") }); Spacer(Modifier.width(4.dp)) }
+        }
+    }
+    OutlinedTextField(args, { args = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Argumenty startowe (opcjonalnie, np. --telefon)") })
+    Row {
+        Button(onClick = {
+            val g = editing
+            val src = file ?: g?.let { pl.szept.core.PyGames.fileOf(it) }
+            if (src == null) { toast(ctx, "Wybierz plik gry"); return@Button }
+            val zip = (file?.let { fileName.endsWith(".zip", true) || isZip(it) }) ?: g!!.zip
+            busy = true
+            scope.launch {
+                try {
+                    val copy = File(ctx.cacheDir, "pyg_send_${System.nanoTime()}").also { withContext(Dispatchers.IO) { src.copyTo(it, overwrite = true) } }
+                    try { core.adminPublishPyGame(copy, zip, g?.id, name, desc, sk, unit, higher, decimals, args) } finally { copy.delete() }
+                    toast(ctx, "Rozsyłam grę „$name” do wszystkich"); reset()
+                } catch (e: Exception) { toast(ctx, e.message ?: "Nie udało się") } finally { busy = false }
+            }
+        }, enabled = !busy && name.isNotBlank() && (file != null || editing != null)) { Text(if (editing != null) "Zapisz i roześlij" else "Roześlij wszystkim") }
+        if (editing != null) TextButton(onClick = { reset() }) { Text("Anuluj") }
+    }
+    confirmDel?.let { g ->
+        AlertDialog(
+            onDismissRequest = { confirmDel = null },
+            title = { Text("Usunąć grę?") },
+            text = { Text("„${g.name}” zniknie z telefonów wszystkich osób.") },
+            confirmButton = { TextButton(onClick = { confirmDel = null; scope.launch { try { core.adminRemovePyGame(g.id) } catch (e: Exception) { toast(ctx, e.message ?: "Błąd") } } }) { Text("Usuń") } },
+            dismissButton = { TextButton(onClick = { confirmDel = null }) { Text("Anuluj") } },
+        )
+    }
+}
+
+/** Czy plik to archiwum ZIP (nagłówek „PK”). */
+private fun isZip(f: File): Boolean = try { f.inputStream().use { val b = ByteArray(2); it.read(b) == 2 && b[0] == 'P'.code.toByte() && b[1] == 'K'.code.toByte() } } catch (e: Exception) { false }

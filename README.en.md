@@ -18,6 +18,12 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.1
+- **Almost 80 games** (paperclip → Game or menu ⋮ → Games): arcade, puzzle, memory & reflex, words & quizzes, cards & dice, board and party games. A new game picker with search and icons matching the rest of the menu.
+- **Solo, two players or a group**: full-screen single-player games, **chat challenges** (same layout for everyone, ranking in the bubble), turn-based board games (chess, checkers, connect four, battleship…, also vs. the computer) and party games for groups.
+- **Score and “Total” (Łącznie)**: after a game you first see the current score; “Total” shows a table of all results, your best, the average and who won how many times in the chat.
+- **Python (pygame) games** run on the phone (Pyodide; the runtime is downloaded once, ~18 MB, verified with SHA-256; games have no internet access). Built-in **Wheelie Simulator 2D**; the administrator distributes more games in the admin panel → “Games” (a `.py` file or a `.zip` with `main.py`). Reporting a score: `import szept; szept.score(value)`.
+
 ### New in 3.0
 - **Send when they're online**, **on-device message translation** (nothing is sent to the internet), **formatting** (*bold*, _italic_, ~strikethrough~, `code`, ||spoiler||).
 - **Decoy PIN** that opens an empty Szept, **disguised icon** (a working calculator that opens Szept when you type a code), **auto-deletion** of old messages set separately per chat, a hidden preview in the recent-apps list.
