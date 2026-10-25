@@ -170,3 +170,17 @@ Aktualizacje podpisuj zawsze tym samym kluczem (plik `szept.keystore`), inaczej 
 Klucz, hasła i zaszyfrowany klucz administratora **nie są w repozytorium** — skopiuj `secrets.properties.example` do `secrets.properties`
 (albo ustaw zmienne środowiskowe `SZEPT_KEYSTORE`, `SZEPT_STORE_PASS`, `SZEPT_KEY_ALIAS`, `SZEPT_KEY_PASS`, `SZEPT_ADMIN_ENC`, `KLIPY_KEY`).
 Bez nich aplikacja buduje się normalnie, tylko bez podpisu wydania i bez panelu administratora.
+
+---
+
+## Inne projekty autora
+
+- **[Fih](https://github.com/vSake-clean/Fih)** — język programowania z kompilatorem w czystym assembly x86-64, bez libc
+- **[LunarDraw](https://github.com/vSake-clean/LunarDraw)** — aplikacja do rysowania z warstwami (GTK3/Cairo)
+- **[LuminaView](https://github.com/vSake-clean/LuminaView)** — szybka, lekka przeglądarka obrazów Qt5 dla Linuksa
+- **[StatusCycler](https://github.com/vSake-clean/StatusCycler)** — plugin Vencord zmieniający status na Discordzie
+- **[vencord-AutoReply](https://github.com/vSake-clean/vencord-AutoReply)** — plugin Vencord do automatycznych odpowiedzi
+- **[vencord-StickyNotes](https://github.com/vSake-clean/vencord-StickyNotes)** — plugin Vencord z notatkami przy użytkownikach Discorda
+- **[vencord-friendgroups](https://github.com/vSake-clean/vencord-friendgroups)** — plugin Vencord do grupowania znajomych
+
+Jeśli projekt Ci się podoba, zostaw ⭐ — to bardzo pomaga!
