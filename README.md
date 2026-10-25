@@ -1,7 +1,9 @@
 # Szept — komunikator na Androida bez własnego serwera
 
+🇵🇱 Polski · 🇬🇧 [English](README.en.md)
+
 ## Instalacja
-1. Skopiuj plik `Szept-<wersja>.apk` (np. `Szept-2.2.apk`) na telefon (Android 8 lub nowszy) i otwórz go. Zezwól na instalację z nieznanych źródeł.
+1. Pobierz najnowszy plik `Szept-<wersja>.apk` z [wydań (Releases)](https://github.com/vSake-clean/Szept/releases/latest), skopiuj go (np. `Szept-2.2.apk`) na telefon (Android 8 lub nowszy) i otwórz go. Zezwól na instalację z nieznanych źródeł.
 2. Wpisz swoje imię i wybierz „Zaczynamy”. To cała konfiguracja — nie trzeba podawać numeru telefonu, e-maila ani adresu serwera.
 3. Zezwól na powiadomienia i na działanie **bez ograniczeń baterii** (baner na ekranie głównym). Na telefonach Xiaomi, Huawei, Oppo i Vivo włącz też „Autostart”.
 
