@@ -2,6 +2,15 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.2
+- Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE).
+- Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria).
+- Tryb „Oszczędzanie baterii” działa bez stałego powiadomienia: nowe wiadomości co ok. 15 minut.
+- Lokalizacja na żywo ma osobne powiadomienie — ukrycie „Działania w tle” go nie chowa.
+- Gry w rozmowie: powiadomienie „Twój ruch”, gdy przeciwnik wykona ruch (szachy, warcaby, statki…), oraz gdy ktoś pobije Twój wynik w wyzwaniu.
+- Gry: przesunięcie palcem od krawędzi ekranu nie zamyka już gry (najpierw pytanie „Zakończyć grę?”), a ekran nie gaśnie w trakcie gry.
+- Po awarii Szept proponuje wysłanie dziennika błędów twórcy (bez treści wiadomości); dziennik zawiera też model telefonu.
+
 ## 3.1
 - Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python.
 - Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”.

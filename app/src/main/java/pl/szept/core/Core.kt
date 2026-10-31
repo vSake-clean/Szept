@@ -1738,7 +1738,48 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val chatId = chatOf(from, gid) ?: return
         val m = db.message(p.optString("id")) ?: return
         if (m.chat != chatId || m.ex.game == null) return
-        db.addGameMove(m.id, from, p.optInt("sq").coerceIn(0, MAX_GAME_MOVES), p.optString("mv").take(64), p.optLong("ts", Clock.now()))
+        if (db.addGameMove(m.id, from, p.optInt("sq").coerceIn(0, MAX_GAME_MOVES), p.optString("mv").take(64), p.optLong("ts", Clock.now()))) {
+            try { notifyGameMove(m, from) } catch (e: Exception) { CrashLog.record("Powiadomienie o ruchu w grze", e) }
+        }
+    }
+
+    /**
+     * Ruch innej osoby w grze: „Twój ruch” w grze we dwoje (także koniec partii), a w wyzwaniu —
+     * gdy ktoś właśnie pobił Twój wynik. Bez powiadomienia, gdy ta rozmowa jest otwarta na ekranie.
+     */
+    private fun notifyGameMove(m: Message, from: String) {
+        if (appVisible && activeChat == m.chat) return
+        val game = JSONObject(m.ex.game ?: return)
+        val info = GameCatalog.byId(game.optString("g")) ?: return
+        val moves = db.gameMoves(m.id)
+        val text = when (info.chat) {
+            GameCatalog.Chat.VERSUS -> {
+                @Suppress("UNCHECKED_CAST") val duel = Duels.ALL[info.id] as? Duel<Any> ?: return
+                val played = Duels.replay(duel, m.sender, game.optLong("s"), moves)
+                val side = played.sideOf(myPub)
+                // tylko gracze tej partii: w rozmowie prywatnej druga osoba zawsze gra; w grupie — dopiero po swoim ruchu
+                val player = side >= 0 && (played.pkOf(side) == myPub || (side == 1 && played.b == null && m.chat.startsWith("d:")))
+                if (!player) return
+                when (played.winner) {
+                    null -> if (duel.canMove(played.state, side)) "Twój ruch" else return
+                    2 -> "koniec gry — remis"
+                    side -> "koniec gry — wygrywasz! 🏆"
+                    else -> "koniec gry — przegrana"
+                }
+            }
+            GameCatalog.Chat.CHALLENGE -> {
+                val results = Games.challengeResults(moves)
+                val mine = info.score.best(results[myPub] ?: return) ?: return
+                val theirs = results[from] ?: return
+                val now = theirs.last()
+                val before = info.score.best(theirs.dropLast(1))
+                // tylko gdy ten wynik właśnie przeskoczył Twój
+                if (!info.score.better(now, mine) || (before != null && info.score.better(before, mine))) return
+                "lepszy wynik niż Twój — " + info.score.fmt(now)
+            }
+            else -> return
+        }
+        notifyMessage(m.chat, from, "🎮 ${info.name}: $text", m.chat.startsWith("g:"))
     }
 
     private fun handleSelfGameMove(p: JSONObject) {

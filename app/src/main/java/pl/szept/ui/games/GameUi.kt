@@ -5,6 +5,7 @@ package pl.szept.ui.games
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -234,11 +235,20 @@ fun PlayHost() {
     var totals by remember(r) { mutableStateOf(false) }
     var help by remember(r) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    BackHandler { Play.req = null }
+    var confirmExit by remember(r) { mutableStateOf(false) }
+    // gra trwa — przypadkowy gest „wstecz” (np. przesunięcie od krawędzi w Wężu) nie zamyka jej od razu
+    val playing = result == null && failed == null
+    BackHandler { if (playing) confirmExit = true else Play.req = null }
+    // ekran nie gaśnie w trakcie gry (dłuższe myślenie w sudoku, szachach…)
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { Play.req = null }) { Icon(Icons.Default.Close, "Zamknij grę") }
+                IconButton(onClick = { if (playing) confirmExit = true else Play.req = null }) { Icon(Icons.Default.Close, "Zamknij grę") }
                 GameBadge(info, 30.dp)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
@@ -250,7 +260,8 @@ fun PlayHost() {
                 }
                 IconButton(onClick = { help = true }) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "Jak grać") }
             }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            // przesunięcia palcem przy krawędziach należą do gry, nie do systemowego gestu „wstecz”
+            Box(Modifier.weight(1f).fillMaxWidth().systemGestureExclusion()) {
                 key(r, round) {
                     game(GameEnv(seed, finish = { score ->
                         if (result == null && failed == null) {
@@ -272,6 +283,13 @@ fun PlayHost() {
         }
     }
     if (totals) TotalsDialog(info, r.chatMsg, r.chatId) { totals = false }
+    if (confirmExit) AlertDialog(
+        onDismissRequest = { confirmExit = false },
+        title = { Text("Zakończyć grę?") },
+        text = { Text(if (r.chatMsg != null) "Ta próba nie zostanie zapisana w wyzwaniu." else "Bieżąca gra nie zostanie zapisana.") },
+        confirmButton = { TextButton(onClick = { confirmExit = false; Play.req = null }) { Text("Zakończ") } },
+        dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Graj dalej") } },
+    )
     if (help) AlertDialog(
         onDismissRequest = { help = false },
         icon = { GameBadge(info) },

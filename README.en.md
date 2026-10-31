@@ -18,6 +18,12 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.2
+- **Crash fixed** when a connection drops while a message is being sent (e.g. switching from Wi-Fi to LTE).
+- **The persistent notification** no longer updates constantly and has a “Hide” button (turning off the “Działanie w tle” channel — Szept keeps receiving messages instantly); in battery-saver mode there is none at all.
+- **Games**: “your move” and “your score was beaten” notifications, an edge swipe no longer closes a game, and the screen stays on while playing.
+- After a crash Szept offers to send the error log.
+
 ### New in 3.1
 - **Almost 80 games** (paperclip → Game or menu ⋮ → Games): arcade, puzzle, memory & reflex, words & quizzes, cards & dice, board and party games. A new game picker with search and icons matching the rest of the menu.
 - **Solo, two players or a group**: full-screen single-player games, **chat challenges** (same layout for everyone, ranking in the bubble), turn-based board games (chess, checkers, connect four, battleship…, also vs. the computer) and party games for groups.
@@ -161,7 +167,7 @@ Your phone ──🔒 envelope──►  relay 1 ┐
 7. **Without internet** the phones become relays themselves: each one with the option on runs a small Nostr relay (port 4869) and announces itself on the Wi-Fi network (mDNS/NSD). The same encrypted envelopes then travel between phones, and once one of them gets internet — they also reach the regular relays.
 8. With **key rotation** on, every device creates a new key every 7 days and announces it to friends in an encrypted envelope; envelopes to it are encrypted with that key, and the phone deletes old keys.
 
-A background service runs with a quiet “Szept is receiving messages” notification. On top of that, an alarm every 10 minutes and WorkManager every 15 minutes check the connection.
+A background service runs with a quiet “Szept działa w tle” notification (Android requires it; the “Hide” button lets you hide it — the service keeps running). In battery-saver mode there is no service. On top of that, an alarm every 10 minutes and WorkManager every 15 minutes check the connection.
 
 **Background mode** (Settings):
 - **Balanced** (default) — while the app is closed, the phone keeps only 2 live connections, so messages arrive instantly (about 0.3 s in testing), and the remaining relays are synchronized about every 10 minutes. Uses noticeably less battery than 8 permanent connections.

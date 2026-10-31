@@ -16,6 +16,12 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.2
+- **Naprawiona awaria** przy zerwaniu połączenia w trakcie wysyłania (np. zmiana Wi-Fi na LTE).
+- **Stałe powiadomienie** jest nieruchome i ma przycisk „Ukryj” (wyłączenie kanału „Działanie w tle” — Szept dalej odbiera wiadomości od razu); w trybie „Oszczędzanie baterii” nie ma go wcale.
+- **Gry**: powiadomienie „Twój ruch” i „pobito Twój wynik”, gest „wstecz” od krawędzi nie przerywa gry, ekran nie gaśnie w trakcie gry.
+- Po awarii Szept proponuje wysłanie dziennika błędów.
+
 ### Nowe w 3.1
 - **Prawie 80 gier** (spinacz → Gra albo menu ⋮ → Gry): zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe i imprezowe. Nowy wybór gry z wyszukiwarką i ikonami w stylu reszty menu.
 - **Sam, we dwoje albo w grupie**: gry jednoosobowe na pełnym ekranie, **wyzwania** w rozmowie (ten sam układ dla wszystkich, ranking w dymku), gry planszowe ruch po ruchu (szachy, warcaby, czwórki, statki…, także z komputerem) i gry imprezowe dla grupy.
@@ -160,7 +166,7 @@ Twój telefon ──🔒 koperta──►  przekaźnik 1 ┐
 7. **Bez internetu** telefony same stają się przekaźnikami: każdy z włączoną opcją uruchamia mały przekaźnik Nostr (port 4869) i ogłasza się w sieci Wi-Fi (mDNS/NSD). Te same zaszyfrowane koperty krążą wtedy między telefonami, a gdy któryś złapie internet — trafiają też na zwykłe przekaźniki.
 8. Przy włączonej **rotacji kluczy** każde urządzenie co 7 dni tworzy nowy klucz i ogłasza go znajomym w zaszyfrowanej kopercie; koperty do niego szyfrowane są tym kluczem, a stare klucze telefon kasuje.
 
-W tle działa usługa z cichym powiadomieniem „Szept odbiera wiadomości”. Dodatkowo co 10 minut alarm, a co 15 minut WorkManager sprawdzają połączenie.
+W tle działa usługa z cichym powiadomieniem „Szept działa w tle” (Android go wymaga; przyciskiem „Ukryj” możesz je schować — usługa działa dalej). W trybie oszczędzania baterii usługi nie ma. Dodatkowo co 10 minut alarm, a co 15 minut WorkManager sprawdzają połączenie.
 
 **Tryb pracy w tle** (Ustawienia):
 - **Zrównoważony** (domyślny) — gdy aplikacja jest zamknięta, telefon trzyma na żywo tylko 2 połączenia, więc wiadomości przychodzą od razu (w teście ok. 0,3 s), a pozostałe przekaźniki są synchronizowane co ok. 10 minut. Zużywa wyraźnie mniej baterii niż 8 stałych połączeń.

@@ -310,6 +310,24 @@ fun Root(act: MainActivity) {
     val uiPrefs = remember { act.getSharedPreferences("ui", Context.MODE_PRIVATE) }
     var whatsNew by remember { mutableStateOf(uiPrefs.getString("seen_version", null) != pl.szept.BuildConfig.VERSION_NAME) }
     val notes = CHANGELOG.firstOrNull { it.first == pl.szept.BuildConfig.VERSION_NAME }?.second
+    // po awarii: propozycja wysłania dziennika błędów (bez treści wiadomości)
+    var crashNotice by remember { mutableStateOf(pl.szept.core.CrashLog.takeCrashNotice()) }
+    if (crashNotice && !whatsNew) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { crashNotice = false },
+        title = { androidx.compose.material3.Text("Szept zamknął się przez błąd") },
+        text = {
+            androidx.compose.material3.Text(
+                "Przepraszamy! Szczegóły zapisały się w dzienniku błędów (bez treści wiadomości i kontaktów). " +
+                    "Wyślij go twórcy aplikacji — pomoże to naprawić błąd. Dziennik jest też w Ustawienia → Pomoc.",
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { crashNotice = false; shareText(act, pl.szept.core.CrashLog.read()) }) {
+                androidx.compose.material3.Text("Wyślij dziennik")
+            }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { crashNotice = false }) { androidx.compose.material3.Text("Nie teraz") } },
+    )
     if (whatsNew) {
         fun done() { whatsNew = false; uiPrefs.edit().putString("seen_version", pl.szept.BuildConfig.VERSION_NAME).apply() }
         if (notes == null) done()

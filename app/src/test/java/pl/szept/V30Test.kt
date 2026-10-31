@@ -153,11 +153,40 @@ class V30Test {
         // kółko i krzyżyk: Ala (X) zaczyna, Bartek (O) odpowiada
         val g = a.startGame(chatA, Games.TTT)
         waitFor("gra doszła") { b.db.message(g.id)?.ex?.game != null }
+        // Bartek nie patrzy na tę rozmowę — dostaje powiadomienie „Twój ruch”
+        val notes = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val rec = object : pl.szept.core.Notifier {
+            override fun onMessage(chatId: String, chatName: String, sender: String, text: String, isGroup: Boolean) { notes.add(text) }
+            override fun cancel(chatId: String) {}
+        }
+        b.notifier = rec; b.appVisible = false
         a.gameMove(g.id, "4")
         waitFor("ruch X u Bartka") { Games.ttt(a.myPub, b.db.gameMoves(g.id)).board[4] == 'X' }
+        waitFor("powiadomienie o ruchu") { notes.any { it == "🎮 Kółko i krzyżyk: Twój ruch" } }
+        b.appVisible = true
         b.gameMove(g.id, "0")
         waitFor("ruch O u Ali") { Games.ttt(a.myPub, a.db.gameMoves(g.id)).board[0] == 'O' }
         assertEquals(b.myPub, Games.ttt(a.myPub, a.db.gameMoves(g.id)).o)
+
+        // wyzwanie: Bartek pobija wynik Ali — Ala dostaje powiadomienie (tylko raz, przy przeskoczeniu)
+        val aNotes = java.util.Collections.synchronizedList(mutableListOf<String>())
+        a.notifier = object : pl.szept.core.Notifier {
+            override fun onMessage(chatId: String, chatName: String, sender: String, text: String, isGroup: Boolean) { aNotes.add(text) }
+            override fun cancel(chatId: String) {}
+        }
+        val ch = a.startGame(chatA, "snake")
+        waitFor("wyzwanie doszło") { b.db.message(ch.id)?.ex?.game != null }
+        a.gameMove(ch.id, "10")
+        waitFor("wynik Ali u Bartka") { b.db.gameMoves(ch.id).isNotEmpty() }
+        a.appVisible = false
+        b.gameMove(ch.id, "7")
+        waitFor("słabszy wynik doszedł") { a.db.gameMoves(ch.id).size == 2 }
+        b.gameMove(ch.id, "12")
+        waitFor("pobity wynik") { aNotes.any { it == "🎮 Wąż: lepszy wynik niż Twój — 12 pkt" } }
+        b.gameMove(ch.id, "15")
+        waitFor("kolejny wynik doszedł") { a.db.gameMoves(ch.id).size == 4 }
+        delay(500)
+        assertEquals(1, aNotes.count { it.startsWith("🎮 Wąż") })
         a.stop(); b.stop(); relay.stop()
     }
 }

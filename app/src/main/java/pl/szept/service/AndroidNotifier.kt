@@ -26,6 +26,8 @@ class AndroidNotifier(private val ctx: Context) : Notifier {
     companion object {
         const val CH_MSG = "messages"
         const val CH_SERVICE = "service"
+        /** Osobny kanał na czas udostępniania lokalizacji — ukrycie „Działania w tle” go nie chowa. */
+        const val CH_LIVE = "live_location"
         const val KEY_REPLY = "reply_text"
         const val ACTION_REPLY = "pl.szept.action.REPLY"
         const val ACTION_READ = "pl.szept.action.READ"
@@ -38,6 +40,10 @@ class AndroidNotifier(private val ctx: Context) : Notifier {
             })
             nm.createNotificationChannel(NotificationChannel(CH_SERVICE, "Działanie w tle", NotificationManager.IMPORTANCE_MIN).apply {
                 description = "Stałe powiadomienie, dzięki któremu Szept odbiera wiadomości w tle"
+                setShowBadge(false)
+            })
+            nm.createNotificationChannel(NotificationChannel(CH_LIVE, "Lokalizacja na żywo", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Widać je, gdy udostępniasz komuś swoją lokalizację na żywo"
                 setShowBadge(false)
             })
         }

@@ -73,6 +73,15 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.2" to listOf(
+        "Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE).",
+        "Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria).",
+        "Tryb „Oszczędzanie baterii” działa bez stałego powiadomienia: nowe wiadomości co ok. 15 minut.",
+        "Lokalizacja na żywo ma osobne powiadomienie — ukrycie „Działania w tle” go nie chowa.",
+        "Gry w rozmowie: powiadomienie „Twój ruch”, gdy przeciwnik wykona ruch (szachy, warcaby, statki…), oraz gdy ktoś pobije Twój wynik w wyzwaniu.",
+        "Gry: przesunięcie palcem od krawędzi ekranu nie zamyka już gry (najpierw pytanie „Zakończyć grę?”), a ekran nie gaśnie w trakcie gry.",
+        "Po awarii Szept proponuje wysłanie dziennika błędów twórcy (bez treści wiadomości); dziennik zawiera też model telefonu.",
+    ),
     "3.1" to listOf(
         "Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python.",
         "Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”.",
@@ -264,7 +273,18 @@ fun ConnectionScreen(nav: Nav) {
     var newRelay by remember { mutableStateOf("") }
     var battery by remember { mutableStateOf(true) }
     var advanced by remember { mutableStateOf(false) }
-    LifecycleResumeEffect(Unit) { battery = MainActivity.ignoresBattery(ctx); onPauseOrDispose { } }
+    var notifHidden by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        battery = MainActivity.ignoresBattery(ctx)
+        notifHidden = pl.szept.service.MessengerService.notificationHidden(ctx)
+        onPauseOrDispose { }
+    }
+    fun chooseMode(mode: Int) {
+        bgMode = mode
+        core.setBgMode(mode)
+        // tryb oszczędzania nie potrzebuje usługi w tle (ani jej powiadomienia)
+        pl.szept.service.MessengerService.start(ctx)
+    }
     val info = remember(states, relays) { core.relayInfo() }
     val connected = states.values.count { it == Relay.State.CONNECTED }
     Scaffold(topBar = { BackBar("Połączenie i bateria", nav) }) { pad ->
@@ -291,21 +311,39 @@ fun ConnectionScreen(nav: Nav) {
                 )
                 Heading("Bateria")
                 listOf(
-                    Triple(pl.szept.core.Core.BG_BALANCED, "Normalnie (zalecane)", "Wiadomości od razu, rozsądne zużycie baterii."),
+                    Triple(pl.szept.core.Core.BG_BALANCED, "Normalnie (zalecane)", "Wiadomości i rozmowy od razu, rozsądne zużycie baterii."),
                     Triple(pl.szept.core.Core.BG_FULL, "Zawsze na bieżąco", "Najszybciej i najpewniej, ale bateria schodzi szybciej."),
-                    Triple(pl.szept.core.Core.BG_SAVER, "Oszczędzanie baterii", "Nowe wiadomości co ok. 15 minut. Najmniej baterii."),
+                    Triple(pl.szept.core.Core.BG_SAVER, "Oszczędzanie baterii", "Bez stałego powiadomienia. Nowe wiadomości co ok. 15 minut, a rozmowy nie dzwonią, gdy Szept jest zamknięty."),
                 ).forEach { (mode, title, sub) ->
                     Row(
-                        Modifier.fillMaxWidth().clickable { bgMode = mode; core.setBgMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
+                        Modifier.fillMaxWidth().clickable { chooseMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(bgMode == mode, { bgMode = mode; core.setBgMode(mode) })
+                        RadioButton(bgMode == mode, { chooseMode(mode) })
                         Column {
                             Text(title, style = MaterialTheme.typography.bodyLarge)
                             Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
+                Heading("Stałe powiadomienie")
+                ListItem(
+                    headlineContent = { Text("„Szept działa w tle”") },
+                    supportingContent = {
+                        Text(
+                            when {
+                                bgMode == pl.szept.core.Core.BG_SAVER -> "Nie ma go — w trybie oszczędzania Szept nie działa stale w tle."
+                                notifHidden -> "Ukryte ✓ — Szept dalej odbiera wiadomości i rozmowy od razu."
+                                else -> "Android wymaga go dla aplikacji, która odbiera wiadomości w tle. Możesz je ukryć: wyłącz kanał „Działanie w tle” — Szept będzie działał dalej."
+                            },
+                        )
+                    },
+                    trailingContent = {
+                        if (bgMode != pl.szept.core.Core.BG_SAVER) TextButton(onClick = {
+                            try { ctx.startActivity(pl.szept.service.MessengerService.hideIntent(ctx)) } catch (_: Exception) { toast(ctx, "Nie udało się otworzyć ustawień powiadomień") }
+                        }) { Text(if (notifHidden) "Pokaż" else "Ukryj") }
+                    },
+                )
                 HorizontalDivider(Modifier.padding(top = 8.dp))
                 ListItem(
                     headlineContent = { Text("Dla zaawansowanych: przekaźniki") },
