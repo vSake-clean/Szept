@@ -430,9 +430,37 @@ fun AppearanceScreen(nav: Nav) {
             } catch (e: Exception) { toast(ctx, "Nie udało się") }
         }
     }
+    val st = pl.szept.ui.style.LocalStyle.current
     Scaffold(topBar = { BackBar("Wygląd", nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text("Styl aplikacji", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(16.dp))
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer).clickable { nav.go(Screen.Styles) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                pl.szept.ui.style.StylePreview(st, Modifier.width(118.dp).height(118.dp))
+                Column(Modifier.weight(1f).padding(12.dp)) {
+                    Text(st.spec.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(st.spec.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Zmień styl (${pl.szept.ui.style.STYLES.size} do wyboru) ›", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            val animOn = pl.szept.ui.style.Anim.entries.count { it.key !in UiPrefs.animOff }
+            OutlinedButton(onClick = { nav.go(Screen.Animations) }, Modifier.fillMaxWidth()) {
+                Text(if (UiPrefs.anim) "Animacje: $animOn z ${pl.szept.ui.style.Anim.entries.size} włączonych" else "Animacje: wyłączone")
+            }
+            OutlinedButton(onClick = { nav.go(Screen.Wizard) }, Modifier.fillMaxWidth()) {
+                Text("Kreator wyglądu — ustaw wszystko krok po kroku")
+            }
+            Spacer(Modifier.height(12.dp))
             Text("Motyw", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            if (st.spec.mode != pl.szept.ui.style.Mode.FOLLOW) Text(
+                "Styl „${st.spec.name}” jest zawsze ${if (st.dark) "ciemny" else "jasny"} — ustawienie motywu zadziała w innych stylach.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             listOf(0 to "Jak w systemie", 1 to "Jasny", 2 to "Ciemny", 3 to "Czarny (AMOLED, oszczędza baterię)").forEach { (v, t) ->
                 Row(Modifier.fillMaxWidth().clickable { UiPrefs.theme = v; UiPrefs.save(ctx) }, verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(UiPrefs.theme == v, { UiPrefs.theme = v; UiPrefs.save(ctx) }); Text(t)
@@ -440,6 +468,10 @@ fun AppearanceScreen(nav: Nav) {
             }
             Spacer(Modifier.height(12.dp))
             Text("Kolor", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            if (!st.spec.accent) Text(
+                "Styl „${st.spec.name}” ma własne kolory. Wybrany kolor działa w stylach: " + pl.szept.ui.style.STYLES.filter { it.accent }.joinToString { it.name } + ".",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                 ACCENTS.forEachIndexed { i, c ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { UiPrefs.accent = i; UiPrefs.save(ctx) }) {
@@ -462,7 +494,7 @@ fun AppearanceScreen(nav: Nav) {
             Spacer(Modifier.height(12.dp))
             Text("Tapeta rozmów", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                WallChoice(UiPrefs.wallpaper == "", Modifier.background(MaterialTheme.colorScheme.background)) { UiPrefs.wallpaper = ""; UiPrefs.save(ctx) }
+                WallChoice(UiPrefs.wallpaper == "", Modifier.background(baseColor())) { UiPrefs.wallpaper = ""; UiPrefs.save(ctx) }
                 WALLPAPERS.forEachIndexed { i, colors ->
                     WallChoice(UiPrefs.wallpaper == "g$i", Modifier.background(Brush.verticalGradient(colors))) { UiPrefs.wallpaper = "g$i"; UiPrefs.save(ctx) }
                 }
@@ -481,13 +513,14 @@ fun AppearanceScreen(nav: Nav) {
             Spacer(Modifier.height(12.dp))
             Text("Podgląd", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             Box(Modifier.fillMaxWidth().height(170.dp).padding(vertical = 6.dp).clip(RoundedCornerShape(12.dp)).border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(12.dp))) {
+                pl.szept.ui.style.StyleBackground(Modifier.matchParentSize())
                 ChatWallpaper(Modifier.matchParentSize())
                 Column(Modifier.padding(8.dp)) {
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer) { Text("Cześć! Jak leci? 👋", Modifier.padding(10.dp)) }
+                    pl.szept.ui.style.StyledBubble(false) { Text("Cześć! Jak leci? 👋", Modifier.padding(10.dp)) }
                     Spacer(Modifier.height(6.dp))
                     Row(Modifier.fillMaxWidth()) {
                         Spacer(Modifier.weight(1f))
-                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) { Text("Super, a u Ciebie? 😄", Modifier.padding(10.dp)) }
+                        pl.szept.ui.style.StyledBubble(true) { Text("Super, a u Ciebie? 😄", Modifier.padding(10.dp)) }
                     }
                 }
             }

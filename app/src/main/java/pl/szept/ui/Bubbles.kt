@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -85,6 +86,20 @@ import pl.szept.data.Reaction
 import pl.szept.data.St
 import pl.szept.data.Vote
 import pl.szept.data.XMode
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import pl.szept.ui.style.Anim
+import pl.szept.ui.style.LocalAnim
+import pl.szept.ui.style.LocalStyle
+import pl.szept.ui.style.Role
+import pl.szept.ui.style.StyledBubble
+import pl.szept.ui.style.StyledChip
+import pl.szept.ui.style.pop
+import pl.szept.ui.style.readable
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -100,35 +115,55 @@ fun MessageItem(
     highlight: Boolean = false,
     onReactionsClick: () -> Unit = {},
     onVote: (List<Int>) -> Unit = {},
+    /** Pierwsza (najwyżej) i ostatnia (najniżej) wiadomość w serii od tej samej osoby. */
+    first: Boolean = true,
+    last: Boolean = true,
+    /** Imię do awatara obok dymków rozmówcy (style z awatarami przy wiadomościach). */
+    avatarName: String? = null,
 ) {
     if (m.kind == Kind.SYSTEM) {
-        Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
-            Text(
-                m.body, Modifier.clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.secondaryContainer)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Box(Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 12.dp), contentAlignment = Alignment.Center) {
+            StyledChip {
+                Text(
+                    m.body, Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         return
     }
     val mine = m.mine
     val mentionsMe = !mine && (App.core.myPub in m.ex.mentions || "all" in m.ex.mentions)
+    val st = LocalStyle.current
+    if (st.spec.flatMessages) {
+        FlatMessage(m, avatarName ?: senderName ?: "", first, onClick, onLongPress, replyName, onReplyClick, reactions, votes, highlight, mentionsMe, onReactionsClick, onVote)
+        return
+    }
+    // serie: mniejsze odstępy w środku serii, większe między seriami (jak w oryginalnych komunikatorach)
+    val series = st.spec.grouped || st.spec.tailKind != pl.szept.ui.style.Tail.NONE
+    val sideAvatar = !mine && avatarName != null && (st.spec.chrome == pl.szept.ui.style.Chrome.MESSENGER || st.spec.chrome == pl.szept.ui.style.Chrome.FACEBOOK)
     Column(
         Modifier.fillMaxWidth()
             .background(if (highlight) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp)
+            .padding(top = if (!series) 2.dp else if (first) 3.dp else 1.dp, bottom = if (!series) 2.dp else if (last) 3.dp else 1.dp),
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
     ) {
-        Surface(
-            shape = RoundedCornerShape(18.dp, 18.dp, if (mine) 4.dp else 18.dp, if (mine) 18.dp else 4.dp),
-            color = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        val fillSolid = st.fill(if (mine) Role.MINE else Role.THEIRS).solid(st.pal.base)
+        Row(verticalAlignment = Alignment.Bottom) {
+        if (sideAvatar) {
+            // awatar rozmówcy przy ostatnim dymku serii
+            Box(Modifier.padding(end = 6.dp).size(28.dp)) { if (last) Avatar(avatarName ?: "", m.sender, 28.dp) }
+        }
+        StyledBubble(
+            mine, Modifier.widthIn(max = 300.dp),
             border = if (mentionsMe) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
-            modifier = Modifier.widthIn(max = 300.dp).combinedClickable(onClick = onClick, onLongClick = onLongPress),
+            onClick = onClick, onLongClick = onLongPress, first = first, last = last,
         ) {
             Column(Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
-                if (senderName != null && !mine) {
-                    Text(senderName, color = avatarColor(m.sender), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                if (senderName != null && !mine && (!series || first)) {
+                    Text(senderName, color = readable(avatarColor(m.sender), fillSolid, 3.5f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
                 if (m.ex.fwd) Text("↪ Przekazano", style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 m.reply?.let { r -> QuoteBox(r, replyName ?: "") { onReplyClick(r.id) } }
@@ -142,7 +177,55 @@ fun MessageItem(
                 MetaRow(m, Modifier.align(Alignment.End))
             }
         }
-        ReactionsRow(reactions, onReactionsClick)
+        }
+        Box(Modifier.padding(start = if (sideAvatar) 34.dp else 0.dp)) { ReactionsRow(reactions, onReactionsClick) }
+    }
+}
+
+/**
+ * Wiadomość bez dymka (czaty serwerowe): na początku serii awatar, nazwa i godzina, potem sam tekst.
+ * Wszystkie wiadomości — także moje — są po lewej stronie.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FlatMessage(
+    m: Message, name: String, first: Boolean, onClick: () -> Unit, onLongPress: () -> Unit,
+    replyName: String?, onReplyClick: (String) -> Unit, reactions: List<Reaction>, votes: List<Vote>,
+    highlight: Boolean, mentionsMe: Boolean, onReactionsClick: () -> Unit, onVote: (List<Int>) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val who = if (m.mine) App.core.myName else name
+    val bg = when {
+        highlight -> cs.primary.copy(alpha = 0.16f)
+        mentionsMe -> Color(0xFFF0B232).copy(alpha = 0.1f)
+        else -> Color.Transparent
+    }
+    Row(
+        Modifier.fillMaxWidth().background(bg)
+            .then(if (mentionsMe) Modifier.drawBehind { drawRect(Color(0xFFF0B232), size = androidx.compose.ui.geometry.Size(2.dp.toPx(), size.height)) } else Modifier)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress)
+            .padding(start = 14.dp, end = 14.dp, top = if (first) 10.dp else 1.dp, bottom = 1.dp),
+    ) {
+        if (first) Avatar(who, m.sender, 40.dp) else Spacer(Modifier.width(40.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            if (first) Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(who, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = cs.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Spacer(Modifier.width(8.dp))
+                Text(formatTime(m.ts), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                if (m.mine) { Spacer(Modifier.width(4.dp)); StatusIcon(m.status) }
+            }
+            if (m.ex.fwd) Text("↪ Przekazano", style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = cs.onSurfaceVariant)
+            m.reply?.let { r -> QuoteBox(r, replyName ?: "") { onReplyClick(r.id) } }
+            when {
+                m.mine && m.xmode == XMode.AFTER_OPEN -> { ViewOnceSent(m); TransferInfo(m) }
+                !m.mine && m.hiddenUntilOpened -> ViewOnceCover(m)
+                else -> Content(m, votes, onVote)
+            }
+            if (m.edited > 0) Text("(edytowano)", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+            if (m.expires > 0) Countdown(m.expires)
+            ReactionsRow(reactions, onReactionsClick)
+        }
     }
 }
 
@@ -169,8 +252,26 @@ fun ReactionsRow(list: List<Reaction>, onClick: () -> Unit) {
     if (list.isEmpty()) return
     val me = App.core.myPub
     val grouped = list.groupBy { it.emoji }.entries.sortedByDescending { it.value.size }
+    val animOn = LocalAnim.current[Anim.REACTIONS]
+    var lastCount by remember { mutableIntStateOf(list.size) }
+    val fly = remember { Animatable(1f) }
+    var flyEmoji by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(list.size) {
+        if (animOn && list.size > lastCount) {
+            flyEmoji = list.maxByOrNull { it.ts }?.emoji ?: list.last().emoji
+            fly.snapTo(0f); fly.animateTo(1f, tween(900)); flyEmoji = null
+        }
+        lastCount = list.size
+    }
+    Box {
+    flyEmoji?.let { e ->
+        Text(e, fontSize = 20.sp, modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp).graphicsLayer {
+            translationY = -56.dp.toPx() * fly.value; alpha = 1f - fly.value
+            val k = 1f + fly.value * 0.9f; scaleX = k; scaleY = k
+        })
+    }
     Row(
-        Modifier.padding(top = 2.dp, start = 6.dp, end = 6.dp).clip(RoundedCornerShape(12.dp))
+        Modifier.pop(list.size, animOn, appear = false).padding(top = 2.dp, start = 6.dp, end = 6.dp).clip(RoundedCornerShape(12.dp))
             .background(if (list.any { it.pk == me }) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick).padding(horizontal = 7.dp, vertical = 2.dp)
             .semantics { contentDescription = "Reakcje: " + grouped.joinToString { it.key + " " + it.value.size } },
@@ -178,9 +279,13 @@ fun ReactionsRow(list: List<Reaction>, onClick: () -> Unit) {
     ) {
         grouped.take(5).forEach { (e, l) ->
             Text(e, fontSize = 14.sp)
-            if (l.size > 1) Text(l.size.toString(), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 1.dp))
+            if (l.size > 1) Text(
+                l.size.toString(), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 1.dp),
+                color = if (list.any { it.pk == me }) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.width(3.dp))
         }
+    }
     }
 }
 
@@ -199,14 +304,12 @@ fun AlbumItem(
             .padding(horizontal = 8.dp, vertical = 2.dp),
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
     ) {
-        Surface(
-            shape = RoundedCornerShape(18.dp, 18.dp, if (mine) 4.dp else 18.dp, if (mine) 18.dp else 4.dp),
-            color = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.width(260.dp),
-        ) {
+        val st = LocalStyle.current
+        val fillSolid = st.fill(if (mine) Role.MINE else Role.THEIRS).solid(st.pal.base)
+        StyledBubble(mine, Modifier.width(260.dp)) {
             Column(Modifier.padding(5.dp)) {
                 if (senderName != null && !mine) {
-                    Text(senderName, Modifier.padding(start = 5.dp, bottom = 3.dp), color = avatarColor(first.sender), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(senderName, Modifier.padding(start = 5.dp, bottom = 3.dp), color = readable(avatarColor(first.sender), fillSolid, 3.5f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
                 if (first.ex.fwd) Text("↪ Przekazano", Modifier.padding(start = 5.dp), style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic)
                 list.chunked(2).forEach { row ->
@@ -366,7 +469,7 @@ fun agoText(ts: Long, now: Long): String {
 /** Szkic „mapy” z pinezką (dekoracja — prawdziwa mapa otwiera się w aplikacji map). */
 @Composable
 private fun MapSketch(pin: Color) {
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val dark = pl.szept.ui.style.LocalStyle.current.pal.base.luminance() < 0.5f
     val land = if (dark) Color(0xFF26332B) else Color(0xFFE5F0E0)
     val road = if (dark) Color(0xFF3B4A40) else Color.White
     Canvas(Modifier.fillMaxSize()) {
@@ -570,5 +673,14 @@ private fun StatusIcon(status: Int) {
         St.FAILED -> Icons.Default.ErrorOutline to MaterialTheme.colorScheme.error
         else -> return
     }
-    Icon(icon, null, Modifier.size(16.dp), tint = tint)
+    if (LocalAnim.current[Anim.BUTTONS]) {
+        androidx.compose.animation.AnimatedContent(
+            icon to tint,
+            transitionSpec = {
+                (androidx.compose.animation.scaleIn(spring(dampingRatio = 0.4f, stiffness = 500f), initialScale = 0.3f) + androidx.compose.animation.fadeIn()) togetherWith
+                    androidx.compose.animation.fadeOut(tween(120))
+            },
+            label = "status",
+        ) { (i, t) -> Icon(i, null, Modifier.size(16.dp), tint = t) }
+    } else Icon(icon, null, Modifier.size(16.dp), tint = tint)
 }

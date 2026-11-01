@@ -2852,7 +2852,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     fun setChatPinned(chatId: String, on: Boolean) = db.setChatPinned(chatId, on)
     fun setArchived(chatId: String, on: Boolean) = db.setArchived(chatId, on)
-    fun saveDraft(chatId: String, text: String) = db.setDraft(chatId, text)
+    /** [notify] — przy wyjściu z rozmowy (lista rozmów ma pokazać „Szkic: …”). */
+    fun saveDraft(chatId: String, text: String, notify: Boolean = false) = db.setDraft(chatId, text, notify)
 
     val hasHiddenPin: Boolean get() = prefs.getString("hpin_h", null) != null
     /** Ukryte czaty są widoczne do zamknięcia aplikacji. */

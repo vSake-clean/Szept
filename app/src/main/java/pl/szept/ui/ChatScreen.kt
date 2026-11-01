@@ -129,6 +129,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import pl.szept.App
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import pl.szept.ui.style.Anim
+import pl.szept.ui.style.LocalAnim
+import pl.szept.ui.style.LocalStyle
+import pl.szept.ui.style.ScreenFx
+import pl.szept.ui.style.StyledBubble
+import pl.szept.ui.style.TypingDots
+import pl.szept.ui.style.appear
+import pl.szept.ui.style.barMuted
+import pl.szept.ui.style.fieldShape
+import pl.szept.ui.style.onBar
+import pl.szept.ui.style.styleBarColors
+import pl.szept.ui.style.styleInputBar
+import pl.szept.ui.style.styleTopBar
 import pl.szept.core.Core
 import pl.szept.core.Gifs
 import pl.szept.core.LocationHelper
@@ -147,9 +164,91 @@ import pl.szept.data.St
 import pl.szept.data.XMode
 import pl.szept.service.MessengerService
 import java.io.File
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.animation.core.FastOutSlowInEasing
+import pl.szept.ui.style.Chrome
+import pl.szept.ui.style.InputStyle
+import pl.szept.ui.style.GlassIconButton
+import pl.szept.ui.style.GlassActions
+import pl.szept.ui.style.backIcon
+import pl.szept.ui.style.Ios6Bar
+import pl.szept.ui.style.rememberBackdrop
+import pl.szept.ui.style.backdropSource
+import pl.szept.ui.style.LocalBackdrop
+import pl.szept.ui.style.ChatBgMotion
 
 /** Kilka zdjęć wysłanych naraz (jeden wiersz listy). */
 data class AlbumRow(val key: String, val msgs: List<Message>)
+
+/**
+ * Nowe wiadomości w otwartej rozmowie (nie te wczytane przy otwarciu ani starsze z przewijania):
+ * tylko one „wjeżdżają”, a 🎉/❤️/🎈… uruchamiają efekt na ekranie.
+ */
+class FreshRows {
+    private var known: HashSet<String>? = null
+    private val pending = HashSet<String>()
+    var fxSeq = 0
+        private set
+    var fx: ScreenFx.Kind? = null
+        private set
+
+    fun update(rows: List<Any>, effects: Boolean) {
+        val k = known
+        if (k == null) { known = rows.mapNotNullTo(HashSet()) { keyOf(it) }; return }
+        for (r in rows.take(8)) {
+            val id = keyOf(r) ?: continue
+            if (id in k) continue
+            pending.add(id)
+            val m = (r as? Message) ?: continue
+            if (effects && m.kind == Kind.TEXT && System.currentTimeMillis() - m.ts < 120_000) {
+                ScreenFx.forText(m.body)?.let { fx = it; fxSeq++ }
+            }
+        }
+        rows.forEach { r -> keyOf(r)?.let { k.add(it) } }
+    }
+
+    /** Czy wiersz ma „wjechać” (tylko raz). */
+    fun take(key: String) = pending.remove(key)
+
+    companion object {
+        fun keyOf(r: Any): String? = when (r) { is Message -> r.id; is AlbumRow -> r.key; else -> null }
+    }
+}
+
+/** Samolocik odlatujący po wysłaniu wiadomości. */
+/** Czy dwie wiadomości należą do jednej serii (ta sama osoba, odstęp do 5 minut). */
+private fun sameSeries(a: Any?, b: Any?): Boolean {
+    val ma = a as? Message ?: return false
+    val mb = b as? Message ?: return false
+    if (ma.kind == Kind.SYSTEM || mb.kind == Kind.SYSTEM) return false
+    return ma.sender == mb.sender && ma.mine == mb.mine && kotlin.math.abs(ma.ts - mb.ts) < 5 * 60_000L
+}
+
+@Composable
+private fun FlyingPlane(tick: Int) {
+    if (tick == 0) return
+    val a = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(tick) { a.snapTo(0f); a.animateTo(1f, tween(520)) }
+    if (a.value >= 1f) return
+    Icon(
+        Icons.AutoMirrored.Filled.Send, null,
+        Modifier.size(22.dp).graphicsLayer {
+            val v = a.value
+            translationX = 70.dp.toPx() * v; translationY = -90.dp.toPx() * v * v
+            rotationZ = -25f * v; alpha = 1f - v
+            val k = 1f - 0.4f * v; scaleX = k; scaleY = k
+        },
+        tint = MaterialTheme.colorScheme.primary,
+    )
+}
 
 /** Łączy kolejne zdjęcia jednego albumu w jeden wiersz (lista od najnowszych). */
 fun groupAlbums(newestFirst: List<Message>): List<Any> {
@@ -253,6 +352,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     var scheduledDialog by remember { mutableStateOf(false) }
     var voiceTimed by remember { mutableStateOf(false) }
     var sendMenu by remember { mutableStateOf(false) }
+    var sentTick by remember { mutableIntStateOf(0) }
     var moreMenu by remember { mutableStateOf(false) }
     var highlight by remember { mutableStateOf<String?>(null) }
     var searchMode by remember { mutableStateOf(false) }
@@ -278,7 +378,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     }
     DisposableEffect(chatId) {
         // stan czytany wprost (nie z ostatniej kompozycji) — zapisuje nawet zmianę sprzed ułamka sekundy
-        onDispose { if (draftLoaded) core.saveDraft(chatId, if (editing != null) draftBeforeEdit else text) }
+        onDispose { if (draftLoaded) core.saveDraft(chatId, if (editing != null) draftBeforeEdit else text, notify = true) }
     }
     LaunchedEffect(text, editing) {
         if (draftLoaded && editing == null) { delay(1500); withContext(Dispatchers.IO) { core.saveDraft(chatId, text) } }
@@ -288,6 +388,10 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     val listState = rememberLazyListState()
     val list = msgs?.asReversed() ?: emptyList()
     val rows = remember(list) { withDayHeaders(groupAlbums(list)) }
+    val anim = LocalAnim.current
+    val fresh = remember(chatId) { FreshRows() }
+    remember(rows) { if (msgs != null) fresh.update(rows, anim[Anim.CHAT_FX]) }
+    LaunchedEffect(fresh.fxSeq) { fresh.fx?.let { ScreenFx.play(it) } }
     val rowsNow by rememberUpdatedState(rows)
     val msgCount by rememberUpdatedState(msgs?.size ?: 0)
     fun rowIndexOf(id: String) = rowsNow.indexOfFirst { (it is Message && it.id == id) || (it is AlbumRow && it.msgs.any { m -> m.id == id }) }
@@ -624,309 +728,555 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         mentionPicks[name] = pk
     }
 
-    Scaffold(
-        topBar = {
-            if (searchMode) {
-                TopAppBar(
-                    navigationIcon = { IconButton(onClick = { searchMode = false; query = "" }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zamknij wyszukiwanie") } },
-                    title = {
-                        TextField(
-                            query, { query = it }, Modifier.fillMaxWidth(), placeholder = { Text("Szukaj w rozmowie") }, singleLine = true,
-                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
-                        )
-                    },
-                    actions = {
-                        if (hits.isNotEmpty()) Text("${hitIdx + 1}/${hits.size}", style = MaterialTheme.typography.labelMedium)
-                        else if (query.trim().length >= 2) Text("0", style = MaterialTheme.typography.labelMedium)
-                        IconButton(onClick = { if (hitIdx < hits.size - 1) { hitIdx++; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx < hits.size - 1) {
-                            Icon(Icons.Default.KeyboardArrowUp, "Starsze")
-                        }
-                        IconButton(onClick = { if (hitIdx > 0) { hitIdx--; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx > 0) {
-                            Icon(Icons.Default.KeyboardArrowDown, "Nowsze")
-                        }
+    val st = LocalStyle.current
+    val chromeKind = st.spec.chrome
+    val glassUi = chromeKind == Chrome.GLASS
+    // tapeta rozmowy także pod polem wiadomości (pływające pole na tle z rysunkami)
+    val wallUnder = chromeKind == Chrome.WHATSAPP
+    val videoInBar = chromeKind == Chrome.WHATSAPP || chromeKind == Chrome.MESSENGER || chromeKind == Chrome.FACEBOOK || chromeKind == Chrome.DISCORD
+    val headerAvatar = when (chromeKind) {
+        Chrome.TELEGRAM -> 40.dp
+        Chrome.WHATSAPP, Chrome.MESSENGER, Chrome.FACEBOOK -> 36.dp
+        Chrome.DISCORD -> 30.dp
+        else -> 38.dp
+    }
+    // zdjęcie w nagłówku — z bazy tylko przy zmianie rozmowy/grupy (nie przy każdym znaku w polu wiadomości)
+    val hdrImg = remember(chat, group) {
+        if (chat?.isGroup == true) group?.icon?.ifBlank { null } else chat?.peer?.let { core.db.contact(it)?.avatar?.ifBlank { null } }
+    }
+    val openInfo: () -> Unit = {
+        val c = chat
+        if (c != null) { if (c.isGroup) nav.go(Screen.GroupInfo(c.id.removePrefix("g:"))) else c.peer?.let { nav.go(Screen.ContactInfo(it)) } }
+    }
+    val typingText = when {
+        typers.isEmpty() -> null
+        !isGroup -> "pisze…"
+        typers.size == 1 -> "${nameFor(typers[0])} pisze…"
+        else -> "${typers.size} osoby piszą…"
+    }
+    // Telegram: gradient tła przesuwa się przy każdej wysłanej wiadomości
+    LaunchedEffect(sentTick) {
+        if (sentTick > 0 && anim[Anim.BG]) ChatBgMotion.phase.animateTo(ChatBgMotion.phase.targetValue + 1f, tween((520 * anim.factor).toInt().coerceAtLeast(1), easing = FastOutSlowInEasing))
+    }
+
+    val headerTitle: @Composable () -> Unit = {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { openInfo() },
+        ) {
+            Avatar(chat?.name ?: "", chat?.peer ?: chatId, headerAvatar, chat?.isGroup == true, hdrImg)
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(chat?.name ?: "", Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
+                    if (chat?.isGroup == false && core.isVerified(chat?.peer)) VerifiedBadge()
+                }
+                val streak = if (chat?.isGroup == false) (streakDays ?: 0) else 0
+                val seen = if (chat?.isGroup == false && !official) rememberSeen(chat?.peer) else null
+                val seenText = seen?.let { (st, at) -> presenceText(st, at) + if (streak > 0) " · 🔥 $streak" else "" }
+                if (typingText != null && anim[Anim.TYPING]) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        typingText.removeSuffix("…"), Modifier.weight(1f, fill = false),
+                        style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = onBar(OkGreen),
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    TypingDots(onBar(OkGreen), 4.dp)
+                } else Text(
+                    typingText ?: group?.let { "${it.members.size} członków · dotknij po szczegóły" }
+                        ?: seenText ?: if (streak > 0) "🔥 $streak dni z rzędu" else "🔒 szyfrowanie end-to-end",
+                    style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = when {
+                        typingText != null -> onBar(OkGreen)
+                        seen != null -> onBar(presenceColor(seen.first))
+                        streak > 0 && group == null -> onBar(Fire)
+                        else -> barMuted()
                     },
                 )
-            } else TopAppBar(
-                navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wstecz") } },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable {
-                            val c = chat ?: return@clickable
-                            if (c.isGroup) nav.go(Screen.GroupInfo(c.id.removePrefix("g:"))) else c.peer?.let { nav.go(Screen.ContactInfo(it)) }
-                        },
-                    ) {
-                        val hdrImg = if (chat?.isGroup == true) group?.icon?.ifBlank { null } else chat?.peer?.let { core.db.contact(it)?.avatar?.ifBlank { null } }
-                        Avatar(chat?.name ?: "", chat?.peer ?: chatId, 38.dp, chat?.isGroup == true, hdrImg)
-                        Spacer(Modifier.width(10.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(chat?.name ?: "", Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                                if (chat?.isGroup == false && core.isVerified(chat?.peer)) VerifiedBadge()
-                            }
-                            val streak = if (chat?.isGroup == false) (streakDays ?: 0) else 0
-                            val typingText = when {
-                                typers.isEmpty() -> null
-                                !isGroup -> "pisze…"
-                                typers.size == 1 -> "${nameFor(typers[0])} pisze…"
-                                else -> "${typers.size} osoby piszą…"
-                            }
-                            val seen = if (chat?.isGroup == false && !official) rememberSeen(chat?.peer) else null
-                            val seenText = seen?.let { (st, at) -> presenceText(st, at) + if (streak > 0) " · 🔥 $streak" else "" }
-                            Text(
-                                typingText ?: group?.let { "${it.members.size} członków · dotknij po szczegóły" }
-                                    ?: seenText ?: if (streak > 0) "🔥 $streak dni z rzędu" else "🔒 szyfrowanie end-to-end",
-                                style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                color = when {
-                                    typingText != null -> OkGreen
-                                    seen != null -> presenceColor(seen.first)
-                                    streak > 0 && group == null -> Fire
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    if (chat?.isGroup == false && chat?.peer != null && !official) IconButton(onClick = { chat?.peer?.let { startCall(it, false) } }) {
-                        Icon(Icons.Default.Call, "Zadzwoń")
-                    }
-                    if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) IconButton(onClick = { startGroupCall(chatId.removePrefix("g:"), false) }) {
-                        Icon(Icons.Default.Call, "Rozmowa grupowa")
-                    }
-                    Box {
-                        IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "Więcej") }
-                        DropdownMenu(moreMenu, { moreMenu = false }) {
-                            if (!official) DropdownMenuItem({ Text(if ((chat?.xmode ?: 0) != 0) "Wiadomości czasowe (włączone)" else "Wiadomości czasowe") }, {
-                                moreMenu = false; timerDialog = true
-                            }, leadingIcon = { Icon(Icons.Default.Timer, null, tint = if ((chat?.xmode ?: 0) != 0) Fire else MaterialTheme.colorScheme.onSurface) })
-                            if (chat?.isGroup == false && chat?.peer != null && !official) DropdownMenuItem({ Text("Rozmowa wideo") }, {
-                                moreMenu = false; chat?.peer?.let { startCall(it, true) }
-                            }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
-                            if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) DropdownMenuItem({ Text("Rozmowa grupowa wideo") }, {
-                                moreMenu = false; startGroupCall(chatId.removePrefix("g:"), true)
-                            }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
-                            DropdownMenuItem({ Text("Szukaj w rozmowie") }, { moreMenu = false; searchMode = true }, leadingIcon = { Icon(Icons.Default.Search, null) })
-                            DropdownMenuItem({ Text("Multimedia, pliki i linki") }, { moreMenu = false; nav.go(Screen.Media(chatId)) }, leadingIcon = { Icon(Icons.Default.Image, null) })
-                            DropdownMenuItem({ Text("Zaplanowane (${scheduled?.size ?: 0})") }, { moreMenu = false; scheduledDialog = true }, leadingIcon = { Icon(Icons.Default.Timer, null) })
-                        }
-                    }
-                },
-            )
-        },
-    ) { pad ->
-        Column(Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize()) {
-            if (chatId.startsWith("g:")) {
-                val k = remember(knownCalls) { core.groupCalls.joinable(chatId.removePrefix("g:")) }
-                if (k != null) Surface(color = Color(0xFF2E7D32), modifier = Modifier.fillMaxWidth().clickable { startGroupCall(chatId.removePrefix("g:"), k.video) }) {
-                    Text(
-                        (if (k.video) "📹" else "📞") + " Trwa rozmowa grupowa (${k.members.size} " + plural(k.members.size, "osoba", "osoby", "osób") + ") — dotknij, aby dołączyć",
-                        color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge,
-                    )
+            }
+        }
+    }
+    val headerActions: @Composable () -> Unit = {
+        if (videoInBar && chat?.isGroup == false && chat?.peer != null && !official && chromeKind == Chrome.WHATSAPP) IconButton(onClick = { chat?.peer?.let { startCall(it, true) } }) {
+            Icon(Icons.Default.Videocam, "Rozmowa wideo")
+        }
+        if (chat?.isGroup == false && chat?.peer != null && !official) IconButton(onClick = { chat?.peer?.let { startCall(it, false) } }) {
+            Icon(Icons.Default.Call, "Zadzwoń")
+        }
+        if (videoInBar && chat?.isGroup == false && chat?.peer != null && !official && chromeKind != Chrome.WHATSAPP) IconButton(onClick = { chat?.peer?.let { startCall(it, true) } }) {
+            Icon(Icons.Default.Videocam, "Rozmowa wideo")
+        }
+        if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) IconButton(onClick = { startGroupCall(chatId.removePrefix("g:"), false) }) {
+            Icon(Icons.Default.Call, "Rozmowa grupowa")
+        }
+        Box {
+            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "Więcej") }
+            StyleMenu(moreMenu, { moreMenu = false }) {
+                if (!official) DropdownMenuItem({ Text(if ((chat?.xmode ?: 0) != 0) "Wiadomości czasowe (włączone)" else "Wiadomości czasowe") }, {
+                    moreMenu = false; timerDialog = true
+                }, leadingIcon = { Icon(Icons.Default.Timer, null, tint = if ((chat?.xmode ?: 0) != 0) Fire else MaterialTheme.colorScheme.onSurface) })
+                if (chat?.isGroup == false && chat?.peer != null && !official) DropdownMenuItem({ Text("Rozmowa wideo") }, {
+                    moreMenu = false; chat?.peer?.let { startCall(it, true) }
+                }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
+                if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) DropdownMenuItem({ Text("Rozmowa grupowa wideo") }, {
+                    moreMenu = false; startGroupCall(chatId.removePrefix("g:"), true)
+                }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
+                DropdownMenuItem({ Text("Szukaj w rozmowie") }, { moreMenu = false; searchMode = true }, leadingIcon = { Icon(Icons.Default.Search, null) })
+                DropdownMenuItem({ Text("Multimedia, pliki i linki") }, { moreMenu = false; nav.go(Screen.Media(chatId)) }, leadingIcon = { Icon(Icons.Default.Image, null) })
+                DropdownMenuItem({ Text("Zaplanowane (${scheduled?.size ?: 0})") }, { moreMenu = false; scheduledDialog = true }, leadingIcon = { Icon(Icons.Default.Timer, null) })
+            }
+        }
+    }
+    val searchBar: @Composable () -> Unit = {
+        TopAppBar(
+            colors = styleBarColors(), modifier = Modifier.styleTopBar(LocalStyle.current),
+            navigationIcon = { IconButton(onClick = { searchMode = false; query = "" }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zamknij wyszukiwanie") } },
+            title = {
+                TextField(
+                    query, { query = it }, Modifier.fillMaxWidth(), placeholder = { Text("Szukaj w rozmowie") }, singleLine = true,
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
+                )
+            },
+            actions = {
+                if (hits.isNotEmpty()) Text("${hitIdx + 1}/${hits.size}", style = MaterialTheme.typography.labelMedium)
+                else if (query.trim().length >= 2) Text("0", style = MaterialTheme.typography.labelMedium)
+                IconButton(onClick = { if (hitIdx < hits.size - 1) { hitIdx++; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx < hits.size - 1) {
+                    Icon(Icons.Default.KeyboardArrowUp, "Starsze")
+                }
+                IconButton(onClick = { if (hitIdx > 0) { hitIdx--; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx > 0) {
+                    Icon(Icons.Default.KeyboardArrowDown, "Nowsze")
+                }
+            },
+        )
+    }
+    val glassSearchBar: @Composable () -> Unit = {
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GlassIconButton(Icons.Default.Close, "Zamknij wyszukiwanie", { searchMode = false; query = "" })
+            Spacer(Modifier.width(8.dp))
+            MessageField(query, { query = it }, "Szukaj w rozmowie", Modifier.weight(1f), singleLine = true)
+            Spacer(Modifier.width(8.dp))
+            GlassActions {
+                if (hits.isNotEmpty()) Text("${hitIdx + 1}/${hits.size}", Modifier.padding(start = 10.dp), style = MaterialTheme.typography.labelMedium)
+                IconButton(onClick = { if (hitIdx < hits.size - 1) { hitIdx++; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx < hits.size - 1) {
+                    Icon(Icons.Default.KeyboardArrowUp, "Starsze")
+                }
+                IconButton(onClick = { if (hitIdx > 0) { hitIdx--; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx > 0) {
+                    Icon(Icons.Default.KeyboardArrowDown, "Nowsze")
                 }
             }
-            val pins = pinned ?: emptyList()
-            if (pins.isNotEmpty()) {
-                val i = pinIdx.coerceIn(0, pins.size - 1)
-                PinnedBar(pins[i], i, pins.size, core.canPin(chatId), onClick = {
-                    jumpTo(pins[i].id)
-                    pinIdx = (i + 1) % pins.size
-                }, onUnpin = { core.pinMessage(pins[i].id, false) })
+        }
+    }
+    val topBar: @Composable () -> Unit = {
+        when {
+            searchMode && glassUi -> glassSearchBar()
+            searchMode -> searchBar()
+            glassUi -> GlassChatHeader(
+                chat?.name ?: "", onBack = { nav.back() }, onTitle = openInfo,
+                avatar = { Avatar(chat?.name ?: "", chat?.peer ?: chatId, 52.dp, chat?.isGroup == true, hdrImg) },
+                status = if (typingText != null && anim[Anim.TYPING]) ({
+                    val c = pl.szept.ui.style.readable(st.pal.muted, if (st.pal.bg.isNotEmpty()) st.pal.bg.first() else st.pal.base, 4.5f)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(typingText.removeSuffix("…"), style = MaterialTheme.typography.labelSmall, color = c)
+                        Spacer(Modifier.width(4.dp))
+                        TypingDots(c, 3.dp)
+                    }
+                }) else null,
+            ) { headerActions() }
+            chromeKind == Chrome.IOS6 -> Ios6Bar(chat?.name ?: "", { nav.back() }, true, { headerActions() })
+            else -> {
+                val base = styleBarColors()
+                val tinted = chromeKind == Chrome.MESSENGER || chromeKind == Chrome.FACEBOOK
+                TopAppBar(
+                    colors = if (tinted) TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent, scrolledContainerColor = Color.Transparent,
+                        titleContentColor = base.titleContentColor, navigationIconContentColor = st.pal.primary, actionIconContentColor = st.pal.primary,
+                    ) else base,
+                    modifier = Modifier.styleTopBar(st),
+                    navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(backIcon(), "Wstecz") } },
+                    title = headerTitle,
+                    actions = { headerActions() },
+                )
             }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                ChatWallpaper(Modifier.matchParentSize())
-                LazyColumn(Modifier.fillMaxSize(), state = listState, reverseLayout = true) {
-                    items(rows, key = { r -> when (r) { is Message -> r.id; is AlbumRow -> r.key; else -> (r as DayHeader).key } }) { row ->
-                        when (row) {
-                            is DayHeader -> DayHeaderItem(row.label)
-                            is AlbumRow -> {
-                                val all = row.msgs.flatMap { reactions?.get(it.id) ?: emptyList() }
-                                SwipeToReply(canSend == null, onReply = { replyTo = row.msgs.last(); editing = null }) { AlbumItem(
-                                    row.msgs, if (isGroup) names?.get(row.msgs.first().sender) ?: row.msgs.first().sender.take(8) else null,
-                                    highlight = row.msgs.any { it.id == highlight }, reactions = all,
-                                    onOpen = { m ->
-                                        when {
-                                            m.mine && m.status == St.FAILED -> core.retry(m.id)
-                                            !m.mine && m.status == St.DOWNLOAD_FAILED -> core.retry(m.id)
-                                            m.path != null -> nav.go(Screen.Viewer(m.id))
-                                        }
-                                    },
-                                    onLong = { m -> actionsFor = m },
-                                    onReactionsClick = { reactionsFor = row.msgs.first() to all },
-                                ) }
-                            }
-                            is Message -> {
-                                val m = row
-                                SwipeToReply(canSend == null && m.kind != Kind.SYSTEM, onReply = { replyTo = m; editing = null }) { MessageItem(
-                                    m,
-                                    senderName = if (isGroup) names?.get(m.sender) ?: m.sender.take(8) else null,
-                                    replyName = m.reply?.let { nameFor(it.sender) },
-                                    onReplyClick = { id -> jumpTo(id) },
-                                    reactions = reactions?.get(m.id) ?: emptyList(),
-                                    votes = votes?.get(m.id) ?: emptyList(),
-                                    highlight = highlight == m.id,
-                                    onReactionsClick = { reactionsFor = m to (reactions?.get(m.id) ?: emptyList()) },
-                                    onVote = { sel -> if (canInteract) core.vote(m.id, sel) else toast(ctx, "Nie możesz już głosować w tej grupie") },
-                                    onClick = {
-                                        when {
-                                            m.mine && m.status == St.FAILED -> core.retry(m.id)
-                                            !m.mine && m.status == St.DOWNLOAD_FAILED -> core.retry(m.id)
-                                            !m.mine && m.hiddenUntilOpened -> {
-                                                // wiadomość czasowa: treść pojawia się dopiero teraz i od teraz liczy się czas
-                                                if (m.media == null || m.path != null) {
-                                                    core.openViewOnce(m.id)
-                                                    when (m.kind) {
-                                                        Kind.IMAGE, Kind.VIDEO -> nav.go(Screen.Viewer(m.id))
-                                                        Kind.VOICE -> m.path?.let { VoicePlayer.toggle(m.id, it) }
-                                                    }
+        }
+    }
+    val topExtras: @Composable () -> Unit = {
+        if (chatId.startsWith("g:")) {
+            val k = remember(knownCalls) { core.groupCalls.joinable(chatId.removePrefix("g:")) }
+            if (k != null) Surface(color = Color(0xFF2E7D32), modifier = Modifier.fillMaxWidth().clickable { startGroupCall(chatId.removePrefix("g:"), k.video) }) {
+                Text(
+                    (if (k.video) "📹" else "📞") + " Trwa rozmowa grupowa (${k.members.size} " + plural(k.members.size, "osoba", "osoby", "osób") + ") — dotknij, aby dołączyć",
+                    color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+        val pins = pinned ?: emptyList()
+        if (pins.isNotEmpty()) {
+            val i = pinIdx.coerceIn(0, pins.size - 1)
+            PinnedBar(pins[i], i, pins.size, core.canPin(chatId), onClick = {
+                jumpTo(pins[i].id)
+                pinIdx = (i + 1) % pins.size
+            }, onUnpin = { core.pinMessage(pins[i].id, false) })
+        }
+    }
+    val messagesArea: @Composable (Modifier, PaddingValues) -> Unit = { mod, inner ->
+        Box(mod) {
+            if (!wallUnder) ChatWallpaper(Modifier.matchParentSize())
+            LazyColumn(Modifier.fillMaxSize(), state = listState, reverseLayout = true, contentPadding = inner) {
+                itemsIndexed(rows, key = { _, r -> when (r) { is Message -> r.id; is AlbumRow -> r.key; else -> (r as DayHeader).key } }) { idx, row ->
+                    val rowKey = FreshRows.keyOf(row)
+                    val play = remember(rowKey) { rowKey != null && fresh.take(rowKey) } && anim[Anim.MSG_IN]
+                    val rowMine = (row as? Message)?.mine ?: (row as? AlbumRow)?.msgs?.firstOrNull()?.mine ?: false
+                    Box((if (anim[Anim.APPEAR]) Modifier.animateItem(fadeInSpec = if (anim[Anim.MSG_IN]) null else spring(stiffness = 400f)) else Modifier).appear(rowMine, play)) {
+                    when (row) {
+                        is DayHeader -> DayHeaderItem(row.label)
+                        is AlbumRow -> {
+                            val all = row.msgs.flatMap { reactions?.get(it.id) ?: emptyList() }
+                            SwipeToReply(canSend == null, onReply = { replyTo = row.msgs.last(); editing = null }) { AlbumItem(
+                                row.msgs, if (isGroup) names?.get(row.msgs.first().sender) ?: row.msgs.first().sender.take(8) else null,
+                                highlight = row.msgs.any { it.id == highlight }, reactions = all,
+                                onOpen = { m ->
+                                    when {
+                                        m.mine && m.status == St.FAILED -> core.retry(m.id)
+                                        !m.mine && m.status == St.DOWNLOAD_FAILED -> core.retry(m.id)
+                                        m.path != null -> nav.go(Screen.Viewer(m.id))
+                                    }
+                                },
+                                onLong = { m -> actionsFor = m },
+                                onReactionsClick = { reactionsFor = row.msgs.first() to all },
+                            ) }
+                        }
+                        is Message -> {
+                            val m = row
+                            SwipeToReply(canSend == null && m.kind != Kind.SYSTEM, onReply = { replyTo = m; editing = null }) { MessageItem(
+                                m,
+                                senderName = if (isGroup) names?.get(m.sender) ?: m.sender.take(8) else null,
+                                replyName = m.reply?.let { nameFor(it.sender) },
+                                onReplyClick = { id -> jumpTo(id) },
+                                reactions = reactions?.get(m.id) ?: emptyList(),
+                                votes = votes?.get(m.id) ?: emptyList(),
+                                highlight = highlight == m.id,
+                                onReactionsClick = { reactionsFor = m to (reactions?.get(m.id) ?: emptyList()) },
+                                onVote = { sel -> if (canInteract) core.vote(m.id, sel) else toast(ctx, "Nie możesz już głosować w tej grupie") },
+                                onClick = {
+                                    when {
+                                        m.mine && m.status == St.FAILED -> core.retry(m.id)
+                                        !m.mine && m.status == St.DOWNLOAD_FAILED -> core.retry(m.id)
+                                        !m.mine && m.hiddenUntilOpened -> {
+                                            // wiadomość czasowa: treść pojawia się dopiero teraz i od teraz liczy się czas
+                                            if (m.media == null || m.path != null) {
+                                                core.openViewOnce(m.id)
+                                                when (m.kind) {
+                                                    Kind.IMAGE, Kind.VIDEO -> nav.go(Screen.Viewer(m.id))
+                                                    Kind.VOICE -> m.path?.let { VoicePlayer.toggle(m.id, it) }
                                                 }
                                             }
-                                            m.mine && m.xmode == XMode.AFTER_OPEN && m.path == null -> {}
-                                            m.kind == Kind.VIDEO && m.ex.round && m.path != null -> RoundPlayer.toggle(m.id, m.path)
-                                            // GIF: podgląd z przyciskiem „Zapisz w moich”
-                                            m.kind == Kind.IMAGE && m.media?.mime == "image/gif" && m.path != null && m.xmode == XMode.OFF -> gifFor = File(m.path) to m
-                                            (m.kind == Kind.IMAGE || m.kind == Kind.VIDEO) && m.path != null -> nav.go(Screen.Viewer(m.id))
-                                            m.kind == Kind.UPDATE && m.path != null -> installApk(ctx, m.path)
-                                            m.kind == Kind.FILE && m.path != null -> openFile(ctx, m.path, m.media?.mime ?: "")
-                                            m.kind == Kind.LOCATION -> Loc.parse(m.body)?.let { openMap(ctx, it.lat, it.lon, nameFor(m.sender)) }
                                         }
-                                    },
-                                    onLongPress = { actionsFor = m },
-                                ) }
-                            }
+                                        m.mine && m.xmode == XMode.AFTER_OPEN && m.path == null -> {}
+                                        m.kind == Kind.VIDEO && m.ex.round && m.path != null -> RoundPlayer.toggle(m.id, m.path)
+                                        // GIF: podgląd z przyciskiem „Zapisz w moich”
+                                        m.kind == Kind.IMAGE && m.media?.mime == "image/gif" && m.path != null && m.xmode == XMode.OFF -> gifFor = File(m.path) to m
+                                        (m.kind == Kind.IMAGE || m.kind == Kind.VIDEO) && m.path != null -> nav.go(Screen.Viewer(m.id))
+                                        m.kind == Kind.UPDATE && m.path != null -> installApk(ctx, m.path)
+                                        m.kind == Kind.FILE && m.path != null -> openFile(ctx, m.path, m.media?.mime ?: "")
+                                        m.kind == Kind.LOCATION -> Loc.parse(m.body)?.let { openMap(ctx, it.lat, it.lon, nameFor(m.sender)) }
+                                    }
+                                },
+                                onLongPress = { actionsFor = m },
+                                first = !sameSeries(m, rows.getOrNull(idx + 1)),
+                                last = !sameSeries(m, rows.getOrNull(idx - 1)),
+                                avatarName = if (m.mine) null else nameFor(m.sender),
+                            ) }
                         }
+                    }
                     }
                 }
             }
-            if ((chat?.xmode ?: 0) != XMode.OFF) {
+            // dymek „pisze…” na dole rozmowy
+            androidx.compose.animation.AnimatedVisibility(
+                visible = typers.isNotEmpty() && anim[Anim.TYPING],
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 6.dp + inner.calculateBottomPadding()),
+                enter = androidx.compose.animation.scaleIn(spring(dampingRatio = 0.5f, stiffness = 500f), transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)) + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.scaleOut(transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)) + androidx.compose.animation.fadeOut(),
+            ) {
+                StyledBubble(false) {
+                    Box(Modifier.padding(horizontal = 14.dp, vertical = 11.dp).semantics { contentDescription = "Rozmówca pisze" }) {
+                        TypingDots(MaterialTheme.colorScheme.onSurfaceVariant, 6.dp)
+                    }
+                }
+            }
+        }
+    }
+    val bottomExtras: @Composable () -> Unit = {
+        if ((chat?.xmode ?: 0) != XMode.OFF) {
+            Text(
+                "⏱ " + (if (chat!!.xmode == XMode.AFTER_SEND) "Automatyczne usuwanie: wiadomości znikają ${formatTtl(chat!!.ttl)} po wysłaniu"
+                else "Wiadomości czasowe: widać je po dotknięciu, znikają ${formatTtl(chat!!.ttl)} po otwarciu"),
+                Modifier.fillMaxWidth().clickable { timerDialog = true }.background(Fire.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelMedium, color = Fire,
+            )
+        }
+        if (!scheduled.isNullOrEmpty()) ScheduledBar(scheduled!!.size) { scheduledDialog = true }
+        preparing?.let {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text(it, Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium)
+        }
+        if (canSend == null) {
+            editing?.let { e -> EditBar(e) { editing = null; text = draftBeforeEdit; draftBeforeEdit = "" } }
+            if (editing == null) replyTo?.let { r -> ReplyBar(core.replyOf(r), nameFor(r.sender)) { replyTo = null } }
+            MentionSuggestions(suggestions) { pk, name -> pickMention(pk, name) }
+        }
+    }
+
+    // ---------- pole wiadomości (inne w każdym stylu) ----------
+    val recording = recMode == 1 && recorder != null
+    val onTextChange: (String) -> Unit = { v ->
+        if (v.length > text.length && v.isNotBlank() && editing == null) core.sendTyping(chatId)
+        text = v.take(10_000)
+    }
+    val placeholder = when {
+        editing != null -> "Nowa treść"
+        chromeKind == Chrome.MESSENGER || chromeKind == Chrome.FACEBOOK -> "Aa"
+        chromeKind == Chrome.DISCORD -> "Wiadomość do @" + (chat?.name ?: "")
+        chromeKind == Chrome.TERMINAL -> "wpisz wiadomość"
+        else -> "Wiadomość"
+    }
+    val takePhotoNow: () -> Unit = {
+        withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
+    }
+    val pickGallery: () -> Unit = { pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    val attachItems: @Composable ColumnScope.() -> Unit = {
+    DropdownMenuItem({ Text("Zdjęcia z galerii (do 10)") }, {
+        attachMenu = false
+        pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }, leadingIcon = { Icon(Icons.Default.Image, null) })
+    DropdownMenuItem({ Text("Zrób zdjęcie") }, {
+        attachMenu = false
+        withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
+    }, leadingIcon = { Icon(Icons.Default.PhotoCamera, null) })
+    DropdownMenuItem({ Text("Wideo z galerii") }, {
+        attachMenu = false
+        pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+    }, leadingIcon = { Icon(Icons.Default.VideoLibrary, null) })
+    DropdownMenuItem({ Text("Nagraj wideo") }, {
+        attachMenu = false
+        withCamera { try { recordVideo.launch(fileUri(ctx, newCamFile("mp4"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
+    }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
+    DropdownMenuItem({ Text("Notatka wideo (okrągła)") }, {
+        attachMenu = false
+        openVideoNote()
+    }, leadingIcon = { Icon(Icons.Default.Face, null) })
+    DropdownMenuItem({ Text("Plik") }, {
+        attachMenu = false
+        pickFile.launch(arrayOf("*/*"))
+    }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) })
+    DropdownMenuItem({ Text("GIF") }, { attachMenu = false; gifPicker = true }, leadingIcon = { Icon(Icons.Default.Gif, null) })
+    DropdownMenuItem({ Text("Gra") }, { attachMenu = false; gamePicker = true }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
+    DropdownMenuItem({ Text("Ankieta") }, { attachMenu = false; pollDialog = true }, leadingIcon = { Icon(Icons.Default.BarChart, null) })
+    DropdownMenuItem({ Text("Lokalizacja") }, { attachMenu = false; locationDialog = true }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
+    }
+    val attachBox: @Composable () -> Unit = {
+        Box {
+            AttachButton { attachMenu = true }
+            StyleMenu(attachMenu, { attachMenu = false }) { attachItems() }
+        }
+    }
+    val gifIcon: @Composable () -> Unit = { FieldIcon(EmojiIcon, "Wybierz GIF", { gifPicker = true }) }
+    val showSend = (text.isNotBlank() || editing != null) && recMode == 0
+    val sendButton: @Composable () -> Unit = {
+        Box {
+            // dotknięcie = wyślij, przytrzymanie = czasowa albo zaplanuj
+            SendButton(editing != null, onClick = { if (editing == null) sentTick++; sendTextNow() }, onLongClick = { if (editing == null) sendMenu = true })
+            StyleMenu(sendMenu, { sendMenu = false }) {
+                DropdownMenuItem({ Text("🕓 Zaplanuj wysłanie…") }, {
+                    sendMenu = false
+                    schedulePick = { at -> scheduleText(at) }
+                })
+                if (chat?.isGroup == false && !official) DropdownMenuItem({ Text("🟢 Wyślij, gdy będzie online") }, {
+                    sendMenu = false
+                    val t = text.trim()
+                    if (t.isNotEmpty()) {
+                        text = ""
+                        val r = replyTo; replyTo = null
+                        val s = core.scheduleWhenOnline(chatId, t, r)
+                        toast(ctx, if (s == null) "Rozmówca jest teraz w aplikacji — wysłano" else "Wyślę, gdy rozmówca otworzy Szepta")
+                    }
+                })
+                HorizontalDivider()
                 Text(
-                    "⏱ " + (if (chat!!.xmode == XMode.AFTER_SEND) "Automatyczne usuwanie: wiadomości znikają ${formatTtl(chat!!.ttl)} po wysłaniu"
-                    else "Wiadomości czasowe: widać je po dotknięciu, znikają ${formatTtl(chat!!.ttl)} po otwarciu"),
-                    Modifier.fillMaxWidth().clickable { timerDialog = true }.background(Fire.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelMedium, color = Fire,
+                    "Wiadomość czasowa — odbiorca zobaczy ją po dotknięciu, potem zniknie po:",
+                    Modifier.padding(horizontal = 16.dp, vertical = 6.dp).widthIn(max = 260.dp),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                listOf(5, 10, 30, 60).forEach { sec ->
+                    DropdownMenuItem({ Text("⏱ Czasowa — ${formatTtl(sec)} po otwarciu") }, {
+                        sendMenu = false; sendTextNow(XMode.AFTER_OPEN, sec)
+                    })
+                }
+            }
+        }
+    }
+    val micButton: @Composable () -> Unit = {
+        val ml = micLook()
+        MicButton(
+            holding = recMode == 1 && recorder != null,
+            dragX = dragX,
+            cancelDistancePx = cancelPx,
+            lockDistancePx = lockPx,
+            onStart = { if (startRecording()) { recMode = 1; dragX = 0f; true } else false },
+            onDrag = { dragX = it.coerceAtMost(0f) },
+            onCancel = { finishRecording(false) },
+            onLock = { recMode = 2; dragX = 0f; haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+            onRelease = { quick -> if (quick) { recMode = 2; dragX = 0f } else finishRecording(true) },
+            filled = ml.filled, color = ml.color, tint = ml.tint, size = ml.size, bottomPad = ml.bottom,
+        )
+    }
+    val sendSwitch: @Composable (@Composable () -> Unit) -> Unit = { other ->
+        Box(contentAlignment = Alignment.Center) {
+            if (anim[Anim.BUTTONS]) androidx.compose.animation.AnimatedContent(
+                showSend,
+                transitionSpec = {
+                    (androidx.compose.animation.scaleIn(spring(dampingRatio = 0.45f, stiffness = 600f), initialScale = 0.3f) + androidx.compose.animation.fadeIn(tween(120))) togetherWith
+                        (androidx.compose.animation.scaleOut(tween(110), targetScale = 0.3f) + androidx.compose.animation.fadeOut(tween(100)))
+                },
+                label = "wyslij",
+            ) { send -> if (send) sendButton() else other() }
+            else if (showSend) sendButton() else other()
+            if (anim[Anim.BUTTONS]) FlyingPlane(sentTick)
+        }
+    }
+    val holdIndicator: @Composable (Modifier) -> Unit = { mod -> HoldRecordingIndicator(recElapsed, amps, dragX, cancelPx, mod) }
+    var iconsOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(text.isEmpty()) { if (text.isEmpty()) iconsOpen = false }
+    val inputRow: @Composable () -> Unit = {
+        when (st.spec.input) {
+            InputStyle.GLASS -> Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.Bottom) {
+                if (editing == null && !recording) attachBox()
+                MessageField(
+                    text, onTextChange, placeholder, Modifier.weight(1f),
+                    trailing = { sendSwitch { micButton() } },
+                    replace = if (recording) ({ holdIndicator(Modifier.fillMaxWidth()) }) else null,
                 )
             }
-            if (!scheduled.isNullOrEmpty()) ScheduledBar(scheduled!!.size) { scheduledDialog = true }
-            preparing?.let {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-                Text(it, Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium)
-            }
-            if (canSend == null) {
-                editing?.let { e -> EditBar(e) { editing = null; text = draftBeforeEdit; draftBeforeEdit = "" } }
-                if (editing == null) replyTo?.let { r -> ReplyBar(core.replyOf(r), nameFor(r.sender)) { replyTo = null } }
-                MentionSuggestions(suggestions) { pk, name -> pickMention(pk, name) }
-            }
-            if (canSend != null) {
-                Text(canSend, Modifier.fillMaxWidth().padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else if (recMode == 2 && recorder != null) {
-                LockedRecordingBar(recElapsed, amps, voiceTimed, { voiceTimed = !voiceTimed }, { finishRecording(false) }, { finishRecording(true) })
-            } else {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
-                    if (recMode == 1 && recorder != null) {
-                        HoldRecordingIndicator(recElapsed, amps, dragX, cancelPx, Modifier.weight(1f))
-                    } else {
-                        if (editing == null) Box {
-                            IconButton(onClick = { attachMenu = true }) { Icon(Icons.Default.AttachFile, "Załącz") }
-                            DropdownMenu(attachMenu, { attachMenu = false }) {
-                                DropdownMenuItem({ Text("Zdjęcia z galerii (do 10)") }, {
-                                    attachMenu = false
-                                    pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                                }, leadingIcon = { Icon(Icons.Default.Image, null) })
-                                DropdownMenuItem({ Text("Zrób zdjęcie") }, {
-                                    attachMenu = false
-                                    withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
-                                }, leadingIcon = { Icon(Icons.Default.PhotoCamera, null) })
-                                DropdownMenuItem({ Text("Wideo z galerii") }, {
-                                    attachMenu = false
-                                    pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
-                                }, leadingIcon = { Icon(Icons.Default.VideoLibrary, null) })
-                                DropdownMenuItem({ Text("Nagraj wideo") }, {
-                                    attachMenu = false
-                                    withCamera { try { recordVideo.launch(fileUri(ctx, newCamFile("mp4"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
-                                }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
-                                DropdownMenuItem({ Text("Notatka wideo (okrągła)") }, {
-                                    attachMenu = false
-                                    openVideoNote()
-                                }, leadingIcon = { Icon(Icons.Default.Face, null) })
-                                DropdownMenuItem({ Text("Plik") }, {
-                                    attachMenu = false
-                                    pickFile.launch(arrayOf("*/*"))
-                                }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) })
-                                DropdownMenuItem({ Text("GIF") }, { attachMenu = false; gifPicker = true }, leadingIcon = { Icon(Icons.Default.Gif, null) })
-                                DropdownMenuItem({ Text("Gra") }, { attachMenu = false; gamePicker = true }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
-                                DropdownMenuItem({ Text("Ankieta") }, { attachMenu = false; pollDialog = true }, leadingIcon = { Icon(Icons.Default.BarChart, null) })
-                                DropdownMenuItem({ Text("Lokalizacja") }, { attachMenu = false; locationDialog = true }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
-                            }
-                        } else Spacer(Modifier.width(8.dp))
-                        OutlinedTextField(
-                            text,
-                            { v ->
-                                if (v.length > text.length && v.isNotBlank() && editing == null) core.sendTyping(chatId)
-                                text = v.take(10_000)
-                            },
-                            Modifier.weight(1f).heightIn(max = 160.dp),
-                            placeholder = { Text(if (editing != null) "Nowa treść" else "Wiadomość") }, shape = RoundedCornerShape(24.dp), maxLines = 6,
-                            trailingIcon = if (editing == null && text.isBlank()) ({
-                                TextButton(onClick = { gifPicker = true }, modifier = Modifier.semantics { contentDescription = "Wybierz GIF" }) { Text("GIF", fontWeight = FontWeight.Bold) }
-                            }) else null,
-                        )
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    if ((text.isNotBlank() || editing != null) && recMode == 0) {
-                        Box {
-                            // dotknięcie = wyślij, przytrzymanie = czasowa albo zaplanuj
-                            Surface(
-                                shape = CircleShape, color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 4.dp).size(44.dp)
-                                    .combinedClickable(onClick = { sendTextNow() }, onLongClick = { if (editing == null) sendMenu = true }),
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    if (editing != null) Icon(Icons.Default.Check, "Zapisz zmianę", tint = MaterialTheme.colorScheme.onPrimary)
-                                    else Icon(Icons.AutoMirrored.Filled.Send, "Wyślij (przytrzymaj: czasowa lub zaplanuj)", tint = MaterialTheme.colorScheme.onPrimary)
-                                }
-                            }
-                            DropdownMenu(sendMenu, { sendMenu = false }) {
-                                DropdownMenuItem({ Text("🕓 Zaplanuj wysłanie…") }, {
-                                    sendMenu = false
-                                    schedulePick = { at -> scheduleText(at) }
-                                })
-                                if (chat?.isGroup == false && !official) DropdownMenuItem({ Text("🟢 Wyślij, gdy będzie online") }, {
-                                    sendMenu = false
-                                    val t = text.trim()
-                                    if (t.isNotEmpty()) {
-                                        text = ""
-                                        val r = replyTo; replyTo = null
-                                        val s = core.scheduleWhenOnline(chatId, t, r)
-                                        toast(ctx, if (s == null) "Rozmówca jest teraz w aplikacji — wysłano" else "Wyślę, gdy rozmówca otworzy Szepta")
-                                    }
-                                })
-                                HorizontalDivider()
-                                Text(
-                                    "Wiadomość czasowa — odbiorca zobaczy ją po dotknięciu, potem zniknie po:",
-                                    Modifier.padding(horizontal = 16.dp, vertical = 6.dp).widthIn(max = 260.dp),
-                                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                listOf(5, 10, 30, 60).forEach { sec ->
-                                    DropdownMenuItem({ Text("⏱ Czasowa — ${formatTtl(sec)} po otwarciu") }, {
-                                        sendMenu = false; sendTextNow(XMode.AFTER_OPEN, sec)
-                                    })
-                                }
-                            }
-                        }
-                    } else {
-                        MicButton(
-                            holding = recMode == 1 && recorder != null,
-                            dragX = dragX,
-                            cancelDistancePx = cancelPx,
-                            lockDistancePx = lockPx,
-                            onStart = { if (startRecording()) { recMode = 1; dragX = 0f; true } else false },
-                            onDrag = { dragX = it.coerceAtMost(0f) },
-                            onCancel = { finishRecording(false) },
-                            onLock = { recMode = 2; dragX = 0f; haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-                            onRelease = { quick -> if (quick) { recMode = 2; dragX = 0f } else finishRecording(true) },
-                        )
+            InputStyle.MESSENGER -> Row(Modifier.fillMaxWidth().styleInputBar().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                val typing = text.isNotEmpty() || editing != null
+                if (!recording) {
+                    if (typing && !iconsOpen) FieldIcon(Icons.Default.ChevronRight, "Pokaż przyciski", { iconsOpen = true }, tint = st.pal.primary)
+                    else if (editing == null) {
+                        attachBox()
+                        FieldIcon(Icons.Default.PhotoCamera, "Zrób zdjęcie", takePhotoNow, tint = st.pal.primary)
+                        FieldIcon(Icons.Default.Image, "Zdjęcia z galerii", pickGallery, tint = st.pal.primary)
                     }
                 }
+                if (!typing) micButton()
+                if (recording) holdIndicator(Modifier.weight(1f))
+                else MessageField(
+                    text, onTextChange, placeholder, Modifier.weight(1f).padding(horizontal = 4.dp),
+                    trailing = { FieldIcon(EmojiIcon, "Wybierz GIF", { gifPicker = true }, tint = st.pal.primary) },
+                )
+                sendSwitch { LikeButton { text = "👍"; sendTextNow() } }
+            }
+            InputStyle.BAR -> Row(Modifier.fillMaxWidth().styleInputBar().padding(horizontal = 2.dp, vertical = 2.dp), verticalAlignment = Alignment.Bottom) {
+                if (recording) holdIndicator(Modifier.weight(1f).padding(start = 10.dp, bottom = 12.dp))
+                else MessageField(
+                    text, onTextChange, placeholder, Modifier.weight(1f),
+                    leading = { gifIcon() },
+                    trailing = if (editing == null) ({ attachBox() }) else null,
+                )
+                sendSwitch { micButton() }
+            }
+            InputStyle.OUTLINED -> Row(Modifier.fillMaxWidth().styleInputBar().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
+                if (recording) holdIndicator(Modifier.weight(1f))
+                else {
+                    if (editing == null) attachBox() else Spacer(Modifier.width(8.dp))
+                    MessageField(
+                        text, onTextChange, placeholder, Modifier.weight(1f),
+                        trailing = if (editing == null && text.isBlank()) ({
+                            TextButton(onClick = { gifPicker = true }, modifier = Modifier.semantics { contentDescription = "Wybierz GIF" }) { Text("GIF", fontWeight = FontWeight.Bold) }
+                        }) else null,
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                sendSwitch { micButton() }
+            }
+            else -> {
+                val whats = chromeKind == Chrome.WHATSAPP
+                val window = st.spec.input == InputStyle.WINDOW
+                Row(
+                    Modifier.fillMaxWidth().styleInputBar().padding(horizontal = 6.dp, vertical = if (window) 8.dp else 6.dp),
+                    verticalAlignment = if (window) Alignment.CenterVertically else Alignment.Bottom,
+                ) {
+                    if (recording) holdIndicator(Modifier.weight(1f))
+                    else {
+                        if (editing == null && !whats) attachBox() else if (!whats) Spacer(Modifier.width(6.dp))
+                        MessageField(
+                            text, onTextChange, placeholder, Modifier.weight(1f),
+                            leading = if (st.spec.input == InputStyle.PILL) ({ gifIcon() }) else null,
+                            trailing = when {
+                                st.spec.input == InputStyle.DISCORD -> ({ gifIcon() })
+                                whats && editing == null -> ({
+                                    Box {
+                                        FieldIcon(Icons.Default.AttachFile, "Załącz", { attachMenu = true }, rotation = -45f)
+                                        StyleMenu(attachMenu, { attachMenu = false }) { attachItems() }
+                                    }
+                                    if (text.isEmpty()) FieldIcon(Icons.Default.PhotoCamera, "Zrób zdjęcie", takePhotoNow)
+                                })
+                                else -> null
+                            },
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    sendSwitch { micButton() }
+                }
+            }
+        }
+    }
+    val inputArea: @Composable () -> Unit = {
+        if (canSend != null) {
+            Text(
+                canSend, Modifier.fillMaxWidth().padding(16.dp),
+                color = if (glassUi) pl.szept.ui.style.readable(st.pal.muted, if (st.pal.bg.isNotEmpty()) st.pal.bg.last() else st.pal.base, 4.5f) else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (recMode == 2 && recorder != null) {
+            LockedRecordingBar(recElapsed, amps, voiceTimed, { voiceTimed = !voiceTimed }, { finishRecording(false) }, { finishRecording(true) })
+        } else inputRow()
+    }
+
+    if (glassUi) {
+        // Liquid Glass: rozmowa pod spodem na całym ekranie, pływające szklane paski na wierzchu
+        val backdrop = rememberBackdrop()
+        var topH by remember { mutableStateOf(0.dp) }
+        var bottomH by remember { mutableStateOf(0.dp) }
+        val fadeBottom = if (st.pal.bg.isNotEmpty()) st.pal.bg.last() else st.pal.base
+        Box(Modifier.fillMaxSize().imePadding()) {
+            messagesArea(Modifier.fillMaxSize().backdropSource(backdrop), PaddingValues(top = topH + 4.dp, bottom = bottomH + 4.dp))
+            CompositionLocalProvider(LocalBackdrop provides backdrop) {
+                Column(
+                    Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                        .onSizeChanged { topH = with(density) { it.height.toDp() } },
+                ) {
+                    topBar()
+                    topExtras()
+                }
+                Column(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .onSizeChanged { bottomH = with(density) { it.height.toDp() } }
+                        .glassBottomFade(fadeBottom).navigationBarsPadding(),
+                ) {
+                    bottomExtras()
+                    inputArea()
+                }
+            }
+        }
+    } else Scaffold(topBar = topBar) { pad ->
+        Box(Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize()) {
+            if (wallUnder) ChatWallpaper(Modifier.matchParentSize())
+            Column(Modifier.imePadding().fillMaxSize()) {
+                topExtras()
+                messagesArea(Modifier.weight(1f).fillMaxWidth(), PaddingValues(0.dp))
+                bottomExtras()
+                inputArea()
             }
         }
     }
@@ -1005,7 +1355,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     if (gamePicker) pl.szept.ui.games.GamePickerDialog(chatId, chat?.isGroup == true) { gamePicker = false }
 
     translation?.let { (_, res) ->
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { translation = null },
             title = { Text("🌐 Tłumaczenie") },
             text = {
@@ -1057,7 +1407,7 @@ private fun TimerDialog(mode0: Int, ttl0: Int, onDismiss: () -> Unit, onSave: (I
     var mode by remember { mutableIntStateOf(mode0) }
     var ttl by remember { mutableIntStateOf(ttl0) }
     val options = listOf(5, 10, 30, 60, 300, 3600, 86400, 7 * 86400)
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Wiadomości czasowe") },
         text = {
@@ -1100,7 +1450,7 @@ private fun DeleteForPeopleDialog(m: Message, g: Group, onDismiss: () -> Unit) {
     val selected = remember { mutableStateListOf<String>() }
     var alsoMe by remember { mutableStateOf(false) }
     val others = g.members.filter { it.pk != App.core.myPub }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Usuń u wybranych") },
         text = {

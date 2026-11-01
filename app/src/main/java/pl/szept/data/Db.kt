@@ -333,7 +333,10 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
     fun setHidden(id: String, on: Boolean) { w.execSQL("UPDATE chats SET hidden=? WHERE id=?", arrayOf<Any?>(if (on) 1 else 0, id)); changed() }
 
     /** Szkic zapisujemy bez powiadamiania UI (żeby pisanie nie odświeżało całej rozmowy). */
-    fun setDraft(id: String, text: String) { w.execSQL("UPDATE chats SET draft=? WHERE id=?", arrayOf<Any?>(text.take(10_000), id)) }
+    fun setDraft(id: String, text: String, notify: Boolean = false) {
+        w.execSQL("UPDATE chats SET draft=? WHERE id=?", arrayOf<Any?>(text.take(10_000), id))
+        if (notify) changed()
+    }
 
     fun touchChat(id: String, ts: Long, text: String, incUnread: Boolean) {
         w.execSQL(

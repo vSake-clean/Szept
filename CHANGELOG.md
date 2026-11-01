@@ -2,6 +2,16 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3
+- 23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”.
+- Każdy styl ma własny układ jak w oryginale: pasek rozmowy, pole wiadomości (szklana kapsułka, rząd ikon z „Aa” i kciukiem, płaski pasek ze spinaczem, okno z przyciskiem „Wyślij”…), listę rozmów (duży tytuł, wspólna karta, wielki nagłówek, napis-logo) i przycisk nowej rozmowy.
+- Liquid Glass: prawdziwe szkło — przyciski i pole wiadomości rozmywają i załamują treść pod spodem (Android 12+), a rozmowa przewija się pod pływającymi paskami.
+- Dymki w seriach: ogonek tylko przy ostatniej wiadomości (albo „uszko” przy pierwszej), mniejsze odstępy w serii, gradient zależny od miejsca na ekranie, awatar przy dymkach rozmówcy i czat bez dymków w stylu serwerowym.
+- Animacje: każdy styl porusza się po swojemu (przejścia, menu, okna, kliknięcia, wjazd wiadomości). Główny przełącznik, charakter ruchu i tempo, a w „Animacjach zaawansowanych” 21 animacji do osobnego wyłączania.
+- Menu i okna dialogowe w stylu: wyrastają z przycisku, wysuwają się albo wjeżdżają od dołu; okna mają rozmyte tło.
+- Kreator wyglądu po instalacji i aktualizacji: tryb jasny/ciemny, styl, animacje (pełne, delikatne, wyłączone), charakter ruchu, tempo, kolor i wielkość tekstu — z podglądem na żywo. Uruchomisz go ponownie w „Wyglądzie”.
+- Material You bierze kolory z tapety telefonu (Android 12+). Klasyczny wygląd Szepta zostaje bez zmian — w kreatorze wystarczy „Zostaw klasyczny”.
+
 ## 3.2
 - Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE).
 - Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria).

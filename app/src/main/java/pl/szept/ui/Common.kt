@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -57,6 +58,12 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import pl.szept.App
+import pl.szept.ui.style.pulse
+import pl.szept.ui.style.scheme
+import pl.szept.ui.style.shape
+import pl.szept.ui.style.shapes
+import pl.szept.ui.style.sparkTaps
+import pl.szept.ui.style.typography
 import pl.szept.crypto.B64
 import java.io.File
 import java.text.SimpleDateFormat
@@ -97,6 +104,22 @@ object UiPrefs {
     var noShots by mutableStateOf(false)
     /** Na liście ostatnich aplikacji widać tylko logo Szepta, bez treści rozmów. */
     var hideRecents by mutableStateOf(true)
+    /** Styl aplikacji — id z [pl.szept.ui.style.STYLES]. */
+    var style by mutableStateOf("classic")
+    /** Animacje w ogóle (główny przełącznik). */
+    var anim by mutableStateOf(true)
+    /** Wyłączone rodzaje animacji (klucze [pl.szept.ui.style.Anim]). */
+    var animOff by mutableStateOf(pl.szept.ui.style.AnimFlags.DEFAULT_OFF)
+    /** Mnożnik czasu animacji (mniej = szybciej). */
+    var animSpeed by mutableFloatStateOf(1f)
+    /** W trybie oszczędzania baterii bez ciągłych animacji. */
+    var animBattery by mutableStateOf(true)
+    /** Rodzaj przejść między ekranami ([pl.szept.ui.style.Trans]). */
+    var transition by mutableIntStateOf(0)
+    /** Charakter ruchu: 0 = jak w stylu, inaczej indeks w [pl.szept.ui.style.MOTION_PRESETS]. */
+    var motion by mutableIntStateOf(0)
+    /** Wersja, dla której pokazano kreator wyglądu (0 = jeszcze nie). */
+    var wizard by mutableIntStateOf(0)
     private var loaded = false
 
     fun load(ctx: Context) {
@@ -107,12 +130,23 @@ object UiPrefs {
         fontScale = p.getFloat("font", 1f); wallpaper = p.getString("wall", "") ?: ""
         delMark = p.getInt("delmark", 0); noShots = p.getBoolean("noshots", false)
         hideRecents = p.getBoolean("hiderecents", true)
+        style = p.getString("style", "classic") ?: "classic"
+        anim = p.getBoolean("anim", true)
+        animOff = p.getStringSet("anim_off", null)?.toSet() ?: pl.szept.ui.style.AnimFlags.DEFAULT_OFF
+        animSpeed = p.getFloat("anim_speed", 1f)
+        animBattery = p.getBoolean("anim_battery", true)
+        transition = p.getInt("transition", 0)
+        motion = p.getInt("motion", 0)
+        wizard = p.getInt("wizard", 0)
     }
 
     fun save(ctx: Context) {
         ctx.getSharedPreferences("ui", Context.MODE_PRIVATE).edit()
             .putInt("theme", theme).putInt("accent", accent).putFloat("font", fontScale).putString("wall", wallpaper)
-            .putInt("delmark", delMark).putBoolean("noshots", noShots).putBoolean("hiderecents", hideRecents).apply()
+            .putInt("delmark", delMark).putBoolean("noshots", noShots).putBoolean("hiderecents", hideRecents)
+            .putString("style", style).putBoolean("anim", anim).putStringSet("anim_off", HashSet(animOff))
+            .putFloat("anim_speed", animSpeed).putBoolean("anim_battery", animBattery).putInt("transition", transition)
+            .putInt("motion", motion).putInt("wizard", wizard).apply()
     }
 
     fun wallpaperFile(ctx: Context) = File(ctx.filesDir, "wallpaper.jpg")
@@ -121,40 +155,111 @@ object UiPrefs {
     fun reload(ctx: Context) { loaded = false; load(ctx) }
 }
 
+/**
+ * Motyw aplikacji: styl (kolory, kształty, czcionki, tło), animacje i efekty.
+ * [decorate] = false — bez ruchomego tła i efektów (np. ekran gry w Pythonie).
+ */
 @Composable
-fun SzeptTheme(content: @Composable () -> Unit) {
+fun SzeptTheme(decorate: Boolean = true, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     remember { UiPrefs.load(ctx) }
-    val dark = when (UiPrefs.theme) { 1 -> false; 2, 3 -> true; else -> isSystemInDarkTheme() }
-    val black = UiPrefs.theme == 3
-    val a = ACCENTS.getOrElse(UiPrefs.accent) { Brand }
-    val bg = if (black) Color.Black else Color(0xFF121218)
-    val scheme = if (dark) {
-        if (UiPrefs.accent == 0) darkColorScheme(
-            primary = Color(0xFFB7AEFF), onPrimary = Color(0xFF21106F), primaryContainer = Color(0xFF3F31B3),
-            onPrimaryContainer = Color(0xFFE4DFFF), secondaryContainer = if (black) Color(0xFF1E1C28) else Color(0xFF2E2B3D),
-            background = bg, surface = bg,
-        ) else darkColorScheme(
-            primary = lerp(a, Color.White, 0.45f), onPrimary = lerp(a, Color.Black, 0.7f), primaryContainer = lerp(a, Color.Black, 0.35f),
-            onPrimaryContainer = lerp(a, Color.White, 0.85f), secondaryContainer = lerp(if (black) Color(0xFF1C1C22) else Color(0xFF2B2B33), a, 0.12f),
-            background = bg, surface = bg,
-        )
-    } else {
-        if (UiPrefs.accent == 0) lightColorScheme(
-            primary = Brand, onPrimary = Color.White, primaryContainer = Color(0xFFE4DFFF),
-            onPrimaryContainer = Color(0xFF170065), secondaryContainer = Color(0xFFECEAF4),
-            background = Color(0xFFF7F7FB), surface = Color(0xFFF7F7FB),
-        ) else lightColorScheme(
-            primary = a, onPrimary = Color.White, primaryContainer = lerp(a, Color.White, 0.82f),
-            onPrimaryContainer = lerp(a, Color.Black, 0.6f), secondaryContainer = lerp(Color(0xFFEDEDF2), a, 0.07f),
-            background = Color(0xFFF7F7FB), surface = Color(0xFFF7F7FB),
-        )
+    val spec = pl.szept.ui.style.styleById(UiPrefs.style)
+    val sysDark = isSystemInDarkTheme()
+    val dark = when (spec.mode) {
+        pl.szept.ui.style.Mode.LIGHT -> false
+        pl.szept.ui.style.Mode.DARK -> true
+        pl.szept.ui.style.Mode.FOLLOW -> when (UiPrefs.theme) { 1 -> false; 2, 3 -> true; else -> sysDark }
     }
+    val black = UiPrefs.theme == 3
+    val ai = UiPrefs.accent
+    // Material You: kolory z tapety (Android 12+), gdy nie wybrano własnego koloru w „Wyglądzie”
+    val pal = remember(spec, dark, ai, black) {
+        if (spec.dynamic && ai == 0 && android.os.Build.VERSION.SDK_INT >= 31 && android.os.Build.FINGERPRINT != "robolectric") {
+            val cs = if (dark) androidx.compose.material3.dynamicDarkColorScheme(ctx) else androidx.compose.material3.dynamicLightColorScheme(ctx)
+            pl.szept.ui.style.palFromScheme(if (black && dark) cs.copy(surface = Color.Black, background = Color.Black) else cs, dark)
+        } else spec.palette(dark, ai, black)
+    }
+    val motion = pl.szept.ui.style.MOTION_PRESETS.getOrNull(UiPrefs.motion)?.second ?: spec.motion
+    val st = remember(spec, pal, motion) { pl.szept.ui.style.StyleState(spec, pal, motion) }
+    val power = pl.szept.ui.style.rememberPowerSave()
+    val sysScale = remember { pl.szept.ui.style.systemAnimScale(ctx) }
+    val anim = remember(UiPrefs.anim, UiPrefs.animOff, UiPrefs.animSpeed, UiPrefs.animBattery, power, sysScale, UiPrefs.transition) {
+        pl.szept.ui.style.AnimFlags.build(UiPrefs.anim, UiPrefs.animOff, UiPrefs.animSpeed, UiPrefs.animBattery, power, sysScale, UiPrefs.transition)
+    }
+    val target = remember(st) {
+        if (spec.id == "classic") pl.szept.ui.style.classicScheme(dark, black, ai).copy(background = Color.Transparent) else pal.scheme()
+    }
+    val scheme = if (anim[pl.szept.ui.style.Anim.COLORS]) animateScheme(target, anim.ms(450)) else target
+    val typography = remember(spec) { spec.typography() }
+    val shapes = remember(spec) { spec.shapes() }
+    val ticker = remember { pl.szept.ui.style.Ticker() }
+    val tilt = remember { pl.szept.ui.style.TiltState() }
+    // wszystkie animacje Compose (także menu i przełączniki) — wyłączone razem z animacjami w Szepcie
+    androidx.compose.runtime.SideEffect { pl.szept.ui.style.MotionGate.scale = if (anim.any) 1f else 0f }
     val density = LocalDensity.current
     CompositionLocalProvider(LocalDensity provides Density(density.density, density.fontScale * UiPrefs.fontScale)) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        MaterialTheme(colorScheme = scheme, typography = typography, shapes = shapes) {
+            val press = motion.press
+            val pressOn = anim[pl.szept.ui.style.Anim.PRESS]
+            val indication = if (press == pl.szept.ui.style.Press.RIPPLE && pressOn) androidx.compose.foundation.LocalIndication.current
+            else remember(press, pressOn, anim[pl.szept.ui.style.Anim.HOVER], pal.primary) {
+                pl.szept.ui.style.StyleIndication(if (press == pl.szept.ui.style.Press.RIPPLE) pl.szept.ui.style.Press.HIGHLIGHT else press, pressOn, anim[pl.szept.ui.style.Anim.HOVER], pal.primary)
+            }
+            CompositionLocalProvider(
+                pl.szept.ui.style.LocalStyle provides st, pl.szept.ui.style.LocalAnim provides anim,
+                pl.szept.ui.style.LocalTicker provides ticker, pl.szept.ui.style.LocalTilt provides tilt,
+                androidx.compose.foundation.LocalIndication provides indication,
+            ) {
+                pl.szept.ui.style.RunTicker(ticker, anim.factor)
+                if (decorate) {
+                    pl.szept.ui.style.TiltSensor(spec.tilt && anim[pl.szept.ui.style.Anim.TILT], tilt)
+                    SystemBarsLook(st)
+                    Box(Modifier.fillMaxSize().sparkTaps(anim[pl.szept.ui.style.Anim.SPARKS])) {
+                        if (anim[pl.szept.ui.style.Anim.COLORS]) androidx.compose.animation.Crossfade(st, animationSpec = androidx.compose.animation.core.tween(anim.ms(450)), label = "styl") { s ->
+                            pl.szept.ui.style.StyleBackground(Modifier.fillMaxSize(), s)
+                        } else pl.szept.ui.style.StyleBackground(Modifier.fillMaxSize(), st)
+                        content()
+                        pl.szept.ui.style.FxLayer()
+                    }
+                } else content()
+            }
+        }
     }
 }
+
+/** Jasne albo ciemne ikony paska stanu i nawigacji — zależnie od stylu. */
+@Composable
+private fun SystemBarsLook(st: pl.szept.ui.style.StyleState) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val barLight = st.pal.bar.solid(st.pal.base).luminance() > 0.45f
+    val navLight = st.pal.base.luminance() > 0.45f
+    androidx.compose.runtime.SideEffect {
+        val w = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+        val c = androidx.core.view.WindowCompat.getInsetsController(w, view)
+        if (c.isAppearanceLightStatusBars != barLight) c.isAppearanceLightStatusBars = barLight
+        if (c.isAppearanceLightNavigationBars != navLight) c.isAppearanceLightNavigationBars = navLight
+    }
+}
+
+/** Płynna zmiana kolorów przy zmianie stylu/motywu. */
+@Composable
+private fun animateScheme(t: androidx.compose.material3.ColorScheme, ms: Int): androidx.compose.material3.ColorScheme {
+    val spec = androidx.compose.animation.core.tween<Color>(ms)
+    @Composable
+    fun a(c: Color) = androidx.compose.animation.animateColorAsState(c, spec, label = "kolor").value
+    return t.copy(
+        primary = a(t.primary), onPrimary = a(t.onPrimary), primaryContainer = a(t.primaryContainer), onPrimaryContainer = a(t.onPrimaryContainer),
+        secondary = a(t.secondary), secondaryContainer = a(t.secondaryContainer), onSecondaryContainer = a(t.onSecondaryContainer),
+        onBackground = a(t.onBackground), surface = a(t.surface), onSurface = a(t.onSurface),
+        surfaceVariant = a(t.surfaceVariant), onSurfaceVariant = a(t.onSurfaceVariant), outline = a(t.outline), outlineVariant = a(t.outlineVariant),
+        surfaceContainer = a(t.surfaceContainer), surfaceContainerHigh = a(t.surfaceContainerHigh), surfaceContainerHighest = a(t.surfaceContainerHighest),
+        surfaceContainerLow = a(t.surfaceContainerLow), error = a(t.error),
+    )
+}
+
+/** Nieprzezroczyste tło bieżącego stylu (tam, gdzie coś musi zasłonić to, co pod spodem). */
+@Composable
+fun baseColor(): Color = pl.szept.ui.style.LocalStyle.current.pal.base
 
 /** Tło rozmowy (tapeta z „Wyglądu”). */
 @Composable
@@ -162,6 +267,9 @@ fun ChatWallpaper(modifier: Modifier) {
     val ctx = LocalContext.current
     val w = UiPrefs.wallpaper
     when {
+        w.isEmpty() -> pl.szept.ui.style.LocalStyle.current.let { st ->
+            st.spec.chatBg?.let { pl.szept.ui.style.StyleBackground(modifier, st, it) }
+        }
         w.startsWith("g") -> {
             val colors = WALLPAPERS.getOrElse(w.drop(1).toIntOrNull() ?: 0) { WALLPAPERS[0] }
             Box(modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(colors)))
@@ -232,6 +340,9 @@ sealed class Screen {
     data object Connection : Screen()
     data object Help : Screen()
     data object Games : Screen()
+    data object Styles : Screen()
+    data object Animations : Screen()
+    data object Wizard : Screen()
 }
 
 class Nav {
@@ -271,7 +382,7 @@ fun isImageData(s: String?) = s != null && s.length > 24
 fun Avatar(name: String, key: String, size: Dp = 46.dp, group: Boolean = false, image: String? = null) {
     val bmp = remember(image) { if (isImageData(image)) Images.thumb(image!!) else null }
     Box(
-        Modifier.size(size).clip(CircleShape).background(avatarColor(key)),
+        Modifier.size(size).clip(pl.szept.ui.style.LocalStyle.current.spec.avatar.shape()).background(avatarColor(key)),
         contentAlignment = Alignment.Center,
     ) {
         when {
@@ -476,7 +587,8 @@ fun rememberSeen(pk: String?): Pair<pl.szept.core.Core.Seen, Long>? {
 @androidx.compose.runtime.Composable
 fun PresenceDot(s: pl.szept.core.Core.Seen, modifier: Modifier = Modifier, size: Dp = 14.dp) {
     androidx.compose.foundation.layout.Box(
-        modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape)
+        modifier.pulse(presenceColor(s), s == pl.szept.core.Core.Seen.ACTIVE)
+            .size(size).clip(androidx.compose.foundation.shape.CircleShape)
             .background(MaterialTheme.colorScheme.surface).padding(2.dp).clip(androidx.compose.foundation.shape.CircleShape)
             .background(presenceColor(s))
             .semantics { contentDescription = "Status: " + presenceText(s, 0L).substringBefore(" ·") },

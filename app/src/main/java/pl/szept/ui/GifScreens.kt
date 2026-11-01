@@ -217,7 +217,7 @@ fun GifPickerDialog(onDismiss: () -> Unit, onSend: (File) -> Unit) {
                                     Modifier.aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.08f))
                                         .combinedClickable(onClick = { preview = f to null }, onLongClick = { ask = true }),
                                 ) { GifImage(f.absolutePath, Modifier.fillMaxSize()) }
-                                if (ask) androidx.compose.material3.AlertDialog(
+                                if (ask) StyleAlertDialog(
                                     onDismissRequest = { ask = false },
                                     title = { Text("Usunąć ten GIF z Twoich?") },
                                     confirmButton = { TextButton(onClick = { Gifs.remove(ctx, f); ask = false; ver++ }) { Text("Usuń") } },
