@@ -322,6 +322,15 @@ class StylesTest {
         rule.runOnUiThread { UiPrefs.style = "liquid"; rule.activity.nav.home() }
         waitText("Kasia")
         snap("52-lista-ciemny-liquid")
+        rule.runOnUiThread { UiPrefs.style = "liquid_sky" }
+        waitText("Kasia")
+        snap("52-lista-ciemny-liquid_sky")
+        rule.runOnUiThread { UiPrefs.theme = 1 }
+        waitText("Kasia")
+        snap("52-lista-jasny-liquid_sky")
+        rule.runOnUiThread { UiPrefs.style = "liquid" }
+        waitText("Kasia")
+        snap("52-lista-jasny-liquid")
         rule.runOnUiThread { UiPrefs.theme = 0; UiPrefs.style = "liquid" }
         // ekrany ustawień stylu i animacji
         rule.runOnUiThread { rule.activity.nav.home(); rule.activity.nav.go(Screen.Styles) }

@@ -78,6 +78,11 @@ import pl.szept.ui.style.bevel
 import pl.szept.ui.style.styleBarColors
 import pl.szept.ui.style.styleTopBar
 import pl.szept.ui.style.titleFx
+import pl.szept.ui.style.edgeFade
+import pl.szept.ui.style.liquidGlass
+import pl.szept.ui.style.currentGlass
+import pl.szept.ui.style.pressScale
+import androidx.compose.foundation.layout.navigationBarsPadding
 
 /*
  * Nagłówek listy rozmów, pole wyszukiwania i przycisk nowej rozmowy w kształcie danego stylu:
@@ -94,7 +99,7 @@ fun hasListTitle(): Boolean = LocalStyle.current.spec.homeHeader.let { it == Hom
 
 /** Czy akcje mieszczą się w nagłówku (w stylach z kapsułką lub okrągłymi przyciskami część trafia do menu). */
 @Composable
-fun compactHomeActions(): Boolean = LocalStyle.current.let { it.spec.chrome == Chrome.GLASS || it.spec.homeHeader == HomeHeader.WORDMARK }
+fun compactHomeActions(): Boolean = LocalStyle.current.spec.homeHeader == HomeHeader.WORDMARK
 
 /**
  * Pasek nad listą rozmów.
@@ -117,12 +122,13 @@ fun HomeTopBar(
         spec.chrome == Chrome.GLASS -> Box(
             Modifier.fillMaxWidth()
                 .drawBehind {
-                    val fade = st.pal.base
-                    drawRect(Brush.verticalGradient(listOf(fade.copy(alpha = 0.94f), fade.copy(alpha = 0.6f * smallTitle + 0.2f), fade.copy(alpha = 0f))))
+                    val fade = st.edgeFade(top = true)
+                    drawRect(Brush.verticalGradient(listOf(fade.copy(alpha = 0.9f), fade.copy(alpha = 0.55f * smallTitle + 0.15f), fade.copy(alpha = 0f))))
                 }
                 .statusBarsPadding().height(60.dp).padding(horizontal = 14.dp),
         ) {
-            // jak w oryginale: menu w kółku po lewej, szukanie i nowa rozmowa po prawej, mały tytuł na środku
+            // jak w oryginale: menu w kółku po lewej, akcje w szklanej kapsułce po prawej, mały tytuł na środku
+            // (szukanie i nowa rozmowa są na dole, w pływającym szklanym pasku)
             Box(Modifier.align(Alignment.CenterStart)) {
                 GlassIconButton(Icons.Default.MoreHoriz, "Menu", onMenu)
                 menu()
@@ -132,7 +138,7 @@ fun HomeTopBar(
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), color = st.pal.onBase,
             )
             Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                actions.forEach { a -> GlassIconButton(a.icon, a.label, a.onClick) }
+                if (actions.isNotEmpty()) GlassActions { actions.forEach { a -> IconButton(onClick = a.onClick) { Icon(a.icon, a.label) } } }
                 if (onCompose != null) GlassIconButton(Icons.Default.EditNote, "Nowa rozmowa", onCompose)
             }
         }
@@ -248,7 +254,40 @@ fun ListTitleBlock(status: @Composable () -> Unit, onSearch: () -> Unit, topPadd
             fontWeight = spec.headWeight ?: FontWeight.Bold, fontFamily = spec.titleFont, letterSpacing = (-0.01).em,
         )
         status()
-        if (spec.searchPill || spec.chrome == Chrome.GLASS) SearchPill(onSearch, Modifier.padding(top = 10.dp))
+        // w szkle pole szukania pływa na dole ekranu (pasek z szukaniem i nową rozmową)
+        if (spec.searchPill && spec.chrome != Chrome.GLASS) SearchPill(onSearch, Modifier.padding(top = 10.dp))
+    }
+}
+
+/**
+ * Pływający szklany pasek na dole listy rozmów (jak w nowym szklanym systemie): kapsułka „Szukaj”
+ * i kółko „Nowa rozmowa”. Lista przewija się pod spodem i prześwituje przez szkło.
+ */
+@Composable
+fun GlassBottomBar(onSearch: () -> Unit, onCompose: () -> Unit, modifier: Modifier = Modifier) {
+    val st = LocalStyle.current
+    val fade = st.edgeFade(top = false)
+    Row(
+        modifier.fillMaxWidth()
+            .drawBehind { drawRect(Brush.verticalGradient(listOf(fade.copy(alpha = 0f), fade.copy(alpha = 0.55f), fade.copy(alpha = 0.85f)))) }
+            .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val src = remember { MutableInteractionSource() }
+        Row(
+            Modifier.weight(1f).height(50.dp).pressScale(src, LocalAnim.current[Anim.PRESS])
+                .liquidGlass(currentGlass(), 25.dp).clip(RoundedCornerShape(25.dp))
+                .clickable(src, null, onClick = onSearch)
+                .semantics { role = Role.Button; contentDescription = "Szukaj" }
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.Search, null, Modifier.size(21.dp), tint = st.pal.muted)
+            Spacer(Modifier.width(8.dp))
+            Text("Szukaj", color = st.pal.muted, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp))
+        }
+        Spacer(Modifier.width(10.dp))
+        GlassIconButton(Icons.Default.EditNote, "Nowa rozmowa", onCompose, size = 50.dp)
     }
 }
 

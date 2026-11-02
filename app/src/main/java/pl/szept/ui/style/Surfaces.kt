@@ -155,15 +155,18 @@ private class SurfacePainter(val st: StyleState, val role: Role, val f: Fill, va
         when (st.surf) {
             Surf.FLAT -> { fill(); outline(1f * px) }
             Surf.GLASS -> {
+                // przezroczyste szkło (dymki rozmówcy, karty) błyszczy mocniej niż pełny kolor (moje dymki)
+                val clear = f.color.alpha < 0.95f
                 softShadow(path, Color.Black.copy(alpha = if (st.dark) 0.4f else 0.12f), (if (small) 6f else 14f) * px, 0f, (if (small) 2f else 5f) * px, f.color, true)
                 fill()
                 val tx = tilt?.x ?: 0f; val ty = tilt?.y ?: 0f
                 clipPath(path) {
-                    drawRect(sheen)
+                    drawRect(sheen, alpha = if (clear) 1f else 0.45f)
                     // odblask światła — przesuwa się, gdy przechylasz telefon
                     val c = Offset(size.width * (0.22f - tx * 0.25f), size.height * (0.05f - ty * 0.3f))
                     val r = maxOf(size.minDimension * 0.9f, 40f * px)
-                    drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = if (st.dark) 0.16f else 0.32f), Color.Transparent), c, r), r, c)
+                    val glint = (if (st.dark) 0.16f else 0.32f) * (if (clear) 1f else 0.5f)
+                    drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = glint), Color.Transparent), c, r), r, c)
                 }
                 val rim = Brush.linearGradient(
                     listOf(

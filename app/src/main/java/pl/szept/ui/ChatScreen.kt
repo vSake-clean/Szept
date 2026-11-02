@@ -184,6 +184,7 @@ import pl.szept.ui.style.rememberBackdrop
 import pl.szept.ui.style.backdropSource
 import pl.szept.ui.style.LocalBackdrop
 import pl.szept.ui.style.ChatBgMotion
+import pl.szept.ui.style.edgeFade
 
 /** Kilka zdjęć wysłanych naraz (jeden wiersz listy). */
 data class AlbumRow(val key: String, val msgs: List<Message>)
@@ -876,7 +877,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                 chat?.name ?: "", onBack = { nav.back() }, onTitle = openInfo,
                 avatar = { Avatar(chat?.name ?: "", chat?.peer ?: chatId, 52.dp, chat?.isGroup == true, hdrImg) },
                 status = if (typingText != null && anim[Anim.TYPING]) ({
-                    val c = pl.szept.ui.style.readable(st.pal.muted, if (st.pal.bg.isNotEmpty()) st.pal.bg.first() else st.pal.base, 4.5f)
+                    val c = pl.szept.ui.style.readable(st.pal.muted, st.edgeFade(top = true), 4.5f)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(typingText.removeSuffix("…"), style = MaterialTheme.typography.labelSmall, color = c)
                         Spacer(Modifier.width(4.dp))
@@ -1236,7 +1237,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         if (canSend != null) {
             Text(
                 canSend, Modifier.fillMaxWidth().padding(16.dp),
-                color = if (glassUi) pl.szept.ui.style.readable(st.pal.muted, if (st.pal.bg.isNotEmpty()) st.pal.bg.last() else st.pal.base, 4.5f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (glassUi) pl.szept.ui.style.readable(st.pal.muted, st.edgeFade(top = false), 4.5f) else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else if (recMode == 2 && recorder != null) {
             LockedRecordingBar(recElapsed, amps, voiceTimed, { voiceTimed = !voiceTimed }, { finishRecording(false) }, { finishRecording(true) })
@@ -1248,7 +1249,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         val backdrop = rememberBackdrop()
         var topH by remember { mutableStateOf(0.dp) }
         var bottomH by remember { mutableStateOf(0.dp) }
-        val fadeBottom = if (st.pal.bg.isNotEmpty()) st.pal.bg.last() else st.pal.base
+        val fadeBottom = st.edgeFade(top = false)
         Box(Modifier.fillMaxSize().imePadding()) {
             messagesArea(Modifier.fillMaxSize().backdropSource(backdrop), PaddingValues(top = topH + 4.dp, bottom = bottomH + 4.dp))
             CompositionLocalProvider(LocalBackdrop provides backdrop) {

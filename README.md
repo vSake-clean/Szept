@@ -16,6 +16,9 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.3.3
+- **Dużo więcej szkła** w „Liquid Glass” i „Liquid Glass Niebo”: kolorowa poświata albo niebo pod całą aplikacją, szklane karty rozmów, dymki i banery oraz pływający szklany pasek szukania na dole.
+
 ### Nowe w 3.3.2
 - Bez iskier przy dotknięciu; w ciemnym „Liquid Glass” znów widać nazwy osób na liście rozmów.
 

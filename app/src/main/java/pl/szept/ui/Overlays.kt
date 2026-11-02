@@ -257,7 +257,8 @@ fun StyleAlertDialog(
     val cs = MaterialTheme.colorScheme
     val ios6 = chrome == Chrome.IOS6
     val container = when (chrome) {
-        Chrome.GLASS -> if (st.dark) Color(0xFF1C1C1E).copy(alpha = 0.92f) else Color(0xFFF7F7F8).copy(alpha = 0.94f)
+        // szkło: okno półprzezroczyste nad rozmytym tłem (Android 12+)
+        Chrome.GLASS -> if (st.dark || st.pal.onBase == Color.White) Color(0xFF1C1C1E).copy(alpha = 0.82f) else Color(0xFFF7F7F8).copy(alpha = 0.84f)
         Chrome.IOS6 -> Color(0xFF233B70).copy(alpha = 0.96f)
         Chrome.WIN95 -> Color(0xFFC0C0C0)
         Chrome.WINXP -> Color(0xFFECE9D8)

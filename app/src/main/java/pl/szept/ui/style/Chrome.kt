@@ -45,6 +45,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
@@ -67,11 +68,16 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun chrome(): Chrome = LocalStyle.current.spec.chrome
 
-/** Szkło dla bieżącego stylu. */
+/** Szkło dla bieżącego stylu (na niebie z białymi napisami — przydymione, żeby ikony były czytelne). */
 @Composable
 fun currentGlass(tinted: Color? = null): GlassLook {
     val st = LocalStyle.current
-    return remember(st.dark, tinted) { glassLookFor(st.dark, tinted) }
+    val smoky = !st.dark && st.pal.onBase.luminance() > 0.5f
+    return remember(st.dark, smoky, tinted) {
+        if (smoky && tinted == null) GlassLook(
+            tint = Color(0xFF0A1F44).copy(alpha = 0.2f), fallback = Color(0xFF0A1F44).copy(alpha = 0.6f), dark = true, saturation = 1.35f,
+        ) else glassLookFor(st.dark, tinted)
+    }
 }
 
 /** Szklany okrągły przycisk z ikoną (iOS 26). */
@@ -87,7 +93,7 @@ fun GlassIconButton(icon: ImageVector, desc: String?, onClick: () -> Unit, modif
             .semantics { role = Role.Button; if (desc != null) contentDescription = desc },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, Modifier.size(size * 0.48f), tint = if (tint != null) Color.White else if (st.dark) Color.White else Color.Black)
+        Icon(icon, null, Modifier.size(size * 0.48f), tint = if (tint != null) Color.White else st.pal.onBase)
     }
 }
 
@@ -99,7 +105,7 @@ fun GlassActions(modifier: Modifier = Modifier, content: @Composable RowScope.()
         modifier.height(44.dp).liquidGlass(currentGlass()).padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CompositionLocalProvider(LocalContentColor provides if (st.dark) Color.White else Color.Black) { content() }
+        CompositionLocalProvider(LocalContentColor provides st.pal.onBase) { content() }
     }
 }
 
@@ -306,6 +312,12 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.aeroBar(pal: Pal) 
 
 /** Szerokość elementu po ułożeniu (np. do wyśrodkowania tytułu obok przycisków). */
 internal fun Modifier.onWidth(block: (Int) -> Unit): Modifier = onSizeChanged { block(it.width) }
+
+/** Kolor łagodnego wygaszenia treści pod szklanymi paskami: kolor nieba albo tła. */
+fun StyleState.edgeFade(top: Boolean): Color = when {
+    spec.bg == Bg.SKY && pal.bg.isNotEmpty() -> if (top) pal.bg.first() else pal.bg.last()
+    else -> pal.base
+}
 
 /** Odstęp ikon w szklanej kapsułce. */
 val GlassActionSpacing = Arrangement.spacedBy(0.dp)

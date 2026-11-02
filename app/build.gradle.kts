@@ -50,8 +50,8 @@ android {
         applicationId = "pl.szept.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "3.3.2"
+        versionCode = 27
+        versionName = "3.3.3"
         // klucz KLIPY (GIF-y) — można też wpisać w aplikacji lub rozesłać z panelu administratora
         val klipy = rootProject.file("klipy.key").takeIf { it.exists() }?.readText()?.trim() ?: secret("KLIPY_KEY") ?: ""
         buildConfigField("String", "KLIPY_KEY", "\"" + klipy.filter { it.isLetterOrDigit() || it == '-' || it == '_' } + "\"")

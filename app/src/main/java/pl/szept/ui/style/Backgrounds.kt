@@ -81,6 +81,7 @@ internal abstract class BgPainter(val pal: Pal, val size: Size, d: Density) {
 
 internal fun makeBg(kind: Bg, pal: Pal, size: Size, d: Density): BgPainter = when (kind) {
     Bg.PLAIN, Bg.RETRO -> Plain(pal, size, d)
+    Bg.AURA -> Aura(pal, size, d)
     Bg.SKY -> Sky(pal, size, d)
     Bg.IOS6 -> Ios6(pal, size, d)
     Bg.TELEGRAM -> TelegramBg(pal, size, d)
@@ -100,13 +101,31 @@ private class Solid(val c: Color, pal: Pal, size: Size, d: Density) : BgPainter(
     override fun DrawScope.paint(t: Float, tx: Float, ty: Float) { drawRect(c) }
 }
 
+/**
+ * Miękka kolorowa poświata pod szkłem (jak tapety pod Liquid Glass): tło stylu i trzy rozlane plamy koloru.
+ * Dzięki niej szkło ma co rozmywać i załamywać, a tekst zostaje czytelny.
+ */
+private class Aura(pal: Pal, size: Size, d: Density) : BgPainter(pal, size, d) {
+    private val cols = pal.bg.ifEmpty { listOf(Color(0xFFCFE0FF), Color(0xFFF0D8FF), Color(0xFFCFF3E8)) }
+    private val spots = listOf(Offset(0.12f, 0.1f) to 0.78f, Offset(0.95f, 0.46f) to 0.72f, Offset(0.25f, 0.98f) to 0.85f)
+    private val brushes = spots.mapIndexed { k, (o, r) ->
+        val c = cols[k % cols.size]
+        Brush.radialGradient(listOf(c, c.copy(alpha = 0.55f), c.copy(alpha = 0f)), Offset(o.x * w, o.y * h), r * maxDim)
+    }
+    override fun DrawScope.paint(t: Float, tx: Float, ty: Float) {
+        drawRect(pal.base)
+        brushes.forEach { drawRect(it) }
+    }
+}
+
 /** iOS 26 „Niebo”: błękit z miękkimi chmurami (w ciemnym — nocne niebo). */
 private class Sky(pal: Pal, size: Size, d: Density) : BgPainter(pal, size, d) {
     private val cols = pal.bg.ifEmpty { listOf(Color(0xFF1F6FDB), Color(0xFF3D93F0), Color(0xFF79B9F6)) }
     private val grad = Brush.verticalGradient(cols)
     private class Cloud(val x: Float, val y: Float, val rx: Float, val ry: Float, val a: Float, val speed: Float)
     private val clouds = List(9) {
-        Cloud(r() * 1.2f - 0.1f, 0.25f + r() * 0.75f, (90f + 140f * r()) * px, (40f + 60f * r()) * px, (if (pal.dark) 0.05f else 0.16f) + r() * 0.12f, 2f + 4f * r())
+        // chmury delikatne — na niebie są białe napisy i szkło
+        Cloud(r() * 1.2f - 0.1f, 0.25f + r() * 0.75f, (90f + 140f * r()) * px, (40f + 60f * r()) * px, (if (pal.dark) 0.04f else 0.06f) + r() * 0.07f, 2f + 4f * r())
     }
     private val puff = Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0.5f), Color.Transparent), Offset.Zero, 1f)
 

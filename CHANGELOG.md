@@ -2,6 +2,12 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3.3
+- Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery.
+- Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu.
+- Liquid Glass Niebo: niebo na każdym ekranie, białe napisy i przydymione szkło, przez które prześwituje niebo.
+- Mocniejsze załamanie światła przy krawędziach szkła, jaśniejsze odblaski w ciemnym motywie i półprzezroczyste okna nad rozmytym tłem.
+
 ## 3.3.2
 - Usunięte „Iskry przy dotknięciu” — w miejscu dotknięcia nic już się nie pojawia, w żadnym stylu.
 - Liquid Glass w ciemnym motywie: na liście rozmów znów widać nazwy osób i podpis „Twoja relacja” (wcześniej były czarne na czarnym tle). Ta sama poprawka obejmuje inne ekrany bez własnego tła.

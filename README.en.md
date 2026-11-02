@@ -18,6 +18,9 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.3.3
+- **Much more glass** in “Liquid Glass” and “Liquid Glass Niebo”: a colourful glow or sky under the whole app, glass chat cards, bubbles and banners, and a floating glass search bar at the bottom.
+
 ### New in 3.3.2
 - No more touch sparks; contact names are visible again on the chat list in dark “Liquid Glass”.
 

@@ -41,7 +41,7 @@ enum class Mode { FOLLOW, LIGHT, DARK }
 enum class Surf { FLAT, GLASS, FROST, SOFT, BRUTAL, CLAY, NEON, GLOSSY, NOTE, CHALK, BEVEL }
 
 /** Tło stylu. */
-enum class Bg { PLAIN, SKY, IOS6, TELEGRAM, WHATSAPP, MICA, HARMONY, BLISS, DESKTOP, RETRO, TERMINAL }
+enum class Bg { PLAIN, AURA, SKY, IOS6, TELEGRAM, WHATSAPP, MICA, HARMONY, BLISS, DESKTOP, RETRO, TERMINAL }
 
 /** „Rama” interfejsu: paski, pole wiadomości, nagłówek listy — tak jak w danym systemie/aplikacji. */
 enum class Chrome { MATERIAL, GLASS, IOS6, ONEUI, EXPRESSIVE, WIN11, WIN7, WINXP, WIN95, TELEGRAM, WHATSAPP, MESSENGER, TERMINAL, HYPER, NOTHING, OXYGEN, COLOROS, EMUI, FACEBOOK, DISCORD, SIGNAL }
@@ -399,37 +399,43 @@ val STYLES: List<StyleSpec> = listOf(
     ),
     // ======================= telefony i nakładki =======================
     StyleSpec(
-        "liquid", "Liquid Glass", "Pływające szklane przyciski, które rozmywają i załamują treść pod spodem, duży tytuł i dymki z zawiniętymi ogonkami.",
-        surf = Surf.FLAT, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true,
+        "liquid", "Liquid Glass", "Szkło wszędzie: pływające przyciski, które rozmywają i załamują treść, szklane karty rozmów i dymki na miękkiej kolorowej poświacie, pasek szukania na dole i dymki z zawiniętymi ogonkami.",
+        surf = Surf.GLASS, bg = Bg.AURA, chatBg = Bg.AURA, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true,
         chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = "iOS 26", category = Category.PHONE,
-        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS, input = InputStyle.GLASS, fab = FabStyle.NONE, searchPill = true, tilt = true, motion = Motions.Apple,
+        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.CARDS, input = InputStyle.GLASS, fab = FabStyle.NONE, tilt = true, motion = Motions.Apple,
     ) { dark, _, _ ->
         if (!dark) Pal(
-            false, Color.White, Color.Black, c(0xFF6C6C71), c(0xFF0088FF), Color.White,
-            mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(c(0xFFE9E9EB), Color.Black),
-            card = null, bar = Fill(Color.Transparent, Color.Black), chip = Fill(Color.Transparent, c(0xFF6C6C71)), line = c(0xFFC6C6C8),
+            false, Color.White, Color.Black, c(0xFF5E5E66), c(0xFF0079F2), Color.White,
+            mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(Color.White.a(0.62f), Color.Black),
+            card = Fill(Color.White.a(0.55f), Color.Black), bar = Fill(Color.Transparent, Color.Black),
+            chip = Fill(Color.White.a(0.55f), c(0xFF5E5E66)), line = c(0xFFC6C6C8),
+            bg = listOf(c(0xFFCFE0FF), c(0xFFF0D8FF), c(0xFFCFF3E8)),
         ) else Pal(
-            true, Color.Black, Color.White, c(0xFF98989F), c(0xFF0091FF), Color.White,
-            mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(c(0xFF262628), Color.White),
-            card = null, bar = Fill(Color.Transparent, Color.White), chip = Fill(Color.Transparent, c(0xFF98989F)), line = c(0xFF38383A),
+            true, Color.Black, Color.White, c(0xFFA1A1A8), c(0xFF0A84FF), Color.White,
+            mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(c(0xFF3A3A3C).a(0.6f), Color.White),
+            card = Fill(c(0xFF1C1C1E).a(0.55f), Color.White), bar = Fill(Color.Transparent, Color.White),
+            chip = Fill(c(0xFF1C1C1E).a(0.6f), c(0xFFC7C7CC)), line = c(0xFF38383A),
+            bg = listOf(c(0xFF15275C), c(0xFF311A56), c(0xFF0A3E4B)),
         )
     },
     StyleSpec(
-        "liquid_sky", "Liquid Glass Niebo", "Szkło na tle nieba z chmurami — kolory przenikają przez przyciski, a dymki rozmówcy są przydymionym szkłem.",
-        surf = Surf.FLAT, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true, moving = true,
-        chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, chatBg = Bg.SKY, origin = "iOS 26", category = Category.PHONE,
-        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS, input = InputStyle.GLASS, fab = FabStyle.NONE, searchPill = true, tilt = true, motion = Motions.Apple,
+        "liquid_sky", "Liquid Glass Niebo", "Szkło na tle nieba z chmurami na każdym ekranie: przydymione szklane karty i dymki, białe napisy, przyciski, przez które prześwituje niebo, i pasek szukania na dole.",
+        surf = Surf.GLASS, bg = Bg.SKY, chatBg = Bg.SKY, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true, moving = true,
+        chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = "iOS 26", category = Category.PHONE,
+        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.CARDS, input = InputStyle.GLASS, fab = FabStyle.NONE, tilt = true, motion = Motions.Apple,
     ) { dark, _, _ ->
         if (!dark) Pal(
-            false, Color.White, Color.Black, c(0xFF6C6C71), c(0xFF0088FF), Color.White,
-            mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(c(0xFF0A2A55).a(0.5f), Color.White),
-            card = null, bar = Fill(Color.Transparent, Color.Black), chip = Fill(c(0xFF0A2A55).a(0.5f), Color.White), line = c(0xFFC6C6C8),
-            bg = listOf(c(0xFF1F6FDB), c(0xFF3D93F0), c(0xFF79B9F6)),
+            false, c(0xFF1D4BA0), Color.White, c(0xFFD2E2FF), c(0xFF8AD8FF), c(0xFF06264F),
+            mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(c(0xFF0A1F44).a(0.42f), Color.White),
+            card = Fill(c(0xFF0A1F44).a(0.3f), Color.White), bar = Fill(Color.Transparent, Color.White),
+            chip = Fill(c(0xFF0A1F44).a(0.45f), Color.White), line = Color.White.a(0.28f),
+            bg = listOf(c(0xFF163D8E), c(0xFF2157B8), c(0xFF2B66CB)),
         ) else Pal(
-            true, Color.Black, Color.White, c(0xFF98989F), c(0xFF0091FF), Color.White,
+            true, c(0xFF07193A), Color.White, c(0xFFB3C6E8), c(0xFF6CC7FF), c(0xFF002240),
             mine = Fill(c(0xFF0088FF), Color.White), theirs = Fill(Color.Black.a(0.38f), Color.White),
-            card = null, bar = Fill(Color.Transparent, Color.White), chip = Fill(Color.Black.a(0.4f), Color.White), line = c(0xFF38383A),
-            bg = listOf(c(0xFF061533), c(0xFF0E2E63), c(0xFF1C4A8F)),
+            card = Fill(Color.Black.a(0.3f), Color.White), bar = Fill(Color.Transparent, Color.White),
+            chip = Fill(Color.Black.a(0.42f), Color.White), line = Color.White.a(0.2f),
+            bg = listOf(c(0xFF030B1E), c(0xFF0A1F47), c(0xFF13366F)),
         )
     },
     StyleSpec(

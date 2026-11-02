@@ -82,9 +82,9 @@ class GlassLook(
     /** Rozmycie treści pod spodem. */
     val blur: Dp = 7.dp,
     /** Największe przesunięcie treści przy samej krawędzi (soczewka). */
-    val lens: Dp = 9.dp,
+    val lens: Dp = 12.dp,
     /** Szerokość pasa przy krawędzi, w którym szkło załamuje światło. */
-    val band: Dp = 13.dp,
+    val band: Dp = 16.dp,
     /** Zabarwienie tafli (np. lekko białe w jasnym motywie). */
     val tint: Color = Color.White.copy(alpha = 0.16f),
     /** Kolor szkła bez rozmycia (starsze Androidy). */
@@ -136,8 +136,8 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
             }
             layer.colorFilter = ColorFilter.colorMatrix(sat)
             val rimColors = listOf(
-                Color.White.copy(alpha = if (look.dark) 0.5f else 0.95f), Color.White.copy(alpha = 0.1f),
-                Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = if (look.dark) 0.32f else 0.7f),
+                Color.White.copy(alpha = if (look.dark) 0.62f else 0.95f), Color.White.copy(alpha = 0.12f),
+                Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = if (look.dark) 0.4f else 0.7f),
             )
             val rim = Brush.linearGradient(rimColors, Offset.Zero, Offset(w, h))
             val inner = Brush.verticalGradient(

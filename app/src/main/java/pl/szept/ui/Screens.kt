@@ -150,6 +150,7 @@ import pl.szept.ui.style.readable
 import pl.szept.ui.style.groupedCard
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import pl.szept.ui.style.styled
 
 // ======================= wspólne elementy =======================
 
@@ -161,6 +162,19 @@ fun BackBar(title: String, nav: Nav, actions: (@Composable () -> Unit)? = null) 
 
 @Composable
 fun Banner(text: String, action: String, onClick: () -> Unit) {
+    val st = LocalStyle.current
+    if (st.spec.chrome == Chrome.GLASS) {
+        // szklana karta (przez szkło prześwituje tło stylu)
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                .styled(pl.szept.ui.style.Role.CARD, RoundedCornerShape(24.dp)).padding(start = 16.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = st.pal.onBase)
+            TextButton(onClick = onClick) { Text(action, fontWeight = FontWeight.Bold, color = st.pal.primary) }
+        }
+        return
+    }
     Card(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -330,13 +344,14 @@ fun HomeScreen(nav: Nav) {
     }
     val compact = compactHomeActions()
     val actions = buildList {
-        add(HomeAction(Icons.Default.Search, "Szukaj") { nav.go(Screen.Search) })
+        // w szkle szukanie jest w pływającym pasku na dole
+        if (!glassUi) add(HomeAction(Icons.Default.Search, "Szukaj") { nav.go(Screen.Search) })
         if (!compact) {
             add(HomeAction(Icons.Default.QrCode, "Mój kod") { nav.go(Screen.MyCode) })
             add(HomeAction(Icons.Default.PersonAdd, "Dodaj kontakt") { nav.go(Screen.AddContact()) })
         }
     }
-    val onCompose: (() -> Unit)? = if (st.spec.fab == FabStyle.NONE) ({ nav.go(Screen.NewChat) }) else null
+    val onCompose: (() -> Unit)? = if (st.spec.fab == FabStyle.NONE && !glassUi) ({ nav.go(Screen.NewChat) }) else null
     val topBar: @Composable () -> Unit = {
         HomeTopBar(
             status = { statusLine(true) }, collapsed = collapsed, actions = actions, onMenu = { menu = true }, onCompose = onCompose,
@@ -404,13 +419,16 @@ fun HomeScreen(nav: Nav) {
         // szklane przyciski nad listą — lista przewija się pod nimi
         val backdrop = rememberBackdrop()
         var topH by remember { mutableStateOf(0.dp) }
+        var bottomH by remember { mutableStateOf(0.dp) }
         Box(Modifier.fillMaxSize()) {
-            list(
-                Modifier.fillMaxSize().backdropSource(backdrop),
-                PaddingValues(top = topH, bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp),
-            )
+            list(Modifier.fillMaxSize().backdropSource(backdrop), PaddingValues(top = topH, bottom = bottomH + 8.dp))
             CompositionLocalProvider(LocalBackdrop provides backdrop) {
                 Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { topH = with(density) { it.height.toDp() } }) { topBar() }
+                // pływający szklany pasek: szukanie i nowa rozmowa
+                GlassBottomBar(
+                    onSearch = { nav.go(Screen.Search) }, onCompose = { nav.go(Screen.NewChat) },
+                    modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { bottomH = with(density) { it.height.toDp() } },
+                )
             }
         }
     } else Scaffold(topBar = topBar, floatingActionButton = { HomeFab { nav.go(Screen.NewChat) } }) { pad ->
@@ -542,7 +560,12 @@ fun ChatRow(c: Chat, onLong: () -> Unit = {}, modifier: Modifier = Modifier, pos
     Row(
         Modifier.fillMaxWidth()
             .then(rowMod)
-            .combinedClickable(interactionSource = src, indication = if (ls == ListStyle.CARDS || ls == ListStyle.SEGMENTED) ripple() else LocalIndication.current, onClick = onClick, onLongClick = onLong)
+            .combinedClickable(
+                interactionSource = src,
+                // szklane karty: ugięcie i podświetlenie stylu zamiast fali
+                indication = if ((ls == ListStyle.CARDS || ls == ListStyle.SEGMENTED) && chromeKind != Chrome.GLASS) ripple() else LocalIndication.current,
+                onClick = onClick, onLongClick = onLong,
+            )
             .padding(start = if (iosList) 4.dp else if (ls == ListStyle.CARDS || inCard) 12.dp else 16.dp, end = if (ls == ListStyle.CARDS || inCard) 12.dp else 16.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

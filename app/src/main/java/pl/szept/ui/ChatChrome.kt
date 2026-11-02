@@ -86,6 +86,7 @@ import pl.szept.ui.style.LocalStyle
 import pl.szept.ui.style.backIcon
 import pl.szept.ui.style.bevel
 import pl.szept.ui.style.currentGlass
+import pl.szept.ui.style.edgeFade
 import pl.szept.ui.style.fieldColors
 import pl.szept.ui.style.fieldShape
 import pl.szept.ui.style.ios6Title
@@ -447,7 +448,7 @@ fun GlassChatHeader(
     actions: @Composable RowScope.() -> Unit,
 ) {
     val st = LocalStyle.current
-    val fade = if (st.pal.bg.isNotEmpty()) st.pal.bg.first() else st.pal.base
+    val fade = st.edgeFade(top = true)
     Box(
         modifier.fillMaxWidth()
             .drawBehind {
