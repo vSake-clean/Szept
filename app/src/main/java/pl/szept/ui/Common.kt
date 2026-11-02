@@ -62,7 +62,6 @@ import pl.szept.ui.style.pulse
 import pl.szept.ui.style.scheme
 import pl.szept.ui.style.shape
 import pl.szept.ui.style.shapes
-import pl.szept.ui.style.sparkTaps
 import pl.szept.ui.style.typography
 import pl.szept.crypto.B64
 import java.io.File
@@ -212,6 +211,8 @@ fun SzeptTheme(decorate: Boolean = true, content: @Composable () -> Unit) {
                 pl.szept.ui.style.StyleIndication(if (press == pl.szept.ui.style.Press.RIPPLE) pl.szept.ui.style.Press.HIGHLIGHT else press, pressOn, anim[pl.szept.ui.style.Anim.HOVER], pal.primary)
             }
             CompositionLocalProvider(
+                // domyślny kolor tekstu = kolor tekstu na tle (inaczej na ekranach bez „rusztowania” byłby czarny — niewidoczny w ciemnym stylu)
+                androidx.compose.material3.LocalContentColor provides scheme.onSurface,
                 pl.szept.ui.style.LocalStyle provides st, pl.szept.ui.style.LocalAnim provides anim,
                 pl.szept.ui.style.LocalTicker provides ticker, pl.szept.ui.style.LocalTilt provides tilt,
                 androidx.compose.foundation.LocalIndication provides indication,
@@ -220,7 +221,7 @@ fun SzeptTheme(decorate: Boolean = true, content: @Composable () -> Unit) {
                 if (decorate) {
                     pl.szept.ui.style.TiltSensor(spec.tilt && anim[pl.szept.ui.style.Anim.TILT], tilt)
                     SystemBarsLook(st)
-                    Box(Modifier.fillMaxSize().sparkTaps(anim[pl.szept.ui.style.Anim.SPARKS])) {
+                    Box(Modifier.fillMaxSize()) {
                         if (anim[pl.szept.ui.style.Anim.COLORS]) androidx.compose.animation.Crossfade(st, animationSpec = androidx.compose.animation.core.tween(anim.ms(450)), label = "styl") { s ->
                             pl.szept.ui.style.StyleBackground(Modifier.fillMaxSize(), s)
                         } else pl.szept.ui.style.StyleBackground(Modifier.fillMaxSize(), st)

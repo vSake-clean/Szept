@@ -103,7 +103,6 @@ enum class Anim(val key: String, val title: String, val desc: String, val group:
     TILT("tilt", "Odblaski i paralaksa", "Szkło łapie światło, gdy przechylasz telefon (żyroskop)", AnimGroup.EFFECTS, continuous = true),
     SHIMMER("shimmer", "Połysk wczytywania", "Migoczące zaślepki, zanim pojawią się rozmowy i zdjęcia", AnimGroup.EFFECTS, continuous = true),
     TITLE("title", "Animowany tytuł", "Błysk, kursor terminala albo kropki — zależnie od stylu", AnimGroup.EFFECTS, continuous = true),
-    SPARKS("sparks", "Iskry przy dotknięciu", "Pod palcem rozbłyskują iskierki", AnimGroup.EFFECTS, defaultOn = false),
     CHAT_FX("chatfx", "Efekty w rozmowie", "🎉 konfetti, ❤️ serca, 🎈 balony, ❄️ śnieg, 🎆 fajerwerki, ⭐ gwiazdy po takiej wiadomości", AnimGroup.CHAT),
     GAME_FX("gamefx", "Konfetti w grach", "Przy wygranej i nowym rekordzie", AnimGroup.CHAT),
     TYPING("typing", "Animowane „pisze…”", "Skaczące kropki, gdy rozmówca pisze", AnimGroup.CHAT, continuous = true),

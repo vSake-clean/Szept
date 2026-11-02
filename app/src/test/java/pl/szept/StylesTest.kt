@@ -225,7 +225,9 @@ class StylesTest {
         assertEquals(480, some.ms(300))
         assertEquals(Trans.FADE, some.transition)
         // iskry domyślnie wyłączone
-        assertTrue("sparks" in AnimFlags.DEFAULT_OFF)
+        // iskry przy dotknięciu usunięte dla wszystkich; domyślnie włączone są wszystkie animacje
+        assertTrue(Anim.entries.none { it.key == "sparks" })
+        assertTrue(AnimFlags.DEFAULT_OFF.isEmpty())
         // zapis i odczyt ustawień
         val ctx = rule.activity
         UiPrefs.style = "neon"; UiPrefs.animOff = setOf("bg"); UiPrefs.animSpeed = 0.65f; UiPrefs.transition = Trans.ZOOM; UiPrefs.anim = false
@@ -316,6 +318,10 @@ class StylesTest {
             waitText("Liquid Glass")
             snap("52-rozmowa-ciemny-$id")
         }
+        // ciemny Liquid Glass na liście rozmów — nazwy osób muszą być widoczne (czytelny domyślny kolor tekstu)
+        rule.runOnUiThread { UiPrefs.style = "liquid"; rule.activity.nav.home() }
+        waitText("Kasia")
+        snap("52-lista-ciemny-liquid")
         rule.runOnUiThread { UiPrefs.theme = 0; UiPrefs.style = "liquid" }
         // ekrany ustawień stylu i animacji
         rule.runOnUiThread { rule.activity.nav.home(); rule.activity.nav.go(Screen.Styles) }

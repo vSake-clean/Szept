@@ -52,8 +52,6 @@ enum class Tail { NONE, IMESSAGE, WHATSAPP, TELEGRAM }
 /** Kształt awatarów. */
 enum class AvatarShape { CIRCLE, SQUIRCLE, SQUARE, HEX, COOKIE }
 
-/** Iskry przy dotknięciu — kształt cząstek. */
-enum class Spark { DOTS, BUBBLES, NEON, PIXELS, HEARTS, LEAVES, STARS, GOLD }
 
 /** Rodzaje przejść między ekranami. */
 object Trans {
@@ -238,7 +236,6 @@ class StyleSpec(
     val tilt: Boolean = false,
     val iridescent: Boolean = false,
     val tape: Boolean = false,
-    val spark: Spark = Spark.DOTS,
     /** Własne tło obszaru wiadomości (np. pulpit w Windows 95, niebo w iOS 26). */
     val chatBg: Bg? = null,
     /** Paski, pole wiadomości i nagłówki jak w oryginale. */
@@ -704,7 +701,7 @@ val STYLES: List<StyleSpec> = listOf(
     StyleSpec(
         "retro", "Retro Grey", "Szare okna z ramkami 3D, granatowy pasek tytułu, turkusowy pulpit i przyciski, które naprawdę się wciskają.",
         mode = Mode.LIGHT, surf = Surf.BEVEL, bg = Bg.RETRO, chatBg = Bg.DESKTOP, radius = 0.dp, tail = 0.dp, corners = intArrayOf(0, 0, 0, 0, 0),
-        cards = true, font = FontFamily.SansSerif, chrome = Chrome.WIN95, avatar = AvatarShape.SQUARE, spark = Spark.PIXELS,
+        cards = true, font = FontFamily.SansSerif, chrome = Chrome.WIN95, avatar = AvatarShape.SQUARE,
         origin = "Windows 95", category = Category.DESKTOP, listStyle = ListStyle.CARDS, input = InputStyle.WINDOW, fab = FabStyle.SQUARE,
         motion = Motions.Retro,
     ) { _, _, _ ->
@@ -719,7 +716,7 @@ val STYLES: List<StyleSpec> = listOf(
     StyleSpec(
         "terminal", "Terminal Green", "Zielony fosfor na czerni, czcionka maszynowa, ostre ramki, odwrócenie kolorów przy dotknięciu i tekst pisany znak po znaku.",
         mode = Mode.DARK, bg = Bg.TERMINAL, radius = 0.dp, tail = 0.dp, corners = intArrayOf(0, 0, 0, 0, 0),
-        dividers = true, font = FontFamily.Monospace, avatar = AvatarShape.SQUARE, chrome = Chrome.TERMINAL, spark = Spark.PIXELS,
+        dividers = true, font = FontFamily.Monospace, avatar = AvatarShape.SQUARE, chrome = Chrome.TERMINAL,
         origin = "Terminal", category = Category.OTHER, homeHeader = HomeHeader.COMPACT, fab = FabStyle.SQUARE, motion = Motions.Terminal,
     ) { _, _, _ ->
         Pal(

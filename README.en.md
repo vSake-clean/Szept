@@ -18,6 +18,9 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.3.2
+- No more touch sparks; contact names are visible again on the chat list in dark “Liquid Glass”.
+
 ### New in 3.3.1
 - **Animations always run when they are on in Szept** — even if the phone has animations turned off (option “Wyłączaj razem z telefonem” in Animations).
 - **Live motion preview** in the wizard and in Animations, clearer springiness and better-centred buttons in “Liquid Glass”.

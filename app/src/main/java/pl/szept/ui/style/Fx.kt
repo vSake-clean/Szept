@@ -16,8 +16,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
@@ -73,26 +71,6 @@ object ScreenFx {
     }
 }
 
-/** Iskry pod palcem (gdy włączone). */
-internal object TouchSparks {
-    class Tap(val pos: Offset, val seed: Long) { var start = -1L }
-    val taps = mutableStateListOf<Tap>()
-    fun add(o: Offset) {
-        if (taps.size >= 6) taps.removeAt(0)
-        taps.add(Tap(o, System.nanoTime()))
-    }
-}
-
-/** Modyfikator korzenia: zbiera dotknięcia do iskier (niczego nie przechwytuje). */
-fun Modifier.sparkTaps(enabled: Boolean): Modifier = if (!enabled) this else pointerInput(Unit) {
-    awaitPointerEventScope {
-        while (true) {
-            val ev = awaitPointerEvent(PointerEventPass.Initial)
-            ev.changes.forEach { c -> if (c.pressed && !c.previousPressed) TouchSparks.add(c.position) }
-        }
-    }
-}
-
 private val FUN = listOf(
     Color(0xFFFF4D6D), Color(0xFFFFC300), Color(0xFF3DDC97), Color(0xFF4CC9F0), Color(0xFF9B5DE5), Color(0xFFFF8FAB), Color(0xFFF15BB5),
 )
@@ -104,26 +82,20 @@ private fun cosf(x: Float) = cos(x.toDouble()).toFloat()
 @Composable
 fun FxLayer() {
     val bursts = ScreenFx.bursts
-    val taps = TouchSparks.taps
-    if (bursts.isEmpty() && taps.isEmpty()) return
-    val st = LocalStyle.current
+    if (bursts.isEmpty()) return
     val clock = remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
-        while (bursts.isNotEmpty() || taps.isNotEmpty()) {
+        while (bursts.isNotEmpty()) {
             androidx.compose.runtime.withFrameNanos { now ->
                 // nowy zegar (np. po odtworzeniu ekranu) liczy od innego początku — wtedy efekt zaczyna się od nowa
                 bursts.forEach { if (it.start < 0 || now < it.start) it.start = now }
-                taps.forEach { if (it.start < 0 || now < it.start) it.start = now }
                 bursts.removeAll { now - it.start > (it.seconds * 1e9).toLong() }
-                taps.removeAll { now - it.start > 650_000_000L }
                 clock.longValue = now
             }
         }
     }
     val heart = remember { heartPath() }
     val star5 = remember { starPath(5, 1f, 0.45f) }
-    val star4 = remember { starPath(4, 1f, 0.25f) }
-    val leaf = remember { Path().apply { moveTo(-1f, 0f); quadraticTo(0f, -0.62f, 1f, 0f); quadraticTo(0f, 0.62f, -1f, 0f); close() } }
     Canvas(Modifier.fillMaxSize()) {
         val now = clock.longValue
         for (b in bursts) {
@@ -131,11 +103,6 @@ fun FxLayer() {
             val t = (now - b.start) / 1e9f
             val fade = (1f - ((t - (b.seconds - 0.7f)) / 0.7f)).coerceIn(0f, 1f)
             drawBurst(b, t, fade, heart, star5)
-        }
-        for (tp in taps) {
-            if (tp.start < 0) continue
-            val t = (now - tp.start) / 0.65e9f
-            drawTap(tp, t.coerceIn(0f, 1f), st, heart, star4, leaf)
         }
     }
 }
@@ -219,38 +186,6 @@ internal fun DrawScope.drawBurst(b: ScreenFx.Burst, t: Float, fade: Float, heart
             withTransform({ translate(x, y); rotate(tt * 220f, Offset.Zero); scale(s, s, Offset.Zero) }) {
                 drawPath(star, Color(0xFFFFC83D).copy(alpha = fade))
             }
-        }
-    }
-}
-
-private fun DrawScope.drawTap(tp: TouchSparks.Tap, t: Float, st: StyleState, heart: Path, star: Path, leaf: Path) {
-    val px = density
-    val a = (1f - t)
-    val prim = st.pal.primary
-    drawCircle(prim.copy(alpha = 0.35f * a), (6f + 30f * t) * px, tp.pos, style = Stroke(2f * px * a + 0.5f))
-    val rnd = java.util.Random(tp.seed)
-    repeat(8) { i ->
-        val ang = i * 0.785f + rnd.nextFloat() * 0.4f
-        val d = (10f + 34f * t) * px * (0.7f + 0.6f * rnd.nextFloat())
-        val o = Offset(tp.pos.x + cosf(ang) * d, tp.pos.y + sinf(ang) * d)
-        val s = (3f + 3f * rnd.nextFloat()) * px * (1f - t * 0.6f)
-        val col = when (st.spec.spark) {
-            Spark.NEON -> if (i % 2 == 0) Color(0xFF00E5FF) else Color(0xFFFF2BD6)
-            Spark.GOLD -> Color(0xFFE9C46A)
-            Spark.HEARTS -> Color(0xFFFF6B9A)
-            Spark.LEAVES -> st.pal.bg.getOrElse(i % max(1, st.pal.bg.size)) { prim }
-            Spark.PIXELS, Spark.DOTS -> prim
-            Spark.BUBBLES -> if (st.dark) Color.White else prim
-            Spark.STARS -> Color(0xFFFFC83D)
-        }.copy(alpha = a)
-        when (st.spec.spark) {
-            Spark.DOTS, Spark.GOLD -> drawCircle(col, s * 0.6f, o)
-            Spark.BUBBLES -> drawCircle(col, s, o, style = Stroke(1.2f * px))
-            Spark.NEON -> drawLine(col, o, Offset(o.x + cosf(ang) * s * 2f, o.y + sinf(ang) * s * 2f), 2f * px)
-            Spark.PIXELS -> drawRect(col, Offset(o.x - s / 2f, o.y - s / 2f), Size(s, s))
-            Spark.HEARTS -> withTransform({ translate(o.x, o.y); scale(s, s, Offset.Zero) }) { drawPath(heart, col) }
-            Spark.LEAVES -> withTransform({ translate(o.x, o.y); rotate(ang * 57f, Offset.Zero); scale(s * 1.3f, s * 1.3f, Offset.Zero) }) { drawPath(leaf, col) }
-            Spark.STARS -> withTransform({ translate(o.x, o.y); scale(s * 1.2f, s * 1.2f, Offset.Zero) }) { drawPath(star, col) }
         }
     }
 }

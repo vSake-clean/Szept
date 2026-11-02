@@ -2,6 +2,10 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3.2
+- Usunięte „Iskry przy dotknięciu” — w miejscu dotknięcia nic już się nie pojawia, w żadnym stylu.
+- Liquid Glass w ciemnym motywie: na liście rozmów znów widać nazwy osób i podpis „Twoja relacja” (wcześniej były czarne na czarnym tle). Ta sama poprawka obejmuje inne ekrany bez własnego tła.
+
 ## 3.3.1
 - Animacje działają także wtedy, gdy telefon ma je wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii) — o ruchu w Szepcie decyduje przełącznik w aplikacji. Kto woli jak w telefonie, włączy „Wyłączaj razem z telefonem” w Animacjach.
 - Żywy podgląd ruchu w kreatorze i w Animacjach: przejście między ekranami, wjazd wiadomości i dotknięcie przycisku odtwarzają się same, w charakterze wybranego stylu.

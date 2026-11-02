@@ -102,8 +102,8 @@ private enum class AnimLevel(val title: String, val desc: String, val icon: Imag
     OFF("Wyłączone", "Bez żadnego ruchu — szybko i oszczędnie", Icons.Default.MotionPhotosOff),
 }
 
-/** Animacje wyłączane w trybie „delikatnym”: wszystko, co trwa cały czas, i iskry. */
-private val GENTLE_OFF: Set<String> = Anim.entries.filter { it.continuous && it != Anim.TYPING || it == Anim.SPARKS }.map { it.key }.toSet()
+/** Animacje wyłączane w trybie „delikatnym”: wszystko, co trwa cały czas (poza „pisze…”). */
+private val GENTLE_OFF: Set<String> = Anim.entries.filter { it.continuous && it != Anim.TYPING }.map { it.key }.toSet()
 
 private fun currentLevel(): AnimLevel = when {
     !UiPrefs.anim -> AnimLevel.OFF

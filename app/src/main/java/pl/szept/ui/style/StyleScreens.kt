@@ -354,7 +354,6 @@ fun AnimationsScreen(nav: Nav) {
                 )
                 Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(onClick = { UiPrefs.animOff = emptySet(); save() }, enabled = UiPrefs.anim) { Text("Wszystkie") }
-                    OutlinedButton(onClick = { UiPrefs.animOff = AnimFlags.DEFAULT_OFF; save() }, enabled = UiPrefs.anim) { Text("Domyślne") }
                     OutlinedButton(onClick = { UiPrefs.animOff = Anim.entries.map { it.key }.toSet(); save() }, enabled = UiPrefs.anim) { Text("Żadne") }
                 }
             }
