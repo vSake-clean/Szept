@@ -18,6 +18,10 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.3.1
+- **Animations always run when they are on in Szept** — even if the phone has animations turned off (option “Wyłączaj razem z telefonem” in Animations).
+- **Live motion preview** in the wizard and in Animations, clearer springiness and better-centred buttons in “Liquid Glass”.
+
 ### New in 3.3
 - **23 visual styles** (Settings → Styl i animacje) modelled on real phones, messengers and desktops: glass that blurs and refracts the content underneath (“Liquid Glass”), wallpaper colours (“Material You”), a one-handed big header (“One Flow”), grey background with white cards (“Hyper Minimal”), a dot-matrix title (“Nothing Dot”), doodle chat backgrounds, gradient bubbles, bubble-less server-style chat, early-2000s windows and a terminal. Names describe the look, not companies.
 - **Layouts like the originals**: each style has its own chat bar, message field, send button, chat list and new-chat button; bubbles group into series with a tail on the last message.

@@ -118,6 +118,8 @@ object UiPrefs {
     var transition by mutableIntStateOf(0)
     /** Charakter ruchu: 0 = jak w stylu, inaczej indeks w [pl.szept.ui.style.MOTION_PRESETS]. */
     var motion by mutableIntStateOf(0)
+    /** Wyłączaj animacje, gdy wyłączy je telefon (domyślnie nie — decyduje przełącznik w Szepcie). */
+    var animFollowSystem by mutableStateOf(false)
     /** Wersja, dla której pokazano kreator wyglądu (0 = jeszcze nie). */
     var wizard by mutableIntStateOf(0)
     private var loaded = false
@@ -137,6 +139,7 @@ object UiPrefs {
         animBattery = p.getBoolean("anim_battery", true)
         transition = p.getInt("transition", 0)
         motion = p.getInt("motion", 0)
+        animFollowSystem = p.getBoolean("anim_follow_system", false)
         wizard = p.getInt("wizard", 0)
     }
 
@@ -146,7 +149,7 @@ object UiPrefs {
             .putInt("delmark", delMark).putBoolean("noshots", noShots).putBoolean("hiderecents", hideRecents)
             .putString("style", style).putBoolean("anim", anim).putStringSet("anim_off", HashSet(animOff))
             .putFloat("anim_speed", animSpeed).putBoolean("anim_battery", animBattery).putInt("transition", transition)
-            .putInt("motion", motion).putInt("wizard", wizard).apply()
+            .putInt("motion", motion).putInt("wizard", wizard).putBoolean("anim_follow_system", animFollowSystem).apply()
     }
 
     fun wallpaperFile(ctx: Context) = File(ctx.filesDir, "wallpaper.jpg")
@@ -182,9 +185,12 @@ fun SzeptTheme(decorate: Boolean = true, content: @Composable () -> Unit) {
     val motion = pl.szept.ui.style.MOTION_PRESETS.getOrNull(UiPrefs.motion)?.second ?: spec.motion
     val st = remember(spec, pal, motion) { pl.szept.ui.style.StyleState(spec, pal, motion) }
     val power = pl.szept.ui.style.rememberPowerSave()
-    val sysScale = remember { pl.szept.ui.style.systemAnimScale(ctx) }
-    val anim = remember(UiPrefs.anim, UiPrefs.animOff, UiPrefs.animSpeed, UiPrefs.animBattery, power, sysScale, UiPrefs.transition) {
-        pl.szept.ui.style.AnimFlags.build(UiPrefs.anim, UiPrefs.animOff, UiPrefs.animSpeed, UiPrefs.animBattery, power, sysScale, UiPrefs.transition)
+    // skala animacji telefonu — sprawdzana ponownie po zmianie trybu oszczędzania energii
+    val sysScale = remember(power) { pl.szept.ui.style.systemAnimScale(ctx) }
+    val anim = remember(UiPrefs.anim, UiPrefs.animOff, UiPrefs.animSpeed, UiPrefs.animBattery, power, sysScale, UiPrefs.transition, UiPrefs.animFollowSystem) {
+        pl.szept.ui.style.AnimFlags.build(
+            UiPrefs.anim, UiPrefs.animOff, UiPrefs.animSpeed, UiPrefs.animBattery, power, sysScale, UiPrefs.transition, UiPrefs.animFollowSystem,
+        )
     }
     val target = remember(st) {
         if (spec.id == "classic") pl.szept.ui.style.classicScheme(dark, black, ai).copy(background = Color.Transparent) else pal.scheme()

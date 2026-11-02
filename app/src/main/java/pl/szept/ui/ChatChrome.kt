@@ -455,7 +455,8 @@ fun GlassChatHeader(
             }
             .statusBarsPadding().padding(horizontal = 14.dp).padding(top = 4.dp, bottom = 8.dp),
     ) {
-        GlassIconButton(backIcon(), "Wstecz", onBack, Modifier.align(Alignment.TopStart).padding(top = 8.dp))
+        // przyciski na wysokości środka awatara (52 dp), jak w oryginale
+        GlassIconButton(backIcon(), "Wstecz", onBack, Modifier.align(Alignment.TopStart).padding(top = 4.dp))
         Column(
             Modifier.align(Alignment.TopCenter).padding(horizontal = 64.dp)
                 .clickable(remember { MutableInteractionSource() }, null, onClick = onTitle),
@@ -475,7 +476,7 @@ fun GlassChatHeader(
             }
             if (status != null) Box(Modifier.offset(y = (-4).dp)) { status() }
         }
-        GlassActions(Modifier.align(Alignment.TopEnd).padding(top = 8.dp)) { actions() }
+        GlassActions(Modifier.align(Alignment.TopEnd).padding(top = 4.dp)) { actions() }
     }
 }
 

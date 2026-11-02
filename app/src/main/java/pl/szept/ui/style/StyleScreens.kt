@@ -1,5 +1,6 @@
 package pl.szept.ui.style
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,6 +43,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -296,12 +299,19 @@ fun AnimationsScreen(nav: Nav) {
                     UiPrefs.anim = it; save()
                 }
             }
-            if (sysOff) item {
-                Text(
-                    "W ustawieniach telefonu animacje są wyłączone (Ułatwienia dostępu → Usuń animacje) — Szept je wtedy pomija.",
-                    Modifier.padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.errorContainer).padding(10.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall,
+            item {
+                if (sysOff) Text(
+                    if (UiPrefs.animFollowSystem) "Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii), więc Szept też ich nie pokazuje — wyłącz przełącznik poniżej, aby je przywrócić."
+                    else "Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii), ale w Szepcie działają — tak, jak ustawisz tutaj.",
+                    Modifier.padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(10.dp))
+                        .background(if (UiPrefs.animFollowSystem) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer).padding(10.dp),
+                    color = if (UiPrefs.animFollowSystem) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                    style = MaterialTheme.typography.bodySmall,
                 )
+                SwitchRow(
+                    "Wyłączaj razem z telefonem", "Gdy w ustawieniach telefonu animacje są wyłączone (np. „Usuń animacje”), Szept też ich nie pokazuje.",
+                    UiPrefs.animFollowSystem, UiPrefs.anim,
+                ) { UiPrefs.animFollowSystem = it; save() }
             }
             item {
                 Section("Charakter ruchu")
@@ -310,6 +320,7 @@ fun AnimationsScreen(nav: Nav) {
                     Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 MotionChips(enabled = UiPrefs.anim) { save() }
+                MotionPreview(Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
             item {
                 Section("Tempo")
@@ -422,5 +433,97 @@ private fun SwitchRow(title: String, desc: String, checked: Boolean, enabled: Bo
         }
         Spacer(Modifier.width(12.dp))
         Switch(checked, onChange, enabled = enabled)
+    }
+}
+
+// ======================= żywy podgląd ruchu =======================
+
+/**
+ * Podgląd ruchu wybranego stylu, odtwarzany w kółko: przejście między ekranami, wjazd nowych wiadomości
+ * i dotknięcie przycisku — z prawdziwymi animacjami stylu (sprężyny, odbicia, przenikania…).
+ */
+@Composable
+fun MotionPreview(modifier: Modifier = Modifier) {
+    val st = LocalStyle.current
+    val anim = LocalAnim.current
+    var tick by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val press = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    androidx.compose.runtime.LaunchedEffect(anim.any, st.motion, anim.factor) {
+        if (!anim.any) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay((1900 * anim.factor).toLong().coerceIn(700L, 4000L))
+            tick++
+            // dotknięcie przycisku w połowie cyklu
+            kotlinx.coroutines.delay((650 * anim.factor).toLong().coerceIn(250L, 1500L))
+            val p = androidx.compose.foundation.interaction.PressInteraction.Press(androidx.compose.ui.geometry.Offset(60f, 30f))
+            press.emit(p)
+            kotlinx.coroutines.delay(170)
+            press.emit(androidx.compose.foundation.interaction.PressInteraction.Release(p))
+        }
+    }
+    val type = if (anim.transition == Trans.AUTO) st.motion.transition else anim.transition
+    Column(modifier) {
+        Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // przejście między ekranami (lista ⇄ rozmowa)
+            Box(Modifier.weight(1f).height(150.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, st.pal.line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))) {
+                StyleBackground(Modifier.matchParentSize(), st, st.spec.bg, animate = false)
+                androidx.compose.animation.AnimatedContent(
+                    targetState = Pair<Any, Int>(tick % 2, 1 + tick % 2),
+                    transitionSpec = { if (anim[Anim.SCREENS]) screenTransition(type, anim.factor, st.motion) else androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None },
+                    label = "podglad",
+                ) { (screen, _) -> MiniScreen(st, screen == 1) }
+            }
+            // nowe wiadomości wjeżdżają jak w stylu
+            Box(Modifier.weight(1f).height(150.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, st.pal.line.copy(alpha = 0.4f), RoundedCornerShape(16.dp))) {
+                StyleBackground(Modifier.matchParentSize(), st, st.spec.chatBg ?: st.spec.bg, animate = false)
+                androidx.compose.runtime.key(tick) {
+                    Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Box(Modifier.appear(false, anim[Anim.MSG_IN])) { MiniBubble(st, false, "Hej! 👋") }
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                            Box(Modifier.appear(true, anim[Anim.MSG_IN])) { MiniBubble(st, true, "Cześć! 😄") }
+                        }
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.pressScale(press, anim[Anim.PRESS]).clip(RoundedCornerShape(st.spec.corners[3].dp))
+                    .background(st.pal.primary)
+                    .clickable(press, androidx.compose.foundation.LocalIndication.current) { }
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+            ) { Text("Dotknij", color = st.pal.onPrimary, fontWeight = FontWeight.SemiBold) }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                if (anim.any) "Ruch: " + st.motion.label else "Animacje są wyłączone",
+                Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Mini ekran do podglądu przejścia: lista rozmów albo rozmowa. */
+@Composable
+private fun MiniScreen(st: StyleState, chat: Boolean) {
+    Column(Modifier.fillMaxSize()) {
+        MiniBar(st)
+        if (!chat) Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(Color(0xFFE57373), Color(0xFF64B5F6), Color(0xFF81C784)).forEach { c ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(18.dp).clip(st.spec.avatar.shape()).background(c))
+                    Spacer(Modifier.width(6.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Box(Modifier.size(width = 54.dp, height = 5.dp).clip(RoundedCornerShape(3.dp)).background(st.pal.onBase.copy(alpha = 0.55f)))
+                        Box(Modifier.size(width = 80.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(st.pal.muted.copy(alpha = 0.45f)))
+                    }
+                }
+            }
+        } else Box(Modifier.fillMaxSize()) {
+            StyleBackground(Modifier.matchParentSize(), st, st.spec.chatBg ?: st.spec.bg, animate = false)
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                MiniBubble(st, false, "Co tam?")
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { MiniBubble(st, true, "Super!") }
+            }
+        }
     }
 }

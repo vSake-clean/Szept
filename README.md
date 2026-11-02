@@ -16,6 +16,10 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.3.1
+- **Animacje działają zawsze, gdy są włączone w Szepcie** — także gdy telefon ma je wyłączone (opcja „Wyłączaj razem z telefonem” w Animacjach).
+- **Żywy podgląd ruchu** w kreatorze i w Animacjach, wyraźniejsza sprężystość i poprawione wyśrodkowanie przycisków w „Liquid Glass”.
+
 ### Nowe w 3.3
 - **23 style wyglądu** (Ustawienia → Styl i animacje) wzorowane na prawdziwych telefonach, komunikatorach i komputerach: szkło, które rozmywa i załamuje treść pod spodem („Liquid Glass”), kolory z tapety („Material You”), wielki nagłówek („One Flow”), szare tło z białymi kartami („Hyper Minimal”), tytuł z kropek („Nothing Dot”), dymki z rysunkami w tle, gradientowe dymki, czat bez dymków, okna z lat 2000 i terminal. Nazwy opisują wygląd, nie firmy.
 - **Układ jak w oryginałach**: każdy styl ma własny pasek rozmowy, pole wiadomości, przycisk wysyłania, listę rozmów i przycisk nowej rozmowy; dymki łączą się w serie z ogonkiem przy ostatniej wiadomości.

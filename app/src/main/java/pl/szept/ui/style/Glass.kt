@@ -112,6 +112,8 @@ private fun glassPath(size: Size, inset: Float, radius: Float): Path = Path().ap
 fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Backdrop? = LocalBackdrop.current): Modifier {
     // „Rozmycie i przezroczystość” wyłączone → matowa tafla bez nagrywania tła (szybciej)
     val source = if (LocalAnim.current[Anim.BLUR]) backdrop else null
+    // odblask na krawędzi przesuwa się, gdy przechylasz telefon (żyroskop)
+    val tilt = if (LocalStyle.current.spec.tilt && LocalAnim.current[Anim.TILT]) LocalTilt.current else null
     val layer = rememberGraphicsLayer()
     val holder = remember { GlassPos() }
     return this
@@ -133,13 +135,11 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
                 layer.renderEffect = if (blurPx > 0.5f) BlurEffect(blurPx, blurPx, TileMode.Clamp) else null
             }
             layer.colorFilter = ColorFilter.colorMatrix(sat)
-            val rim = Brush.linearGradient(
-                listOf(
-                    Color.White.copy(alpha = if (look.dark) 0.5f else 0.95f), Color.White.copy(alpha = 0.1f),
-                    Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = if (look.dark) 0.32f else 0.7f),
-                ),
-                Offset.Zero, Offset(w, h),
+            val rimColors = listOf(
+                Color.White.copy(alpha = if (look.dark) 0.5f else 0.95f), Color.White.copy(alpha = 0.1f),
+                Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = if (look.dark) 0.32f else 0.7f),
             )
+            val rim = Brush.linearGradient(rimColors, Offset.Zero, Offset(w, h))
             val inner = Brush.verticalGradient(
                 0f to Color.White.copy(alpha = if (look.dark) 0.07f else 0.22f), 0.45f to Color.Transparent, startY = 0f, endY = h,
             )
@@ -178,7 +178,16 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
                 }
                 drawPath(outline, look.tint)
                 drawPath(outline, inner)
-                drawPath(outline, rim, style = Stroke(1.1f * density))
+                if (tilt != null) {
+                    // światło „ślizga się” po krawędzi zgodnie z przechyleniem
+                    val tx = tilt.x; val ty = tilt.y
+                    val sx = w * 0.55f * tx; val sy = h * 0.55f * ty
+                    drawPath(outline, Brush.linearGradient(rimColors, Offset(sx, sy), Offset(w + sx, h + sy)), style = Stroke(1.2f * density))
+                    drawPath(outline, Brush.radialGradient(
+                        listOf(Color.White.copy(alpha = if (look.dark) 0.1f else 0.22f), Color.Transparent),
+                        Offset(w * (0.5f - 0.45f * tx), h * (0.15f - 0.4f * ty)), max(w, h) * 0.7f,
+                    ))
+                } else drawPath(outline, rim, style = Stroke(1.1f * density))
             }
         }
 }

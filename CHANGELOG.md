@@ -2,6 +2,13 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3.1
+- Animacje działają także wtedy, gdy telefon ma je wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii) — o ruchu w Szepcie decyduje przełącznik w aplikacji. Kto woli jak w telefonie, włączy „Wyłączaj razem z telefonem” w Animacjach.
+- Żywy podgląd ruchu w kreatorze i w Animacjach: przejście między ekranami, wjazd wiadomości i dotknięcie przycisku odtwarzają się same, w charakterze wybranego stylu.
+- Wyraźna sprężystość: przejścia między ekranami w stylach sprężystych (m.in. Liquid Glass, Expressive Pop, „Zabawny”) odbijają się na końcu ruchu.
+- Liquid Glass: szewron „wstecz” jest wyśrodkowany w szklanym kółku, przyciski stoją na wysokości awatara, tytuł nie wchodzi pod przyciski, a na liście rozmów menu jest po lewej, szukanie i nowa rozmowa po prawej.
+- Liquid Glass: odblask na krawędzi szkła przesuwa się, gdy przechylasz telefon.
+
 ## 3.3
 - 23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”.
 - Każdy styl ma własny układ jak w oryginale: pasek rozmowy, pole wiadomości (szklana kapsułka, rząd ikon z „Aa” i kciukiem, płaski pasek ze spinaczem, okno z przyciskiem „Wyślij”…), listę rozmów (duży tytuł, wspólna karta, wielki nagłówek, napis-logo) i przycisk nowej rozmowy.

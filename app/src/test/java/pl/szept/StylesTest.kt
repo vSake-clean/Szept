@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.Density
@@ -210,7 +211,9 @@ class StylesTest {
         assertTrue(Anim.entries.all { all[it] })
         // główny przełącznik i systemowe „Usuń animacje”
         assertTrue(Anim.entries.none { AnimFlags.build(false, emptySet(), 1f, true, false, 1f, 0)[it] })
-        assertTrue(Anim.entries.none { AnimFlags.build(true, emptySet(), 1f, true, false, 0f, 0)[it] })
+        // telefon wyłączył animacje: domyślnie decyduje przełącznik w Szepcie, a po włączeniu „jak w telefonie” — brak ruchu
+        assertTrue(Anim.entries.all { AnimFlags.build(true, emptySet(), 1f, true, false, 0f, 0)[it] })
+        assertTrue(Anim.entries.none { AnimFlags.build(true, emptySet(), 1f, true, false, 0f, 0, followSystem = true)[it] })
         // oszczędzanie baterii: bez ciągłych, ale przejścia zostają
         val saver = AnimFlags.build(true, emptySet(), 1f, true, true, 1f, 0)
         assertTrue(!saver[Anim.BG] && !saver[Anim.TILT] && saver[Anim.SCREENS] && saver[Anim.MSG_IN])
@@ -319,7 +322,7 @@ class StylesTest {
         waitText("Liquid Glass")
         snap("53-style")
         rule.runOnUiThread { rule.activity.nav.go(Screen.Animations) }
-        waitText("Przejścia między ekranami")
+        waitText("Charakter ruchu")
         snap("54-animacje")
         rule.runOnUiThread { rule.activity.nav.back(); rule.activity.nav.back(); rule.activity.nav.go(Screen.Appearance) }
         waitText("Zmień styl")
@@ -359,22 +362,22 @@ class StylesTest {
             snap("56-kreator-3")
             rule.onNodeWithText("Dalej").performClick()
             waitText("Pojedyncze animacje")
-            rule.onNodeWithText("Delikatne").performClick()
+            rule.onNodeWithText("Delikatne").performScrollTo().performClick()
             rule.waitForIdle()
             assertTrue(UiPrefs.anim && "bg" in UiPrefs.animOff && "typing" !in UiPrefs.animOff)
-            rule.onNodeWithText("Wyłączone").performClick()
+            rule.onNodeWithText("Wyłączone").performScrollTo().performClick()
             rule.waitForIdle()
             assertTrue(!UiPrefs.anim)
-            rule.onNodeWithText("Pełne").performClick()
+            rule.onNodeWithText("Pełne").performScrollTo().performClick()
             rule.waitForIdle()
             assertTrue(UiPrefs.anim && UiPrefs.animOff == AnimFlags.DEFAULT_OFF)
-            rule.onNodeWithText("Z odbiciem").performClick()
+            rule.onNodeWithText("Z odbiciem").performScrollTo().performClick()
             rule.waitForIdle()
             assertEquals(3, UiPrefs.motion)
             snap("56-kreator-4")
             rule.onNodeWithText("Dalej").performClick()
             waitText("Kolor i tekst")
-            rule.onNodeWithText("Duży").performClick()
+            rule.onNodeWithText("Duży").performScrollTo().performClick()
             rule.waitForIdle()
             assertEquals(1.15f, UiPrefs.fontScale)
             snap("56-kreator-5")

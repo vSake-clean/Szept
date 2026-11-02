@@ -278,13 +278,18 @@ private fun StylePage(save: () -> Unit) {
 @Composable
 private fun MotionPage(save: () -> Unit) {
     val st = LocalStyle.current
-    val anim = LocalAnim.current
-    var demo by remember { mutableIntStateOf(0) }
-    // przy każdej zmianie ustawień pokaż ruch na przykładzie
-    LaunchedEffect(UiPrefs.anim, UiPrefs.motion, UiPrefs.animSpeed, UiPrefs.style) { demo++ }
+    val ctx = LocalContext.current
+    val phoneOff = remember { systemAnimScale(ctx) == 0f }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        PageTitle("Animacje", "Każdy styl ma własny charakter ruchu. Pojedyncze animacje wyłączysz później w „Animacjach zaawansowanych”.")
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        PageTitle("Animacje", "Każdy styl ma własny charakter ruchu — podgląd poniżej odtwarza się sam. Pojedyncze animacje wyłączysz później w „Animacjach zaawansowanych”.")
+        // żywy podgląd: przejście ekranów, wjazd wiadomości i dotknięcie — zmienia się od razu po wyborze
+        MotionPreview(Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+        if (phoneOff) Text(
+            "Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii). W Szepcie działają mimo to — zgodnie z wyborem poniżej.",
+            Modifier.padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(10.dp),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AnimLevel.entries.forEach { l ->
                 OptionCard(currentLevel() == l, { applyLevel(l); save() }, Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -300,25 +305,13 @@ private fun MotionPage(save: () -> Unit) {
             }
         }
         Text(
-            "Charakter ruchu — „${st.spec.name}”: ${st.spec.motion.label}", Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp),
+            "Charakter ruchu — teraz: ${st.motion.label}", Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
             style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
         )
         MotionChips(enabled = UiPrefs.anim) { save() }
         Text("Tempo", Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         SpeedChips(enabled = UiPrefs.anim) { save() }
-        // podgląd: nowa wiadomość wjeżdża tak, jak w wybranym stylu
-        Box(Modifier.fillMaxWidth().padding(16.dp).height(120.dp).clip(RoundedCornerShape(18.dp)).clickable { demo++ }.semantics { contentDescription = "Podgląd ruchu — dotknij, aby powtórzyć" }) {
-            StyleBackground(Modifier.matchParentSize(), st, st.spec.chatBg ?: st.spec.bg, animate = false)
-            key(demo) {
-                Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(10.dp)) {
-                    Box(Modifier.appear(false, anim[Anim.MSG_IN])) { StyledBubble(false) { Text("Widzisz, jak to się rusza? 👀", Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) } }
-                    Spacer(Modifier.height(6.dp))
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                        Box(Modifier.appear(true, anim[Anim.MSG_IN])) { StyledBubble(true) { Text("Tak! 😄", Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) } }
-                    }
-                }
-            }
-        }
+        Spacer(Modifier.height(12.dp))
     }
 }
 

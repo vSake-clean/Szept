@@ -124,7 +124,7 @@ private fun bez(a: Float, b: Float, c: Float, d: Float) = androidx.compose.anima
 /** Gotowe charaktery ruchu (osobowości: Premium, Corporate, Playful, Energetic). */
 object Motions {
     /** iOS: sprężyste wsunięcie z paralaksą, menu „wyrasta” z przycisku. */
-    val Apple = MotionSpec(Trans.SLIDE, 420, bez(0.25f, 0.1f, 0.25f, 1f), 0.86f, 300f, Press.SCALE, MenuAnim.GROW, Appear.SPRING, DialogAnim.ZOOM, label = "sprężysty, z paralaksą")
+    val Apple = MotionSpec(Trans.SLIDE, 420, bez(0.25f, 0.1f, 0.25f, 1f), 0.74f, 320f, Press.SCALE, MenuAnim.GROW, Appear.SPRING, DialogAnim.ZOOM, label = "sprężysty z odbiciem, z paralaksą")
     /** iOS 6: płynne przesunięcie i „podskakujący” alert. */
     val Glossy = MotionSpec(Trans.SLIDE, 350, bez(0.42f, 0f, 0.58f, 1f), 1f, 400f, Press.HIGHLIGHT, MenuAnim.FADE, Appear.FADE, DialogAnim.BOUNCE, label = "płynny, okna z podskokiem")
     /** Material 3: wspólna oś, krzywa „emphasized”, fala dotyku. */
@@ -405,7 +405,7 @@ val STYLES: List<StyleSpec> = listOf(
         "liquid", "Liquid Glass", "Pływające szklane przyciski, które rozmywają i załamują treść pod spodem, duży tytuł i dymki z zawiniętymi ogonkami.",
         surf = Surf.FLAT, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true,
         chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = "iOS 26", category = Category.PHONE,
-        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS, input = InputStyle.GLASS, fab = FabStyle.NONE, searchPill = true, motion = Motions.Apple,
+        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS, input = InputStyle.GLASS, fab = FabStyle.NONE, searchPill = true, tilt = true, motion = Motions.Apple,
     ) { dark, _, _ ->
         if (!dark) Pal(
             false, Color.White, Color.Black, c(0xFF6C6C71), c(0xFF0088FF), Color.White,
@@ -421,7 +421,7 @@ val STYLES: List<StyleSpec> = listOf(
         "liquid_sky", "Liquid Glass Niebo", "Szkło na tle nieba z chmurami — kolory przenikają przez przyciski, a dymki rozmówcy są przydymionym szkłem.",
         surf = Surf.FLAT, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true, moving = true,
         chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, chatBg = Bg.SKY, origin = "iOS 26", category = Category.PHONE,
-        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS, input = InputStyle.GLASS, fab = FabStyle.NONE, searchPill = true, motion = Motions.Apple,
+        homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS, input = InputStyle.GLASS, fab = FabStyle.NONE, searchPill = true, tilt = true, motion = Motions.Apple,
     ) { dark, _, _ ->
         if (!dark) Pal(
             false, Color.White, Color.Black, c(0xFF6C6C71), c(0xFF0088FF), Color.White,

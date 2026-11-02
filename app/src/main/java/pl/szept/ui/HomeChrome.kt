@@ -122,22 +122,18 @@ fun HomeTopBar(
                 }
                 .statusBarsPadding().height(60.dp).padding(horizontal = 14.dp),
         ) {
+            // jak w oryginale: menu w kółku po lewej, szukanie i nowa rozmowa po prawej, mały tytuł na środku
+            Box(Modifier.align(Alignment.CenterStart)) {
+                GlassIconButton(Icons.Default.MoreHoriz, "Menu", onMenu)
+                menu()
+            }
             Text(
                 "Szept", Modifier.align(Alignment.Center).graphicsLayer { alpha = smallTitle },
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), color = st.pal.onBase,
             )
-            Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically) {
-                GlassActions {
-                    actions.forEach { a -> IconButton(onClick = a.onClick) { Icon(a.icon, a.label) } }
-                    Box {
-                        IconButton(onClick = onMenu) { Icon(Icons.Default.MoreHoriz, "Menu") }
-                        menu()
-                    }
-                }
-                if (onCompose != null) {
-                    Spacer(Modifier.width(8.dp))
-                    GlassIconButton(Icons.Default.EditNote, "Nowa rozmowa", onCompose)
-                }
+            Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                actions.forEach { a -> GlassIconButton(a.icon, a.label, a.onClick) }
+                if (onCompose != null) GlassIconButton(Icons.Default.EditNote, "Nowa rozmowa", onCompose)
             }
         }
         spec.homeHeader == HomeHeader.WORDMARK -> Row(

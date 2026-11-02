@@ -133,8 +133,15 @@ class AnimFlags(private val on: Set<Anim>, val factor: Float, val transition: In
         val NONE = AnimFlags(emptySet(), 1f, Trans.FADE)
         val ALL = AnimFlags(Anim.entries.toSet(), 1f, Trans.AUTO)
 
-        fun build(enabled: Boolean, off: Set<String>, speed: Float, battery: Boolean, powerSave: Boolean, systemScale: Float, transition: Int): AnimFlags {
-            if (!enabled || systemScale == 0f) return NONE
+        /**
+         * [followSystem] — gdy w telefonie animacje są wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii),
+         * Szept też ich nie pokazuje. Domyślnie wyłączone: o animacjach w Szepcie decyduje przełącznik w aplikacji.
+         */
+        fun build(
+            enabled: Boolean, off: Set<String>, speed: Float, battery: Boolean, powerSave: Boolean, systemScale: Float, transition: Int,
+            followSystem: Boolean = false,
+        ): AnimFlags {
+            if (!enabled || (followSystem && systemScale == 0f)) return NONE
             val set = Anim.entries.filter { it.key !in off && (!it.continuous || !(battery && powerSave)) }.toSet()
             return AnimFlags(set, speed.coerceIn(0.3f, 3f), transition)
         }
@@ -146,9 +153,13 @@ class AnimFlags(private val on: Set<Anim>, val factor: Float, val transition: In
 
 val LocalAnim = staticCompositionLocalOf { AnimFlags.ALL }
 
-/** Systemowa skala animacji (0 = „Usuń animacje” w ułatwieniach dostępu). */
+/**
+ * Systemowa skala animacji: 0 = telefon wyłączył animacje — w ustawieniach („Usuń animacje”, skala animatora
+ * w opcjach programisty) albo w trybie oszczędzania energii.
+ */
 fun systemAnimScale(ctx: Context): Float = try {
-    Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    val set = Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    if (set == 0f || !android.animation.ValueAnimator.areAnimatorsEnabled()) 0f else set
 } catch (_: Throwable) { 1f }
 
 /** Tryb oszczędzania energii (odświeża się na bieżąco). */
@@ -602,11 +613,18 @@ fun AnimatedContentTransitionScope<Pair<Any, Int>>.screenTransition(type: Int, f
     val d = (m.duration.coerceAtLeast(120) * factor).toInt()
     val q = (d * 0.55f).toInt()
     val e = m.easing
+    // sprężyste charaktery ruchu (iOS, Expressive, zabawny…): przesunięcie i powiększenie na sprężynie — widać odbicie
+    val springy = m.damping < 0.9f
+    val stiff = (m.stiffness / (factor * factor)).coerceIn(40f, 3000f)
+    val slideSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset> =
+        if (springy) androidx.compose.animation.core.spring(m.damping, stiff, androidx.compose.ui.unit.IntOffset(1, 1)) else tween(d, easing = e)
+    val scaleSpec: androidx.compose.animation.core.FiniteAnimationSpec<Float> =
+        if (springy) androidx.compose.animation.core.spring(m.damping, stiff) else tween(d, easing = e)
     return when (type) {
         Trans.NONE -> androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
         Trans.FADE -> fadeIn(tween(d, easing = e)) togetherWith fadeOut(tween(q))
-        Trans.ZOOM -> if (fwd) (scaleIn(tween(d, easing = e), initialScale = 0.9f) + fadeIn(tween(d))) togetherWith (scaleOut(tween(d, easing = e), targetScale = 1.06f) + fadeOut(tween(q)))
-        else (scaleIn(tween(d, easing = e), initialScale = 1.08f) + fadeIn(tween(d))) togetherWith (scaleOut(tween(d, easing = e), targetScale = 0.92f) + fadeOut(tween(q)))
+        Trans.ZOOM -> if (fwd) (scaleIn(scaleSpec, initialScale = 0.86f) + fadeIn(tween(d))) togetherWith (scaleOut(tween(d, easing = e), targetScale = 1.06f) + fadeOut(tween(q)))
+        else (scaleIn(scaleSpec, initialScale = 1.1f) + fadeIn(tween(d))) togetherWith (scaleOut(tween(d, easing = e), targetScale = 0.92f) + fadeOut(tween(q)))
         // Fluent: wsunięcie z dołu o ~40 dp z wygaszeniem, wyjście krótkie
         Trans.RISE -> if (fwd) (slideInVertically(tween(d, easing = e)) { (it * 0.06f).toInt() } + fadeIn(tween(d))) togetherWith fadeOut(tween(q / 2))
         else fadeIn(tween(d)) togetherWith (slideOutVertically(tween(q, easing = e)) { (it * 0.06f).toInt() } + fadeOut(tween(q)))
@@ -618,10 +636,10 @@ fun AnimatedContentTransitionScope<Pair<Any, Int>>.screenTransition(type: Int, f
         else (slideInHorizontally(tween(d, easing = e)) { -(it * 0.08f).toInt() } + fadeIn(tween(d - q, delayMillis = q / 2))) togetherWith
             (slideOutHorizontally(tween(d, easing = e)) { (it * 0.08f).toInt() } + fadeOut(tween(q / 2)))
         // iOS i komunikatory: nowy ekran wjeżdża z prawej, poprzedni odsuwa się o ~30% (paralaksa)
-        else -> if (fwd) (slideInHorizontally(tween(d, easing = e)) { it } + fadeIn(tween(q))) togetherWith
-            (slideOutHorizontally(tween(d, easing = e)) { -it / 3 } + fadeOut(tween(d)))
-        else (slideInHorizontally(tween(d, easing = e)) { -it / 3 } + fadeIn(tween(d))) togetherWith
-            (slideOutHorizontally(tween(d, easing = e)) { it } + fadeOut(tween(q)))
+        else -> if (fwd) (slideInHorizontally(slideSpec) { it } + fadeIn(tween(q))) togetherWith
+            (slideOutHorizontally(slideSpec) { -it / 3 } + fadeOut(tween(d)))
+        else (slideInHorizontally(slideSpec) { -it / 3 } + fadeIn(tween(d))) togetherWith
+            (slideOutHorizontally(slideSpec) { it } + fadeOut(tween(q)))
     }
 }
 

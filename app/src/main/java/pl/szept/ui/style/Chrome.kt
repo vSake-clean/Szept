@@ -33,7 +33,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -100,10 +103,24 @@ fun GlassActions(modifier: Modifier = Modifier, content: @Composable RowScope.()
     }
 }
 
+/**
+ * Szewron „wstecz” jak w iOS: cienka linia z zaokrąglonymi końcami, wyśrodkowana optycznie
+ * (ikona Material „arrow_back_ios” jest przesunięta w lewo i w kółku wygląda krzywo).
+ */
+val ChevronBack: ImageVector by lazy {
+    ImageVector.Builder("ChevronBack", 24.dp, 24.dp, 24f, 24f).apply {
+        addPath(
+            pathData = androidx.compose.ui.graphics.vector.PathParser().parsePathString("M14.6 4.6 L7.4 12 L14.6 19.4").toNodes(),
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black), strokeLineWidth = 2.6f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round, strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round,
+        )
+    }.build()
+}
+
 /** Ikona „wstecz” zgodna z systemem (iOS i One UI — szewron). */
 @Composable
 fun backIcon(): ImageVector = when (chrome()) {
-    Chrome.GLASS, Chrome.IOS6, Chrome.ONEUI -> Icons.AutoMirrored.Filled.ArrowBackIos
+    Chrome.GLASS, Chrome.IOS6, Chrome.ONEUI -> ChevronBack
     else -> Icons.AutoMirrored.Filled.ArrowBack
 }
 
@@ -114,12 +131,18 @@ fun StyleBackBar(title: String, onBack: () -> Unit, hasActions: Boolean, actions
     val st = LocalStyle.current
     when (st.spec.chrome) {
         Chrome.GLASS -> Box(Modifier.fillMaxWidth().statusBarsPadding().height(60.dp).padding(horizontal = 14.dp)) {
-            GlassIconButton(Icons.AutoMirrored.Filled.ArrowBackIos, "Wstecz", onBack, Modifier.align(Alignment.CenterStart))
+            // tytuł na środku ekranu, ale nigdy pod przyciskami (odstęp = szerszy z boków)
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            var side by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(44.dp) }
+            GlassIconButton(ChevronBack, "Wstecz", onBack, Modifier.align(Alignment.CenterStart))
             Text(
-                title, Modifier.align(Alignment.Center).padding(horizontal = 66.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                title, Modifier.align(Alignment.Center).padding(horizontal = maxOf(44.dp, side) + 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), color = st.pal.onBase,
             )
-            if (hasActions) GlassActions(Modifier.align(Alignment.CenterEnd)) { actions() }
+            if (hasActions) GlassActions(
+                Modifier.align(Alignment.CenterEnd).onWidth { w -> side = with(density) { w.toDp() } },
+            ) { actions() }
         }
         Chrome.IOS6 -> Ios6Bar(title, onBack, hasActions, actions)
         else -> TopAppBar(
@@ -280,6 +303,9 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.aeroBar(pal: Pal) 
     drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.12f)), 0f, size.height * 0.5f), size = Size(size.width, size.height * 0.5f))
     drawRect(Color(0xFF1B3A63).copy(alpha = 0.7f), Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
 }
+
+/** Szerokość elementu po ułożeniu (np. do wyśrodkowania tytułu obok przycisków). */
+internal fun Modifier.onWidth(block: (Int) -> Unit): Modifier = onSizeChanged { block(it.width) }
 
 /** Odstęp ikon w szklanej kapsułce. */
 val GlassActionSpacing = Arrangement.spacedBy(0.dp)
