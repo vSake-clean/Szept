@@ -271,7 +271,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
 
     if (lookDialog) {
         val emojis = listOf("👥", "🎉", "⚽", "🎮", "🎵", "🍕", "💼", "📚", "🏠", "✈️", "🔥", "💬", "🐱", "🌍", "❤️", "⭐")
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { lookDialog = false },
             title = { Text("Ikona grupy") },
             text = {
@@ -293,7 +293,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
     }
     if (rename) {
         var name by remember { mutableStateOf(group.name) }
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { rename = false },
             title = { Text("Nazwa grupy") },
             text = { OutlinedTextField(name, { name = it.take(60) }, singleLine = true) },
@@ -303,7 +303,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
     }
     if (invite) {
         val link = core.groupInvite(gid) ?: ""
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { invite = false },
             title = { Text("Zaproszenie do „${group.name}”") },
             text = {
@@ -325,7 +325,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
     }
     if (descrDialog) {
         var d by remember { mutableStateOf(group.descr) }
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { descrDialog = false },
             title = { Text("Opis grupy") },
             text = { OutlinedTextField(d, { d = it.take(1000) }, minLines = 3, maxLines = 8, placeholder = { Text("O czym jest ta grupa? Zasady?") }) },
@@ -335,7 +335,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
     }
     if (limitedDialog) LimitedInviteDialog(gid, group) { limitedDialog = false }
     muteFor?.let { mem ->
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { muteFor = null },
             title = { Text("Wycisz: ${names?.get(mem.pk) ?: mem.name}") },
             text = {
@@ -354,7 +354,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
     }
     memberMenu?.let { mem ->
         val name = names?.get(mem.pk) ?: mem.name
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { memberMenu = null },
             title = { Text(name) },
             text = {
@@ -380,7 +380,7 @@ fun GroupInfoScreen(nav: Nav, gid: String) {
         )
     }
     confirm?.let { (q, action) ->
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { confirm = null },
             title = { Text(q) },
             confirmButton = { TextButton(onClick = { action(); confirm = null }) { Text("Tak") } },
@@ -400,7 +400,7 @@ private fun LimitedInviteDialog(gid: String, group: pl.szept.data.Group, onDismi
     var maxUses by remember { mutableStateOf(1) }
     var created by remember { mutableStateOf<String?>(null) }
     val now = System.currentTimeMillis()
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Link z limitem") },
         text = {
@@ -499,7 +499,7 @@ fun ContactInfoScreen(nav: Nav, pk: String) {
             }
         }
     }
-    if (confirmDelete) AlertDialog(
+    if (confirmDelete) StyleAlertDialog(
         onDismissRequest = { confirmDelete = false },
         title = { Text("Usunąć całą rozmowę z telefonu?") },
         confirmButton = { TextButton(onClick = { core.deleteChat("d:$pk"); confirmDelete = false; nav.home() }) { Text("Usuń") } },

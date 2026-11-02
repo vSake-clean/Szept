@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.AutoAwesome
+import pl.szept.ui.style.cascadeIn
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Router
@@ -73,6 +75,43 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.3.3" to listOf(
+        "Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery.",
+        "Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu.",
+        "Liquid Glass Niebo: niebo na każdym ekranie, białe napisy i przydymione szkło, przez które prześwituje niebo.",
+        "Mocniejsze załamanie światła przy krawędziach szkła, jaśniejsze odblaski w ciemnym motywie i półprzezroczyste okna nad rozmytym tłem.",
+    ),
+    "3.3.2" to listOf(
+        "Usunięte „Iskry przy dotknięciu” — w miejscu dotknięcia nic już się nie pojawia, w żadnym stylu.",
+        "Liquid Glass w ciemnym motywie: na liście rozmów znów widać nazwy osób i podpis „Twoja relacja” (wcześniej były czarne na czarnym tle). Ta sama poprawka obejmuje inne ekrany bez własnego tła.",
+    ),
+    "3.3.1" to listOf(
+        "Animacje działają także wtedy, gdy telefon ma je wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii) — o ruchu w Szepcie decyduje przełącznik w aplikacji. Kto woli jak w telefonie, włączy „Wyłączaj razem z telefonem” w Animacjach.",
+        "Żywy podgląd ruchu w kreatorze i w Animacjach: przejście między ekranami, wjazd wiadomości i dotknięcie przycisku odtwarzają się same, w charakterze wybranego stylu.",
+        "Wyraźna sprężystość: przejścia między ekranami w stylach sprężystych (m.in. Liquid Glass, Expressive Pop, „Zabawny”) odbijają się na końcu ruchu.",
+        "Liquid Glass: szewron „wstecz” jest wyśrodkowany w szklanym kółku, przyciski stoją na wysokości awatara, tytuł nie wchodzi pod przyciski, a na liście rozmów menu jest po lewej, szukanie i nowa rozmowa po prawej.",
+        "Liquid Glass: odblask na krawędzi szkła przesuwa się, gdy przechylasz telefon.",
+        "Wiadomość do wielu: po wysłaniu Szept wraca tylko z ekranu wysyłki — nie zamyka ekranu, który zdążyłeś otworzyć w międzyczasie.",
+    ),
+    "3.3" to listOf(
+        "23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”.",
+        "Każdy styl ma własny układ jak w oryginale: pasek rozmowy, pole wiadomości (szklana kapsułka, rząd ikon z „Aa” i kciukiem, płaski pasek ze spinaczem, okno z przyciskiem „Wyślij”…), listę rozmów (duży tytuł, wspólna karta, wielki nagłówek, napis-logo) i przycisk nowej rozmowy.",
+        "Liquid Glass: prawdziwe szkło — przyciski i pole wiadomości rozmywają i załamują treść pod spodem (Android 12+), a rozmowa przewija się pod pływającymi paskami.",
+        "Dymki w seriach: ogonek tylko przy ostatniej wiadomości (albo „uszko” przy pierwszej), mniejsze odstępy w serii, gradient zależny od miejsca na ekranie, awatar przy dymkach rozmówcy i czat bez dymków w stylu serwerowym.",
+        "Animacje: każdy styl porusza się po swojemu (przejścia, menu, okna, kliknięcia, wjazd wiadomości). Główny przełącznik, charakter ruchu i tempo, a w „Animacjach zaawansowanych” 21 animacji do osobnego wyłączania.",
+        "Menu i okna dialogowe w stylu: wyrastają z przycisku, wysuwają się albo wjeżdżają od dołu; okna mają rozmyte tło.",
+        "Kreator wyglądu po instalacji i aktualizacji: tryb jasny/ciemny, styl, animacje (pełne, delikatne, wyłączone), charakter ruchu, tempo, kolor i wielkość tekstu — z podglądem na żywo. Uruchomisz go ponownie w „Wyglądzie”.",
+        "Material You bierze kolory z tapety telefonu (Android 12+). Klasyczny wygląd Szepta zostaje bez zmian — w kreatorze wystarczy „Zostaw klasyczny”.",
+    ),
+    "3.2" to listOf(
+        "Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE).",
+        "Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria).",
+        "Tryb „Oszczędzanie baterii” działa bez stałego powiadomienia: nowe wiadomości co ok. 15 minut.",
+        "Lokalizacja na żywo ma osobne powiadomienie — ukrycie „Działania w tle” go nie chowa.",
+        "Gry w rozmowie: powiadomienie „Twój ruch”, gdy przeciwnik wykona ruch (szachy, warcaby, statki…), oraz gdy ktoś pobije Twój wynik w wyzwaniu.",
+        "Gry: przesunięcie palcem od krawędzi ekranu nie zamyka już gry (najpierw pytanie „Zakończyć grę?”), a ekran nie gaśnie w trakcie gry.",
+        "Po awarii Szept proponuje wysłanie dziennika błędów twórcy (bez treści wiadomości); dziennik zawiera też model telefonu.",
+    ),
     "3.1" to listOf(
         "Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python.",
         "Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”.",
@@ -161,7 +200,7 @@ val CHANGELOG: List<Pair<String, List<String>>> = listOf(
 @Composable
 private fun Category(icon: ImageVector, title: String, sub: String, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().cascadeIn(title).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
@@ -230,6 +269,7 @@ fun SettingsScreen(nav: Nav) {
             Heading("Najczęściej używane")
             Category(Icons.Default.Lock, "Prywatność i bezpieczeństwo", "PIN, kod awaryjny, zrzuty ekranu, potwierdzenia odczytu") { nav.go(Screen.Security) }
             Category(Icons.Default.Palette, "Wygląd i dźwięki", "Motyw, kolory, tapeta, wielkość tekstu, dźwięk powiadomień") { nav.go(Screen.Appearance) }
+            Category(Icons.Default.AutoAwesome, "Style i animacje", "${pl.szept.ui.style.STYLES.size} stylów wzorowanych na telefonach, komunikatorach i komputerach oraz animacje zaawansowane") { nav.go(Screen.Styles) }
             Category(Icons.Default.People, "Osoby", "Twoje kontakty, blokowanie") { nav.go(Screen.People) }
             Category(Icons.Default.PersonAdd, "Zaproś znajomych", "Wyślij im aplikację i swój kod") { shareApp(ctx) }
             Heading("Konto i telefon")
@@ -264,7 +304,18 @@ fun ConnectionScreen(nav: Nav) {
     var newRelay by remember { mutableStateOf("") }
     var battery by remember { mutableStateOf(true) }
     var advanced by remember { mutableStateOf(false) }
-    LifecycleResumeEffect(Unit) { battery = MainActivity.ignoresBattery(ctx); onPauseOrDispose { } }
+    var notifHidden by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        battery = MainActivity.ignoresBattery(ctx)
+        notifHidden = pl.szept.service.MessengerService.notificationHidden(ctx)
+        onPauseOrDispose { }
+    }
+    fun chooseMode(mode: Int) {
+        bgMode = mode
+        core.setBgMode(mode)
+        // tryb oszczędzania nie potrzebuje usługi w tle (ani jej powiadomienia)
+        pl.szept.service.MessengerService.start(ctx)
+    }
     val info = remember(states, relays) { core.relayInfo() }
     val connected = states.values.count { it == Relay.State.CONNECTED }
     Scaffold(topBar = { BackBar("Połączenie i bateria", nav) }) { pad ->
@@ -291,21 +342,39 @@ fun ConnectionScreen(nav: Nav) {
                 )
                 Heading("Bateria")
                 listOf(
-                    Triple(pl.szept.core.Core.BG_BALANCED, "Normalnie (zalecane)", "Wiadomości od razu, rozsądne zużycie baterii."),
+                    Triple(pl.szept.core.Core.BG_BALANCED, "Normalnie (zalecane)", "Wiadomości i rozmowy od razu, rozsądne zużycie baterii."),
                     Triple(pl.szept.core.Core.BG_FULL, "Zawsze na bieżąco", "Najszybciej i najpewniej, ale bateria schodzi szybciej."),
-                    Triple(pl.szept.core.Core.BG_SAVER, "Oszczędzanie baterii", "Nowe wiadomości co ok. 15 minut. Najmniej baterii."),
+                    Triple(pl.szept.core.Core.BG_SAVER, "Oszczędzanie baterii", "Bez stałego powiadomienia. Nowe wiadomości co ok. 15 minut, a rozmowy nie dzwonią, gdy Szept jest zamknięty."),
                 ).forEach { (mode, title, sub) ->
                     Row(
-                        Modifier.fillMaxWidth().clickable { bgMode = mode; core.setBgMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
+                        Modifier.fillMaxWidth().clickable { chooseMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(bgMode == mode, { bgMode = mode; core.setBgMode(mode) })
+                        RadioButton(bgMode == mode, { chooseMode(mode) })
                         Column {
                             Text(title, style = MaterialTheme.typography.bodyLarge)
                             Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
+                Heading("Stałe powiadomienie")
+                ListItem(
+                    headlineContent = { Text("„Szept działa w tle”") },
+                    supportingContent = {
+                        Text(
+                            when {
+                                bgMode == pl.szept.core.Core.BG_SAVER -> "Nie ma go — w trybie oszczędzania Szept nie działa stale w tle."
+                                notifHidden -> "Ukryte ✓ — Szept dalej odbiera wiadomości i rozmowy od razu."
+                                else -> "Android wymaga go dla aplikacji, która odbiera wiadomości w tle. Możesz je ukryć: wyłącz kanał „Działanie w tle” — Szept będzie działał dalej."
+                            },
+                        )
+                    },
+                    trailingContent = {
+                        if (bgMode != pl.szept.core.Core.BG_SAVER) TextButton(onClick = {
+                            try { ctx.startActivity(pl.szept.service.MessengerService.hideIntent(ctx)) } catch (_: Exception) { toast(ctx, "Nie udało się otworzyć ustawień powiadomień") }
+                        }) { Text(if (notifHidden) "Pokaż" else "Ukryj") }
+                    },
+                )
                 HorizontalDivider(Modifier.padding(top = 8.dp))
                 ListItem(
                     headlineContent = { Text("Dla zaawansowanych: przekaźniki") },

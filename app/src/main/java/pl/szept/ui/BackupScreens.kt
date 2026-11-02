@@ -145,7 +145,7 @@ fun RestoreBackupDialog(uri: Uri, onDismiss: () -> Unit, onDone: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0) }
     var err by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text("Przywróć kopię zapasową") },
         text = {

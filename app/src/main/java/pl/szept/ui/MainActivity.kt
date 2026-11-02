@@ -39,6 +39,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import pl.szept.App
 import pl.szept.core.Links
+import pl.szept.ui.style.screenTransition
+import androidx.compose.ui.platform.createLifecycleAwareWindowRecomposer
 
 class NavVm : ViewModel() {
     val nav = Nav()
@@ -66,7 +68,13 @@ class MainActivity : FragmentActivity() {
         locked = App.real.hasIdentity && App.real.lockEnabled && !vm.unlocked
         UiPrefs.load(this)
         setSecure(false)
-        setContent { SzeptTheme { androidx.compose.runtime.key(App.decoyActive) { Root(this) } } }
+        // własny „rekompozytor” z globalną skalą animacji (pełne wyłączenie animacji w ustawieniach);
+        // w testach zostaje domyślny (zegar testów musi nim sterować)
+        val parent = if (Build.FINGERPRINT == "robolectric") null else try {
+            @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+            window.decorView.createLifecycleAwareWindowRecomposer(pl.szept.ui.style.MotionGate, lifecycle)
+        } catch (e: Throwable) { null }
+        setContent(parent) { SzeptTheme { androidx.compose.runtime.key(App.decoyActive) { Root(this) } } }
         // przychodzące połączenie: pokaż się nad ekranem blokady i zapal ekran
         lifecycleScope.launch {
             kotlinx.coroutines.flow.combine(App.real.calls.state, App.real.groupCalls.state) { c, g -> c to g }.collect { (c, g) ->
@@ -305,15 +313,44 @@ fun Root(act: MainActivity) {
         return
     }
     val nav = act.nav
+    // kreator wyglądu: po instalacji i raz po aktualizacji do wersji z nowymi stylami (zastępuje wtedy „Co nowego”)
+    var wizard by remember { mutableStateOf(pl.szept.ui.style.shouldShowWizard()) }
+    if (wizard) {
+        pl.szept.ui.style.AppearanceWizard {
+            UiPrefs.wizard = pl.szept.ui.style.WIZARD_VERSION
+            UiPrefs.save(act)
+            act.getSharedPreferences("ui", Context.MODE_PRIVATE).edit().putString("seen_version", pl.szept.BuildConfig.VERSION_NAME).apply()
+            wizard = false
+        }
+        return
+    }
     BackHandler(enabled = nav.stack.size > 1) { nav.back() }
     // „Co nowego” — raz po każdej aktualizacji
     val uiPrefs = remember { act.getSharedPreferences("ui", Context.MODE_PRIVATE) }
     var whatsNew by remember { mutableStateOf(uiPrefs.getString("seen_version", null) != pl.szept.BuildConfig.VERSION_NAME) }
     val notes = CHANGELOG.firstOrNull { it.first == pl.szept.BuildConfig.VERSION_NAME }?.second
+    // po awarii: propozycja wysłania dziennika błędów (bez treści wiadomości)
+    var crashNotice by remember { mutableStateOf(pl.szept.core.CrashLog.takeCrashNotice()) }
+    if (crashNotice && !whatsNew) StyleAlertDialog(
+        onDismissRequest = { crashNotice = false },
+        title = { androidx.compose.material3.Text("Szept zamknął się przez błąd") },
+        text = {
+            androidx.compose.material3.Text(
+                "Przepraszamy! Szczegóły zapisały się w dzienniku błędów (bez treści wiadomości i kontaktów). " +
+                    "Wyślij go twórcy aplikacji — pomoże to naprawić błąd. Dziennik jest też w Ustawienia → Pomoc.",
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { crashNotice = false; shareText(act, pl.szept.core.CrashLog.read()) }) {
+                androidx.compose.material3.Text("Wyślij dziennik")
+            }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { crashNotice = false }) { androidx.compose.material3.Text("Nie teraz") } },
+    )
     if (whatsNew) {
         fun done() { whatsNew = false; uiPrefs.edit().putString("seen_version", pl.szept.BuildConfig.VERSION_NAME).apply() }
         if (notes == null) done()
-        else androidx.compose.material3.AlertDialog(
+        else StyleAlertDialog(
             onDismissRequest = { done() },
             title = { androidx.compose.material3.Text("Co nowego w wersji ${pl.szept.BuildConfig.VERSION_NAME}") },
             text = {
@@ -330,7 +367,18 @@ fun Root(act: MainActivity) {
             if (c != null && c.active) CallBanner(c) { act.callHidden = false }
             else if (g != null && g.phase == pl.szept.call.GroupCallManager.Phase.ACTIVE) GroupCallBanner(g) { act.callHidden = false }
             // osobny stan dla każdego ekranu (np. przejście z jednej rozmowy prosto do innej)
-            Box(Modifier.weight(1f)) { key(s) { Route(s, nav, act) } }
+            Box(Modifier.weight(1f)) {
+                val anim = pl.szept.ui.style.LocalAnim.current
+                if (anim[pl.szept.ui.style.Anim.SCREENS]) {
+                    val style = pl.szept.ui.style.LocalStyle.current
+                    val type = if (anim.transition == pl.szept.ui.style.Trans.AUTO) style.spec.transition else anim.transition
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = Pair<Any, Int>(s, nav.stack.size),
+                        transitionSpec = { screenTransition(type, anim.factor, style.motion) },
+                        label = "ekran",
+                    ) { (target, _) -> Route(target as Screen, nav, act) }
+                } else key(s) { Route(s, nav, act) }
+            }
         }
         // gra na pełnym ekranie (nad rozmową — po zamknięciu wracasz tam, gdzie byłeś)
         pl.szept.ui.games.PlayHost()
@@ -339,6 +387,11 @@ fun Root(act: MainActivity) {
 
 @Composable
 private fun Route(s: Screen, nav: Nav, act: MainActivity) {
+    androidx.compose.runtime.CompositionLocalProvider(pl.szept.ui.style.LocalCascade provides remember { pl.szept.ui.style.Cascade() }) { RouteContent(s, nav, act) }
+}
+
+@Composable
+private fun RouteContent(s: Screen, nav: Nav, act: MainActivity) {
     when (s) {
         Screen.Home -> HomeScreen(nav)
         is Screen.Chat -> ChatScreen(nav, s.id, act, s.focus)
@@ -372,5 +425,8 @@ private fun Route(s: Screen, nav: Nav, act: MainActivity) {
         Screen.Connection -> ConnectionScreen(nav)
         Screen.Help -> HelpScreen(nav)
         Screen.Games -> pl.szept.ui.games.GamesScreen(nav)
+        Screen.Styles -> pl.szept.ui.style.StylesScreen(nav)
+        Screen.Animations -> pl.szept.ui.style.AnimationsScreen(nav)
+        Screen.Wizard -> pl.szept.ui.style.AppearanceWizard { nav.back() }
     }
 }

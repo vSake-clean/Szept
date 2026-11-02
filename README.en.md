@@ -18,6 +18,28 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.3.3
+- **Much more glass** in “Liquid Glass” and “Liquid Glass Niebo”: a colourful glow or sky under the whole app, glass chat cards, bubbles and banners, and a floating glass search bar at the bottom.
+
+### New in 3.3.2
+- No more touch sparks; contact names are visible again on the chat list in dark “Liquid Glass”.
+
+### New in 3.3.1
+- **Animations always run when they are on in Szept** — even if the phone has animations turned off (option “Wyłączaj razem z telefonem” in Animations).
+- **Live motion preview** in the wizard and in Animations, clearer springiness and better-centred buttons in “Liquid Glass”.
+
+### New in 3.3
+- **23 visual styles** (Settings → Styl i animacje) modelled on real phones, messengers and desktops: glass that blurs and refracts the content underneath (“Liquid Glass”), wallpaper colours (“Material You”), a one-handed big header (“One Flow”), grey background with white cards (“Hyper Minimal”), a dot-matrix title (“Nothing Dot”), doodle chat backgrounds, gradient bubbles, bubble-less server-style chat, early-2000s windows and a terminal. Names describe the look, not companies.
+- **Layouts like the originals**: each style has its own chat bar, message field, send button, chat list and new-chat button; bubbles group into series with a tail on the last message.
+- **Animations with character**: every style moves its own way (screen transitions, menus, dialogs, taps, incoming messages). Master switch, speed, a shared motion character and “Animacje zaawansowane” — 21 animations you can turn off one by one.
+- **Appearance wizard** after installing or updating (mode, style, animations, colour, text size) with a live preview. The classic look stays unchanged.
+
+### New in 3.2
+- **Crash fixed** when a connection drops while a message is being sent (e.g. switching from Wi-Fi to LTE).
+- **The persistent notification** no longer updates constantly and has a “Hide” button (turning off the “Działanie w tle” channel — Szept keeps receiving messages instantly); in battery-saver mode there is none at all.
+- **Games**: “your move” and “your score was beaten” notifications, an edge swipe no longer closes a game, and the screen stays on while playing.
+- After a crash Szept offers to send the error log.
+
 ### New in 3.1
 - **Almost 80 games** (paperclip → Game or menu ⋮ → Games): arcade, puzzle, memory & reflex, words & quizzes, cards & dice, board and party games. A new game picker with search and icons matching the rest of the menu.
 - **Solo, two players or a group**: full-screen single-player games, **chat challenges** (same layout for everyone, ranking in the bubble), turn-based board games (chess, checkers, connect four, battleship…, also vs. the computer) and party games for groups.
@@ -161,7 +183,7 @@ Your phone ──🔒 envelope──►  relay 1 ┐
 7. **Without internet** the phones become relays themselves: each one with the option on runs a small Nostr relay (port 4869) and announces itself on the Wi-Fi network (mDNS/NSD). The same encrypted envelopes then travel between phones, and once one of them gets internet — they also reach the regular relays.
 8. With **key rotation** on, every device creates a new key every 7 days and announces it to friends in an encrypted envelope; envelopes to it are encrypted with that key, and the phone deletes old keys.
 
-A background service runs with a quiet “Szept is receiving messages” notification. On top of that, an alarm every 10 minutes and WorkManager every 15 minutes check the connection.
+A background service runs with a quiet “Szept działa w tle” notification (Android requires it; the “Hide” button lets you hide it — the service keeps running). In battery-saver mode there is no service. On top of that, an alarm every 10 minutes and WorkManager every 15 minutes check the connection.
 
 **Background mode** (Settings):
 - **Balanced** (default) — while the app is closed, the phone keeps only 2 live connections, so messages arrive instantly (about 0.3 s in testing), and the remaining relays are synchronized about every 10 minutes. Uses noticeably less battery than 8 permanent connections.

@@ -12,7 +12,6 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
@@ -20,27 +19,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import pl.szept.App
 import pl.szept.R
 import pl.szept.core.Core
 import pl.szept.core.LocationHelper
-import pl.szept.nostr.Relay
 
 /**
  * Usługa pierwszoplanowa — utrzymuje połączenia z przekaźnikami, żeby wiadomości
- * docierały także wtedy, gdy aplikacja jest zamknięta.
+ * docierały także wtedy, gdy aplikacja jest zamknięta. Android wymaga dla niej powiadomienia:
+ * jest stałe (nie odświeża się przy każdej zmianie połączenia), a przycisk „Ukryj” prowadzi
+ * do ustawień, gdzie można je wyłączyć — usługa działa dalej. W trybie oszczędzania baterii
+ * usługa w ogóle nie działa (wiadomości sprawdza budzik i WorkManager), więc nie ma powiadomienia.
  */
 class MessengerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + pl.szept.core.CrashLog.handler)
-    private var watch: Job? = null
     private var liveWatch: Job? = null
     private var locationOn = false
-    private var lastOk = 0
-    private var lastTotal = 0
-    private var lastTrimmed = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -48,22 +43,13 @@ class MessengerService : Service() {
         super.onCreate()
         AndroidNotifier.createChannels(this)
         try {
-            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(0, 0), fgsTypes(false))
+            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(false), fgsTypes(false))
         } catch (e: Exception) {
             Log.w("Szept", "nie można uruchomić usługi pierwszoplanowej", e)
             stopSelf()
             return
         }
         App.real.start()
-        watch = scope.launch {
-            combine(App.real.relayStates, App.real.trimmed) { states, trimmed -> states to trimmed }.collectLatest { (states, trimmed) ->
-                val ok = states.values.count { it == Relay.State.CONNECTED }
-                lastOk = ok; lastTotal = states.size; lastTrimmed = trimmed
-                try {
-                    NotificationManagerCompat.from(this@MessengerService).notify(NOTIF_ID, buildNotification(ok, states.size, trimmed))
-                } catch (e: SecurityException) { }
-            }
-        }
         // udostępnianie lokalizacji na żywo: odbiornik GPS działa tylko wtedy
         liveWatch = scope.launch { App.real.liveActive.collect { on -> setLive(on) } }
         scheduleKeepAlive(this)
@@ -79,17 +65,20 @@ class MessengerService : Service() {
         if (on == locationOn) return
         if (on) {
             try {
-                ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(lastOk, lastTotal, lastTrimmed, true), fgsTypes(true))
+                ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(true), fgsTypes(true))
             } catch (e: Exception) { Log.w("Szept", "usługa lokalizacji", e) }
             locationOn = LocationHelper.startTracking(this) { l -> App.real.onLocation(l.latitude, l.longitude, l.accuracy) }
         } else {
             LocationHelper.stopTracking(this)
             locationOn = false
-            try { ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(lastOk, lastTotal, lastTrimmed), fgsTypes(false)) } catch (_: Exception) {}
+            // tryb oszczędzania: usługa była potrzebna tylko do lokalizacji na żywo
+            if (!needed()) { stopSelf(); return }
+            try { ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(false), fgsTypes(false)) } catch (_: Exception) {}
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!needed()) { stopSelf(); return START_NOT_STICKY }
         App.real.keepalive()
         return START_STICKY
     }
@@ -100,29 +89,49 @@ class MessengerService : Service() {
         super.onDestroy()
     }
 
-    private fun buildNotification(ok: Int, total: Int, trimmed: Boolean = false, live: Boolean = locationOn || App.real.liveActive.value): Notification =
-        NotificationCompat.Builder(this, AndroidNotifier.CH_SERVICE)
+    private fun buildNotification(live: Boolean): Notification {
+        val b = NotificationCompat.Builder(this, if (live) AndroidNotifier.CH_LIVE else AndroidNotifier.CH_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_msg)
-            .setContentTitle(if (live) "Szept: udostępniasz lokalizację na żywo" else "Szept odbiera wiadomości")
-            .setContentText(
-                when {
-                    total == 0 -> "Łączenie…"
-                    trimmed && App.real.bgMode == Core.BG_SAVER -> "Tryb oszczędny · sprawdzanie co ok. 10–15 min"
-                    trimmed -> "Tryb zrównoważony · $ok na żywo, pełna synchronizacja co ok. 10 min"
-                    else -> "Połączono z $ok/$total przekaźnikami"
-                },
-            )
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
+            .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setContentIntent(AndroidNotifier.openChatIntent(this, null))
+        if (live) return b.setContentTitle("Szept: udostępniasz lokalizację na żywo").setContentText("Dotknij, aby otworzyć Szept").build()
+        return b.setContentTitle("Szept działa w tle")
+            .setContentText("Wiadomości i rozmowy przychodzą od razu. To powiadomienie możesz ukryć.")
+            .addAction(0, "Ukryj", PendingIntent.getActivity(this, 11, hideIntent(this), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
             .build()
+    }
 
     companion object {
         const val NOTIF_ID = 1
 
+        /** Czy usługa jest potrzebna: w trybie oszczędzania tylko na czas lokalizacji na żywo. */
+        fun needed(): Boolean = App.real.bgMode != Core.BG_SAVER || App.real.liveActive.value
+
+        /** Ustawienia kanału „Działanie w tle” — tam można wyłączyć stałe powiadomienie (usługa działa dalej). */
+        fun hideIntent(ctx: Context): Intent =
+            Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, AndroidNotifier.CH_SERVICE)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        /** Czy użytkownik ukrył stałe powiadomienie (wyłączony kanał albo wszystkie powiadomienia Szepta). */
+        fun notificationHidden(ctx: Context): Boolean {
+            val nm = ctx.getSystemService(android.app.NotificationManager::class.java) ?: return false
+            if (!nm.areNotificationsEnabled()) return true
+            return nm.getNotificationChannel(AndroidNotifier.CH_SERVICE)?.importance == android.app.NotificationManager.IMPORTANCE_NONE
+        }
+
+        /** Uruchamia usługę albo — w trybie oszczędzania — zatrzymuje ją i zostawia budzik co ~10 min. */
         fun start(ctx: Context) {
+            if (!needed()) {
+                try { ctx.stopService(Intent(ctx, MessengerService::class.java)) } catch (_: Exception) {}
+                scheduleKeepAlive(ctx)
+                return
+            }
             try {
                 ContextCompat.startForegroundService(ctx, Intent(ctx, MessengerService::class.java))
             } catch (e: Exception) {

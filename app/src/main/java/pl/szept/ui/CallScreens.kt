@@ -622,7 +622,7 @@ private fun AddToCallDialog(call: pl.szept.call.GroupCallManager.GroupCall, onDi
     }
     val free = pl.szept.call.GroupCallManager.max(call.video) - 1 - call.peers.size
     val picked = remember { androidx.compose.runtime.mutableStateListOf<String>() }
-    androidx.compose.material3.AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Dodaj do rozmowy") },
         text = {

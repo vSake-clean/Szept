@@ -2,6 +2,43 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3.3
+- Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery.
+- Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu.
+- Liquid Glass Niebo: niebo na każdym ekranie, białe napisy i przydymione szkło, przez które prześwituje niebo.
+- Mocniejsze załamanie światła przy krawędziach szkła, jaśniejsze odblaski w ciemnym motywie i półprzezroczyste okna nad rozmytym tłem.
+
+## 3.3.2
+- Usunięte „Iskry przy dotknięciu” — w miejscu dotknięcia nic już się nie pojawia, w żadnym stylu.
+- Liquid Glass w ciemnym motywie: na liście rozmów znów widać nazwy osób i podpis „Twoja relacja” (wcześniej były czarne na czarnym tle). Ta sama poprawka obejmuje inne ekrany bez własnego tła.
+
+## 3.3.1
+- Animacje działają także wtedy, gdy telefon ma je wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii) — o ruchu w Szepcie decyduje przełącznik w aplikacji. Kto woli jak w telefonie, włączy „Wyłączaj razem z telefonem” w Animacjach.
+- Żywy podgląd ruchu w kreatorze i w Animacjach: przejście między ekranami, wjazd wiadomości i dotknięcie przycisku odtwarzają się same, w charakterze wybranego stylu.
+- Wyraźna sprężystość: przejścia między ekranami w stylach sprężystych (m.in. Liquid Glass, Expressive Pop, „Zabawny”) odbijają się na końcu ruchu.
+- Liquid Glass: szewron „wstecz” jest wyśrodkowany w szklanym kółku, przyciski stoją na wysokości awatara, tytuł nie wchodzi pod przyciski, a na liście rozmów menu jest po lewej, szukanie i nowa rozmowa po prawej.
+- Liquid Glass: odblask na krawędzi szkła przesuwa się, gdy przechylasz telefon.
+- Wiadomość do wielu: po wysłaniu Szept wraca tylko z ekranu wysyłki — nie zamyka ekranu, który zdążyłeś otworzyć w międzyczasie.
+
+## 3.3
+- 23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”.
+- Każdy styl ma własny układ jak w oryginale: pasek rozmowy, pole wiadomości (szklana kapsułka, rząd ikon z „Aa” i kciukiem, płaski pasek ze spinaczem, okno z przyciskiem „Wyślij”…), listę rozmów (duży tytuł, wspólna karta, wielki nagłówek, napis-logo) i przycisk nowej rozmowy.
+- Liquid Glass: prawdziwe szkło — przyciski i pole wiadomości rozmywają i załamują treść pod spodem (Android 12+), a rozmowa przewija się pod pływającymi paskami.
+- Dymki w seriach: ogonek tylko przy ostatniej wiadomości (albo „uszko” przy pierwszej), mniejsze odstępy w serii, gradient zależny od miejsca na ekranie, awatar przy dymkach rozmówcy i czat bez dymków w stylu serwerowym.
+- Animacje: każdy styl porusza się po swojemu (przejścia, menu, okna, kliknięcia, wjazd wiadomości). Główny przełącznik, charakter ruchu i tempo, a w „Animacjach zaawansowanych” 21 animacji do osobnego wyłączania.
+- Menu i okna dialogowe w stylu: wyrastają z przycisku, wysuwają się albo wjeżdżają od dołu; okna mają rozmyte tło.
+- Kreator wyglądu po instalacji i aktualizacji: tryb jasny/ciemny, styl, animacje (pełne, delikatne, wyłączone), charakter ruchu, tempo, kolor i wielkość tekstu — z podglądem na żywo. Uruchomisz go ponownie w „Wyglądzie”.
+- Material You bierze kolory z tapety telefonu (Android 12+). Klasyczny wygląd Szepta zostaje bez zmian — w kreatorze wystarczy „Zostaw klasyczny”.
+
+## 3.2
+- Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE).
+- Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria).
+- Tryb „Oszczędzanie baterii” działa bez stałego powiadomienia: nowe wiadomości co ok. 15 minut.
+- Lokalizacja na żywo ma osobne powiadomienie — ukrycie „Działania w tle” go nie chowa.
+- Gry w rozmowie: powiadomienie „Twój ruch”, gdy przeciwnik wykona ruch (szachy, warcaby, statki…), oraz gdy ktoś pobije Twój wynik w wyzwaniu.
+- Gry: przesunięcie palcem od krawędzi ekranu nie zamyka już gry (najpierw pytanie „Zakończyć grę?”), a ekran nie gaśnie w trakcie gry.
+- Po awarii Szept proponuje wysłanie dziennika błędów twórcy (bez treści wiadomości); dziennik zawiera też model telefonu.
+
 ## 3.1
 - Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python.
 - Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”.

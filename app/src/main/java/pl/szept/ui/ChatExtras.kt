@@ -135,12 +135,12 @@ fun withDayHeaders(newestFirst: List<Any>): List<Any> {
 @Composable
 fun DayHeaderItem(label: String) {
     Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-        Text(
-            label,
-            Modifier.clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        pl.szept.ui.style.StyledChip {
+            Text(
+                label, Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -373,6 +373,12 @@ fun MicButton(
     onCancel: () -> Unit,
     onLock: () -> Unit,
     onRelease: (quickTap: Boolean) -> Unit,
+    /** Wygląd: wypełnione kółko (domyślnie) albo sama ikona (np. w polu wiadomości iOS, pasku Telegrama). */
+    filled: Boolean = true,
+    color: Color? = null,
+    tint: Color = Color.White,
+    size: androidx.compose.ui.unit.Dp = 48.dp,
+    bottomPad: androidx.compose.ui.unit.Dp = 4.dp,
 ) {
     val start by rememberUpdatedState(onStart)
     val drag by rememberUpdatedState(onDrag)
@@ -393,13 +399,13 @@ fun MicButton(
             }
         }
         Box(
-            Modifier.padding(bottom = 4.dp).size(48.dp)
+            Modifier.padding(bottom = if (filled) bottomPad else 0.dp).size(size)
                 .graphicsLayer {
                     scaleX = scale; scaleY = scale
                     translationX = if (holding) dragX.coerceIn(-cancelDistancePx, 0f) else 0f
                 }
                 .clip(CircleShape)
-                .background(if (holding) Color(0xFFE53935) else MaterialTheme.colorScheme.primary)
+                .background(if (holding) Color(0xFFE53935) else if (filled) color ?: MaterialTheme.colorScheme.primary else Color.Transparent)
                 .semantics { contentDescription = "Nagraj głosówkę"; role = Role.Button }
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -434,7 +440,7 @@ fun MicButton(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Mic, null, tint = Color.White)
+            Icon(Icons.Default.Mic, null, tint = if (holding) Color.White else tint)
         }
     }
 }
