@@ -248,7 +248,8 @@ fun BroadcastScreen(nav: Nav) {
                         }
                         sending = false
                         toast(ctx, "Wysłano do $ok os.")
-                        nav.back()
+                        // wysyłanie trwa chwilę — wróć tylko, jeśli nadal jesteśmy na tym ekranie (nie zamykaj innego)
+                        if (nav.current == Screen.Broadcast) nav.back()
                     }
                 },
                 icon = { Icon(Icons.AutoMirrored.Filled.Send, null) },
