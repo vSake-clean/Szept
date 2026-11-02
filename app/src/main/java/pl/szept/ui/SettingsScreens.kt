@@ -81,6 +81,7 @@ val CHANGELOG: List<Pair<String, List<String>>> = listOf(
         "Wyraźna sprężystość: przejścia między ekranami w stylach sprężystych (m.in. Liquid Glass, Expressive Pop, „Zabawny”) odbijają się na końcu ruchu.",
         "Liquid Glass: szewron „wstecz” jest wyśrodkowany w szklanym kółku, przyciski stoją na wysokości awatara, tytuł nie wchodzi pod przyciski, a na liście rozmów menu jest po lewej, szukanie i nowa rozmowa po prawej.",
         "Liquid Glass: odblask na krawędzi szkła przesuwa się, gdy przechylasz telefon.",
+        "Wiadomość do wielu: po wysłaniu Szept wraca tylko z ekranu wysyłki — nie zamyka ekranu, który zdążyłeś otworzyć w międzyczasie.",
     ),
     "3.3" to listOf(
         "23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”.",
