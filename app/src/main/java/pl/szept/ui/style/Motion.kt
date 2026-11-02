@@ -617,7 +617,8 @@ fun AnimatedContentTransitionScope<Pair<Any, Int>>.screenTransition(type: Int, f
     val springy = m.damping < 0.9f
     val stiff = (m.stiffness / (factor * factor)).coerceIn(40f, 3000f)
     val slideSpec: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset> =
-        if (springy) androidx.compose.animation.core.spring(m.damping, stiff, androidx.compose.ui.unit.IntOffset(1, 1)) else tween(d, easing = e)
+        // całe ekrany odbijają się lekko (najwyżej ~8% szerokości), żeby nawigacja nie „skakała”
+        if (springy) androidx.compose.animation.core.spring(m.damping.coerceAtLeast(0.62f), stiff, androidx.compose.ui.unit.IntOffset(1, 1)) else tween(d, easing = e)
     val scaleSpec: androidx.compose.animation.core.FiniteAnimationSpec<Float> =
         if (springy) androidx.compose.animation.core.spring(m.damping, stiff) else tween(d, easing = e)
     return when (type) {
