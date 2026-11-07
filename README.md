@@ -16,6 +16,10 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.3.4
+- **Mniej internetu**: wybór, kiedy pobierać zdjęcia, filmy i pliki (zawsze / tylko Wi-Fi / po dotknięciu), oszczędniejsza wysyłka i pobieranie mediów oraz rzadszy status „aktywny”.
+- **Liquid Glass bliżej oryginału**: łagodne „ciągłe” rogi szkła (squircle), naturalniejszy błysk w narożniku i delikatniejszy cień.
+
 ### Nowe w 3.3.3
 - **Dużo więcej szkła** w „Liquid Glass” i „Liquid Glass Niebo”: kolorowa poświata albo niebo pod całą aplikacją, szklane karty rozmów, dymki i banery oraz pływający szklany pasek szukania na dole.
 

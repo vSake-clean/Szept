@@ -18,6 +18,10 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.3.4
+- **Less data**: choose when to download photos, videos and files (always / Wi-Fi only / on tap), leaner media upload and download, and presence (“active”) sent less often.
+- **Liquid Glass closer to the original**: smooth continuous (squircle) glass corners, a more natural corner highlight and a softer shadow.
+
 ### New in 3.3.3
 - **Much more glass** in “Liquid Glass” and “Liquid Glass Niebo”: a colourful glow or sky under the whole app, glass chat cards, bubbles and banners, and a floating glass search bar at the bottom.
 

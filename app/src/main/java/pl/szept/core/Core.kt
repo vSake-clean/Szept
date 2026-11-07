@@ -3,6 +3,7 @@ package pl.szept.core
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.NetworkCapabilities
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +91,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         /** Najwięcej ruchów jednej osoby w jednej grze (szachy, warcaby, wyniki w wyzwaniu). */
         const val MAX_GAME_MOVES = 400
         const val CHUNK_RAW = 44_000
-        const val MEDIA_RELAYS = 5
+        /** Na ile przekaźników wysyłamy paczki mediów (mniej = mniej zużytego internetu). */
+        const val MEDIA_RELAYS = 3
         const val MAX_MEDIA = 16L * 1024 * 1024
         /** Tryby pracy w tle. */
         const val BG_FULL = 0       // wszystkie przekaźniki na żywo (najszybciej, najwięcej baterii)
@@ -161,6 +163,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     private val relaySem = ConcurrentHashMap<String, Semaphore>()
     private val uploading = ConcurrentHashMap.newKeySet<String>()
     private val downloads = ConcurrentHashMap<String, DownloadJob>()
+    /** Media, które mają się pobrać mimo oszczędzania danych (użytkownik dotknął „pobierz”). */
+    private val forcedDl = ConcurrentHashMap.newKeySet<String>()
     private val inboxCount = ConcurrentHashMap<String, Int>()
     private val inboxOldest = ConcurrentHashMap<String, Long>()
     private var started = false
@@ -500,6 +504,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     val changed = lastNetwork != null && lastNetwork != network
                     lastNetwork = network
                     relays.values.forEach { it.reconnectNow(force = changed) }
+                    kickDownloads()   // np. wróciło Wi-Fi → ruszają wstrzymane media
                 }
             }
             cm.registerDefaultNetworkCallback(cb)
@@ -722,10 +727,20 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val now = System.currentTimeMillis()
         if (!force && st == lastPresenceState && now - lastPresenceAt < PRESENCE_EVERY_MS - 10_000) return
         if (st == "off" && lastPresenceState == "off") return
-        val targets = db.contacts(true).filter { !it.blocked && it.pk != myPub && !Admin.isAdmin(it.pk) }.map { it.pk }.take(150)
+        val all = db.contacts(true).filter { !it.blocked && it.pk != myPub && !Admin.isAdmin(it.pk) }.map { it.pk }
+        // status wysyłamy tylko do osób, z którymi ostatnio była rozmowa (mniej ruchu w tle)
+        val cutoff = System.currentTimeMillis() - 21L * 86400_000
+        val recent = buildSet {
+            for (c in db.chats()) {
+                if (c.lastTs <= cutoff) continue
+                if (c.isGroup) db.group(c.id.removePrefix("g:"))?.members?.forEach { add(it.pk) }
+                else c.peer?.let { add(it) }
+            }
+        }
+        val targets = all.filter { it in recent }.ifEmpty { all }.take(150)
         if (targets.isEmpty() || connectedRelays().isEmpty()) return
         lastPresenceState = st; lastPresenceAt = now
-        publishEphemeral(JSONObject().put("t", "pres").put("s", st).put("ts", Clock.now()), targets, relayCount = 4, ttlSec = 20 * 60)
+        publishEphemeral(JSONObject().put("t", "pres").put("s", st).put("ts", Clock.now()), targets, relayCount = 2, ttlSec = 20 * 60)
     }
 
     private fun handlePresence(from: String, p: JSONObject) {
@@ -1642,7 +1657,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         // pisząc na innym urządzeniu, przeczytałem tę rozmowę
         db.markChatRead(chatId)
         notifier?.cancel(chatId)
-        if (media != null) { db.addDownload(id, media); kickDownloads() }
+        if (media != null) queueDownload(id, media)
         if (expires > 0) expiryKick.trySend(Unit)
     }
 
@@ -1931,7 +1946,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         clearTyping(chatId, from)
         val visible = activeChat == chatId && appVisible
         db.touchChat(chatId, ts, Db.preview(m), !visible)
-        if (media != null) { db.addDownload(id, media); kickDownloads() }
+        if (media != null) queueDownload(id, media)
         if (expires > 0) expiryKick.trySend(Unit)
         val mentioned = gid != null && (myPub in ex.mentions || ("all" in ex.mentions && db.group(gid)?.isAdmin(from) == true))
         if (!visible) notifyMessage(chatId, from, Db.preview(m), gid != null, mentioned)
@@ -2263,6 +2278,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             val m = db.message(msgId) ?: return@launch
             if (!m.mine) {
                 val meta = m.media ?: return@launch
+                forcedDl.add(meta.id)   // ponowienie działa też przy oszczędzaniu danych
                 db.addDownload(msgId, meta)
                 db.updateStatus(msgId, St.DOWNLOADING, false)
                 kickDownloads()
@@ -3380,6 +3396,43 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (msgId.startsWith("admin:")) true
         else if (msgId.startsWith("story:")) db.story(msgId.removePrefix("story:")) != null else db.message(msgId) != null
 
+    /** Pobieranie mediów: 0 = zawsze, 1 = tylko przez Wi-Fi, 2 = dopiero po dotknięciu. */
+    val mediaDlMode: Int get() = prefs.getInt("media_dl", 0)
+
+    fun setMediaDlMode(mode: Int) {
+        prefs.edit().putInt("media_dl", mode.coerceIn(0, 2)).apply()
+        if (autoDownloadAllowed()) kickDownloads()   // poluzowano ograniczenie → ruszają wstrzymane
+    }
+
+    /** Czy bieżąca sieć jest bez limitu (Wi-Fi). Przy braku pewności zakładamy, że tak. */
+    private fun isUnmetered(): Boolean = try {
+        val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return true
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    } catch (e: Exception) { true }
+
+    /** Czy media mogą pobierać się automatycznie przy obecnym ustawieniu i sieci. */
+    private fun autoDownloadAllowed(): Boolean = when (mediaDlMode) { 1 -> isUnmetered(); 2 -> false; else -> true }
+
+    /** Dokłada media wiadomości do pobrania, respektując oszczędzanie danych. */
+    private fun queueDownload(msgId: String, meta: MediaMeta) {
+        db.addDownload(msgId, meta)
+        if (autoDownloadAllowed()) kickDownloads()
+        else db.updateStatus(msgId, St.DOWNLOAD_HELD, false)   // czeka na Wi-Fi albo dotknięcie
+    }
+
+    /** Pobiera wstrzymane media na żądanie użytkownika (dotknięcie dymka). */
+    fun downloadNow(msgId: String) {
+        scope.launch {
+            val m = db.message(msgId) ?: return@launch
+            val meta = m.media ?: return@launch
+            forcedDl.add(meta.id)
+            db.addDownload(msgId, meta)
+            db.updateStatus(msgId, St.DOWNLOADING, false)
+            kickDownloads()
+        }
+    }
+
     fun kickUploads() {
         val list = db.uploads()
         for (u in list) {
@@ -3466,10 +3519,15 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     fun kickDownloads() {
         for (d in db.downloads()) {
             if (downloads.containsKey(d.media)) continue
+            // oszczędzanie danych: wstrzymane media czekają, aż będzie Wi-Fi albo użytkownik je dotknie
+            if (!(autoDownloadAllowed() || d.media in forcedDl)) continue
             if (connectedRelays().isEmpty() || downloads.size >= 4) return
             // uszkodzony wpis (np. zły klucz) — usuwamy, zamiast wywracać aplikację przy każdym starcie
             val job = try { DownloadJob(d) } catch (e: Exception) { CrashLog.record("Zły plik do pobrania", e); db.removeDownload(d.media); continue }
-            if (downloads.putIfAbsent(d.media, job) == null) job.start()
+            if (downloads.putIfAbsent(d.media, job) == null) {
+                if (d.msg.isNotEmpty()) db.updateStatus(d.msg, St.DOWNLOADING, false)   // ze wstrzymanego na „pobieranie”
+                job.start()
+            }
         }
     }
 
@@ -3491,6 +3549,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 try { run() } catch (e: Exception) { Log.w(TAG, "download", e) } finally {
                     asked.forEach { it.unsubscribe(subId) }
                     downloads.remove(d.media)
+                    forcedDl.remove(d.media)
                 }
             }
         }
@@ -3499,19 +3558,12 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
         private suspend fun run() {
             if (have.size < d.meta.chunks) {
-                asked = connectedRelays()
-                val filter = JSONObject().put("kinds", JSONArray().put(CHUNK_KIND)).put("#x", JSONArray().put(d.media)).put("limit", d.meta.chunks + 20)
-                asked.forEach { it.subscribe(subId, listOf(filter)) }
+                val all = connectedRelays()
+                // najpierw pytamy kilka przekaźników; resztę dokładamy, tylko gdy to nie wystarcza
+                // (ten sam plik leżący na kilku przekaźnikach nie schodzi wtedy po kilka razy)
                 val deadline = System.currentTimeMillis() + 120_000
-                var allEoseAt = 0L
-                while (have.size < d.meta.chunks && System.currentTimeMillis() < deadline) {
-                    withTimeoutOrNull(1000) { signal.receive() }
-                    db.setProgress(d.msg, have.size * 100 / d.meta.chunks)
-                    if (eose.size >= asked.size || asked.none { it.isConnected && it.hasSub(subId) && it.url !in eose }) {
-                        if (allEoseAt == 0L) allEoseAt = System.currentTimeMillis()
-                        if (System.currentTimeMillis() - allEoseAt > 4000) break
-                    }
-                }
+                gather(all.take(3), deadline)
+                if (have.size < d.meta.chunks) gather(all.drop(3), deadline)
             }
             if (have.size >= d.meta.chunks) finish()
             else {
@@ -3519,6 +3571,24 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 val ageDays = (System.currentTimeMillis() - d.created) / 86400_000
                 if (d.tries > 30 && ageDays > 3) {
                     db.removeDownload(d.media); db.updateStatus(d.msg, St.DOWNLOAD_FAILED, false); dir.deleteRecursively()
+                }
+            }
+        }
+
+        /** Subskrybuje kolejną porcję przekaźników i czeka na paczki (wspólny limit czasu z [run]). */
+        private suspend fun gather(add: List<Relay>, deadline: Long) {
+            val fresh = add.filter { it !in asked }
+            if (fresh.isEmpty() || System.currentTimeMillis() >= deadline) return
+            asked = asked + fresh
+            val filter = JSONObject().put("kinds", JSONArray().put(CHUNK_KIND)).put("#x", JSONArray().put(d.media)).put("limit", d.meta.chunks + 20)
+            fresh.forEach { it.subscribe(subId, listOf(filter)) }
+            var allEoseAt = 0L
+            while (have.size < d.meta.chunks && System.currentTimeMillis() < deadline) {
+                withTimeoutOrNull(1000) { signal.receive() }
+                db.setProgress(d.msg, have.size * 100 / d.meta.chunks)
+                if (eose.size >= asked.size || asked.none { it.isConnected && it.hasSub(subId) && it.url !in eose }) {
+                    if (allEoseAt == 0L) allEoseAt = System.currentTimeMillis()
+                    if (System.currentTimeMillis() - allEoseAt > 4000) break
                 }
             }
         }

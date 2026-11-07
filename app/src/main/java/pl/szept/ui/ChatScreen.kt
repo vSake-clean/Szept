@@ -940,6 +940,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                 onOpen = { m ->
                                     when {
                                         m.mine && m.status == St.FAILED -> core.retry(m.id)
+                                        !m.mine && m.status == St.DOWNLOAD_HELD -> core.downloadNow(m.id)
                                         !m.mine && m.status == St.DOWNLOAD_FAILED -> core.retry(m.id)
                                         m.path != null -> nav.go(Screen.Viewer(m.id))
                                     }
@@ -963,6 +964,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                 onClick = {
                                     when {
                                         m.mine && m.status == St.FAILED -> core.retry(m.id)
+                                        !m.mine && m.status == St.DOWNLOAD_HELD -> core.downloadNow(m.id)
                                         !m.mine && m.status == St.DOWNLOAD_FAILED -> core.retry(m.id)
                                         !m.mine && m.hiddenUntilOpened -> {
                                             // wiadomość czasowa: treść pojawia się dopiero teraz i od teraz liczy się czas

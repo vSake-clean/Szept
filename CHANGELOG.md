@@ -2,6 +2,12 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3.4
+- Mniej zużytego internetu: w Ustawieniach → Połączenie i bateria wybierzesz, kiedy pobierać zdjęcia, filmy i pliki — zawsze, tylko przez Wi-Fi albo dopiero po dotknięciu.
+- Oszczędniejsza wysyłka mediów (na mniej przekaźników) i pobieranie, które nie ściąga tego samego pliku po kilka razy z różnych serwerów.
+- Status „aktywny” wysyłany rzadziej i tylko do osób, z którymi ostatnio była rozmowa — mniej ruchu w tle.
+- Liquid Glass bliżej oryginału: łagodne „ciągłe” rogi szkła (squircle), naturalniejszy błysk światła w narożniku i delikatniejszy, większy cień.
+
 ## 3.3.3
 - Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery.
 - Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu.

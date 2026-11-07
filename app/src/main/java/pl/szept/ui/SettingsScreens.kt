@@ -75,6 +75,12 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.3.4" to listOf(
+        "Mniej zużytego internetu: w Ustawieniach → Połączenie i bateria możesz wybrać, kiedy pobierać zdjęcia, filmy i pliki — zawsze, tylko przez Wi-Fi albo dopiero po dotknięciu.",
+        "Oszczędniejsza wysyłka mediów (na mniej przekaźników) i pobieranie, które nie ściąga tego samego pliku po kilka razy z różnych serwerów.",
+        "Status „aktywny” wysyłany rzadziej i tylko do osób, z którymi ostatnio rozmawiałeś — mniej ruchu w tle.",
+        "Liquid Glass bliżej oryginału: łagodne „ciągłe” rogi szkła, naturalniejszy błysk światła w narożniku i delikatniejszy, większy cień.",
+    ),
     "3.3.3" to listOf(
         "Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery.",
         "Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu.",
@@ -300,6 +306,7 @@ fun ConnectionScreen(nav: Nav) {
     val core = App.core
     val states by core.relayStates.collectAsState()
     var bgMode by remember { mutableStateOf(core.bgMode) }
+    var mediaDl by remember { mutableStateOf(core.mediaDlMode) }
     var relays by remember { mutableStateOf(core.configuredRelays()) }
     var newRelay by remember { mutableStateOf("") }
     var battery by remember { mutableStateOf(true) }
@@ -351,6 +358,28 @@ fun ConnectionScreen(nav: Nav) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(bgMode == mode, { chooseMode(mode) })
+                        Column {
+                            Text(title, style = MaterialTheme.typography.bodyLarge)
+                            Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Heading("Dane i internet")
+                Text(
+                    "Zdjęcia, filmy i pliki w rozmowach. Mniej pobierania = mniej zużytego internetu.",
+                    Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                listOf(
+                    Triple(0, "Pobieraj zawsze", "Jak dotąd — media schodzą od razu."),
+                    Triple(1, "Tylko przez Wi-Fi", "Na danych komórkowych dotknij zdjęcia, aby je pobrać."),
+                    Triple(2, "Zawsze po dotknięciu", "Nic nie pobiera się samo — otwierasz, co chcesz."),
+                ).forEach { (mode, title, sub) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { mediaDl = mode; core.setMediaDlMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(mediaDl == mode, { mediaDl = mode; core.setMediaDlMode(mode) })
                         Column {
                             Text(title, style = MaterialTheme.typography.bodyLarge)
                             Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

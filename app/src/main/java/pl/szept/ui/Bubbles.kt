@@ -518,6 +518,7 @@ private fun TransferInfo(m: Message) {
     val text = when {
         m.mine && m.status == St.UPLOADING -> "Wysyłanie ${m.progress}%"
         !m.mine && m.media != null && m.path == null && m.status == St.DOWNLOADING -> "Pobieranie ${m.progress}%"
+        !m.mine && m.status == St.DOWNLOAD_HELD -> "Dotknij, aby pobrać"
         !m.mine && m.status == St.DOWNLOAD_FAILED -> "Nie udało się pobrać — dotknij, aby ponowić"
         m.mine && m.status == St.FAILED -> "Nie wysłano — dotknij, aby ponowić"
         else -> null

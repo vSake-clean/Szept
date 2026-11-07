@@ -92,16 +92,42 @@ class GlassLook(
     val dark: Boolean = false,
     /** Siła cienia pod szkłem (0 = bez). */
     val shadow: Float = 1f,
-    /** Nasycenie barw pod szkłem. */
-    val saturation: Float = 1.45f,
+    /** Nasycenie barw pod szkłem (blisko 1.0 — jak w iOS, żeby szkło nie przejaskrawiało tła). */
+    val saturation: Float = 1.12f,
 )
 
 private class GlassPos { var pos = Offset.Zero }
 
-/** Kształt szkła: zaokrąglony prostokąt (promień) — koło i kapsułka to szczególne przypadki. */
-private fun glassPath(size: Size, inset: Float, radius: Float): Path = Path().apply {
-    val r = max(0f, radius - inset)
-    addRoundRect(RoundRect(inset, inset, size.width - inset, size.height - inset, CornerRadius(r, r)))
+/**
+ * Kształt szkła z „ciągłymi” rogami (squircle, jak w iOS) — róg to wycinek superelipsy,
+ * dzięki czemu zaokrąglenie łagodnie przechodzi w prostą krawędź (bez widocznego „zlania” łuku).
+ * [n] steruje pełnością rogu (2 = zwykłe koło, większe = bardziej kwadratowe z miękkim narożnikiem).
+ */
+private fun squirclePath(size: Size, inset: Float, radius: Float, n: Float = 4.5f): Path {
+    val l = inset; val t = inset; val r = size.width - inset; val b = size.height - inset
+    val path = Path()
+    if (r - l <= 0f || b - t <= 0f) return path
+    val rad = max(0f, min(radius - inset, min(r - l, b - t) / 2f))
+    if (rad <= 0.5f) { path.addRoundRect(RoundRect(l, t, r, b, CornerRadius(0f, 0f))); return path }
+    val exp = 2f / n
+    val steps = 14
+    fun p(v: Double) = Math.pow(v.coerceIn(0.0, 1.0), exp.toDouble()).toFloat()
+    // obrys zgodnie z ruchem wskazówek zegara, zaczynając na górnej krawędzi
+    path.moveTo(l + rad, t)
+    path.lineTo(r - rad, t)
+    run { val cx = r - rad; val cy = t + rad                          // róg prawy-górny
+        for (i in 0..steps) { val u = Math.PI / 2 * i / steps; path.lineTo(cx + rad * p(Math.sin(u)), cy - rad * p(Math.cos(u))) } }
+    path.lineTo(r, b - rad)
+    run { val cx = r - rad; val cy = b - rad                          // róg prawy-dolny
+        for (i in 0..steps) { val u = Math.PI / 2 * i / steps; path.lineTo(cx + rad * p(Math.cos(u)), cy + rad * p(Math.sin(u))) } }
+    path.lineTo(l + rad, b)
+    run { val cx = l + rad; val cy = b - rad                          // róg lewy-dolny
+        for (i in 0..steps) { val u = Math.PI / 2 * i / steps; path.lineTo(cx - rad * p(Math.sin(u)), cy + rad * p(Math.cos(u))) } }
+    path.lineTo(l, t + rad)
+    run { val cx = l + rad; val cy = t + rad                          // róg lewy-górny
+        for (i in 0..steps) { val u = Math.PI / 2 * i / steps; path.lineTo(cx - rad * p(Math.cos(u)), cy - rad * p(Math.sin(u))) } }
+    path.close()
+    return path
 }
 
 /**
@@ -121,13 +147,13 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
         .drawWithCache {
             val w = size.width; val h = size.height
             val radius = cornerRadius?.toPx()?.coerceAtMost(min(w, h) / 2f) ?: (min(w, h) / 2f)
-            val outline = glassPath(size, 0f, radius)
+            val outline = squirclePath(size, 0f, radius)
             val blurPx = look.blur.toPx()
             val margin = ceil(blurPx * 2.5f + look.lens.toPx() + 2f)
             val band = min(look.band.toPx(), min(w, h) / 2f)
             val lens = look.lens.toPx()
             val rings = 9
-            val ringPaths = List(rings) { i -> glassPath(size, band * i / rings, radius) }
+            val ringPaths = List(rings) { i -> squirclePath(size, band * i / rings, radius) }
             val center = Offset(w / 2f, h / 2f)
             val canBlur = Build.VERSION.SDK_INT >= 31
             val sat = ColorMatrix().apply { setToSaturation(look.saturation) }
@@ -139,15 +165,30 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
                 Color.White.copy(alpha = if (look.dark) 0.62f else 0.95f), Color.White.copy(alpha = 0.12f),
                 Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = if (look.dark) 0.4f else 0.7f),
             )
-            val rim = Brush.linearGradient(rimColors, Offset.Zero, Offset(w, h))
             val inner = Brush.verticalGradient(
                 0f to Color.White.copy(alpha = if (look.dark) 0.07f else 0.22f), 0.45f to Color.Transparent, startY = 0f, endY = h,
+            )
+            // błysk skupiony w lewym-górnym rogu + słabszy w prawym-dolnym (odbicie światła w szkle, nie równa obwódka)
+            val specTop = Brush.linearGradient(
+                0f to Color.White.copy(alpha = if (look.dark) 0.5f else 0.92f),
+                0.16f to Color.White.copy(alpha = if (look.dark) 0.12f else 0.3f),
+                0.46f to Color.Transparent, start = Offset.Zero, end = Offset(w, h),
+            )
+            val specBottom = Brush.linearGradient(
+                0.55f to Color.Transparent,
+                0.86f to Color.White.copy(alpha = if (look.dark) 0.05f else 0.16f),
+                1f to Color.White.copy(alpha = if (look.dark) 0.16f else 0.42f), start = Offset.Zero, end = Offset(w, h),
+            )
+            // miękki połysk tuż pod lewym-górnym narożnikiem
+            val glow = Brush.radialGradient(
+                listOf(Color.White.copy(alpha = if (look.dark) 0.1f else 0.2f), Color.Transparent),
+                center = Offset(w * 0.3f, h * 0.22f), radius = max(w, h) * 0.6f,
             )
             onDrawBehind {
                 // cień pod taflą (miękki, tylko na zewnątrz)
                 if (look.shadow > 0f) softShadow(
-                    outline, Color.Black.copy(alpha = (if (look.dark) 0.45f else 0.13f) * look.shadow),
-                    14f * density, 0f, 4f * density, Color.Black, true,
+                    outline, Color.Black.copy(alpha = (if (look.dark) 0.5f else 0.11f) * look.shadow),
+                    20f * density, 0f, 6f * density, Color.Black, true,
                 )
                 val b = source
                 val src = b?.layer
@@ -178,6 +219,7 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
                 }
                 drawPath(outline, look.tint)
                 drawPath(outline, inner)
+                drawPath(outline, glow)
                 if (tilt != null) {
                     // światło „ślizga się” po krawędzi zgodnie z przechyleniem
                     val tx = tilt.x; val ty = tilt.y
@@ -187,7 +229,10 @@ fun Modifier.liquidGlass(look: GlassLook, cornerRadius: Dp? = null, backdrop: Ba
                         listOf(Color.White.copy(alpha = if (look.dark) 0.1f else 0.22f), Color.Transparent),
                         Offset(w * (0.5f - 0.45f * tx), h * (0.15f - 0.4f * ty)), max(w, h) * 0.7f,
                     ))
-                } else drawPath(outline, rim, style = Stroke(1.1f * density))
+                } else {
+                    drawPath(outline, specTop, style = Stroke(1.4f * density))
+                    drawPath(outline, specBottom, style = Stroke(1f * density))
+                }
             }
         }
 }
@@ -200,7 +245,7 @@ fun GlassBox(look: GlassLook, modifier: Modifier = Modifier, cornerRadius: Dp? =
 
 /** Szkło dla bieżącego stylu (jasne lub ciemne). */
 fun glassLookFor(dark: Boolean, tinted: Color? = null): GlassLook = if (tinted != null) GlassLook(
-    tint = tinted.copy(alpha = 0.78f), fallback = tinted.copy(alpha = 0.92f), dark = dark, saturation = 1.2f,
+    tint = tinted.copy(alpha = 0.78f), fallback = tinted.copy(alpha = 0.92f), dark = dark, saturation = 1.08f,
 ) else if (dark) GlassLook(
     tint = Color(0xFF1C1C1E).copy(alpha = 0.32f), fallback = Color(0xFF2C2C2E).copy(alpha = 0.86f), dark = true,
 ) else GlassLook()
