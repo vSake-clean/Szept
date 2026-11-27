@@ -355,8 +355,8 @@ class StylesTest {
     @Test
     fun appearanceWizard() {
         pl.szept.ui.style.WizardGate.enabledInTests = true
-        data class Look(val style: String, val theme: Int, val anim: Boolean, val animOff: Set<String>)
-        val before = Look(UiPrefs.style, UiPrefs.theme, UiPrefs.anim, UiPrefs.animOff)
+        data class Look(val style: String)
+        val before = Look(UiPrefs.style)
         try {
             UiPrefs.wizard = 0
             waitText("Zaczynamy")
@@ -416,9 +416,8 @@ class StylesTest {
             assertEquals(pl.szept.ui.style.WIZARD_VERSION, UiPrefs.wizard)
         } finally {
             pl.szept.ui.style.WizardGate.enabledInTests = false
-            // przywróć wygląd sprzed testu, żeby kolejne testy widziały ten sam ekran
-            UiPrefs.fontScale = 1f; UiPrefs.motion = 0
-            UiPrefs.style = before.style; UiPrefs.theme = before.theme; UiPrefs.anim = before.anim; UiPrefs.animOff = before.animOff
+            // klasyczny styl dla kolejnych testów (inny styl zmienia układ ekranu głównego)
+            UiPrefs.fontScale = 1f; UiPrefs.motion = 0; UiPrefs.style = "classic"
         }
     }
 

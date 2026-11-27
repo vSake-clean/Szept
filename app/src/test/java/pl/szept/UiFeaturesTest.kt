@@ -193,6 +193,7 @@ class UiFeaturesTest {
         val g = kotlinx.coroutines.runBlocking { core.createGroup("Ekipa", listOf(peer)) }
         go(Screen.Forward("k1"))
         waitText("Przekaż do")
+        waitText("Ekipa")   // lista rozmów wczytuje się chwilę po otwarciu
         rule.onNodeWithText("Ekipa").performClick()
         rule.onNodeWithText("Przekaż (1)", useUnmergedTree = true).performClick()
         until("przekazano do grupy") { core.db.messages(g, 50).any { it.ex.fwd && it.body.startsWith("Cześć!") } }
