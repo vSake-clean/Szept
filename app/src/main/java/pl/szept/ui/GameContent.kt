@@ -55,7 +55,7 @@ fun AutoCleanRow(chatId: String) {
         supportingContent = { Text(if (days <= 0) "Wyłączone" else "Wiadomości starsze niż $days dni znikają z tego telefonu") },
         modifier = Modifier.clickable { open = true },
     )
-    if (open) AlertDialog(
+    if (open) StyleAlertDialog(
         onDismissRequest = { open = false },
         title = { Text("Usuwaj stare wiadomości") },
         text = {

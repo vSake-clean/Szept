@@ -78,7 +78,7 @@ class PyGameActivity : ComponentActivity() {
         val game = PyGames.game(gameId) ?: run { toast(this, "Tej gry nie ma już w telefonie"); finish(); return }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideBars()
-        setContent { SzeptTheme { Screen(game) } }
+        setContent { SzeptTheme(decorate = false) { Screen(game) } }
     }
 
     private fun hideBars() {
@@ -122,7 +122,7 @@ class PyGameActivity : ComponentActivity() {
                 }
             }
         }
-        if (menu) AlertDialog(
+        if (menu) StyleAlertDialog(
             onDismissRequest = { menu = false },
             icon = { GameBadge(info) },
             title = { Text(game.name) },
@@ -155,7 +155,7 @@ class PyGameActivity : ComponentActivity() {
                 }
             }
         }
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(baseColor()).systemBarsPadding(), contentAlignment = Alignment.Center) {
             Card(Modifier.padding(24.dp).widthIn(max = 460.dp)) {
                 Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.CloudDownload, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)

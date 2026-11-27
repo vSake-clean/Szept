@@ -73,10 +73,13 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pl.szept.App
+import pl.szept.ui.style.storyRing
 import pl.szept.core.Core
 import pl.szept.core.MediaUtil
 import pl.szept.data.Kind
 import pl.szept.data.Story
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 
 /** Kolory tła relacji tekstowych. */
 val STORY_BG = listOf(
@@ -102,12 +105,14 @@ fun StoriesRow(nav: Nav) {
         item(key = "me") {
             StoryBubble(
                 "Twoja relacja", core.myName, core.myPub, myAvatar, ring = if (mine.isEmpty()) null else true, plus = true,
+                state = if (mine.isEmpty()) "brak relacji — dotknij, aby dodać" else "relacja widoczna — dotknij, aby obejrzeć",
                 onClick = { if (mine.isNotEmpty()) nav.go(Screen.Stories(core.myPub)) else newStory = true },
             )
         }
         items(others, key = { it.key }) { (pk, l) ->
             val c = core.db.contact(pk)
-            StoryBubble(c?.display ?: "?", c?.display ?: "?", pk, c?.avatar?.ifBlank { null }, ring = l.any { !it.seen }) {
+            val fresh = l.any { !it.seen }
+            StoryBubble(c?.display ?: "?", c?.display ?: "?", pk, c?.avatar?.ifBlank { null }, ring = fresh, state = if (fresh) "nowa relacja" else "relacja obejrzana") {
                 nav.go(Screen.Stories(pk))
             }
         }
@@ -116,14 +121,19 @@ fun StoriesRow(nav: Nav) {
 }
 
 @Composable
-private fun StoryBubble(label: String, name: String, key: String, avatar: String?, ring: Boolean?, plus: Boolean = false, onClick: () -> Unit) {
-    Column(Modifier.width(64.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StoryBubble(label: String, name: String, key: String, avatar: String?, ring: Boolean?, plus: Boolean = false, state: String? = null, onClick: () -> Unit) {
+    Column(
+        Modifier.width(64.dp).clickable(onClick = onClick)
+            .then(if (state != null) Modifier.semantics { stateDescription = state } else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Box {
             Box(
                 Modifier.size(58.dp).clip(CircleShape)
-                    .border(
-                        BorderStroke(2.5.dp, when (ring) { true -> MaterialTheme.colorScheme.primary; false -> MaterialTheme.colorScheme.outline; null -> Color.Transparent }),
-                        CircleShape,
+                    .then(
+                        if (ring == true) Modifier.storyRing(
+                            listOf(MaterialTheme.colorScheme.primary, Color(0xFFFF4D8D), Color(0xFFFFB13B), Color(0xFF4CC9F0)), 2.5.dp, animate = true,
+                        ) else Modifier.border(BorderStroke(2.5.dp, if (ring == false) MaterialTheme.colorScheme.outline else Color.Transparent), CircleShape),
                     ).padding(4.dp),
                 contentAlignment = Alignment.Center,
             ) { Avatar(name, key, 50.dp, image = avatar) }
@@ -295,7 +305,7 @@ fun StoryViewer(nav: Nav, pk: String) {
                     Spacer(Modifier.width(6.dp))
                     Text(plural(views?.size ?: 0, "wyświetlenie", "wyświetlenia", "wyświetleń"), color = Color.White)
                 }
-                if (viewers) AlertDialog(
+                if (viewers) StyleAlertDialog(
                     onDismissRequest = { viewers = false },
                     title = { Text("Kto obejrzał") },
                     text = {
@@ -315,7 +325,7 @@ fun StoryViewer(nav: Nav, pk: String) {
                     confirmButton = { TextButton(onClick = { viewers = false }) { Text("Zamknij") } },
                 )
             }
-            if (confirmDelete) AlertDialog(
+            if (confirmDelete) StyleAlertDialog(
                 onDismissRequest = { confirmDelete = false },
                 title = { Text("Usunąć relację?") },
                 text = { Text("Zniknie też u znajomych.") },

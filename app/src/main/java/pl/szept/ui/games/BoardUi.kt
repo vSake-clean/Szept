@@ -1,5 +1,7 @@
 package pl.szept.ui.games
 
+import pl.szept.ui.StyleAlertDialog
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -277,7 +279,7 @@ fun ChessBoard(s: Chess.S, mySide: Int, enabled: Boolean, onMove: (String) -> Un
         }
     }
     promo?.let { (from, to) ->
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { promo = null },
             title = { Text("Promocja pionka") },
             text = {

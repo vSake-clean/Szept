@@ -132,7 +132,7 @@ fun MessageActionsDialog(
     var confirmAll by remember { mutableStateOf(false) }
     var moreEmoji by remember { mutableStateOf(false) }
     if (confirmAll) {
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Usunąć u wszystkich?") },
             text = { Text("Wiadomość zniknie u wszystkich uczestników rozmowy (także tych, którzy są teraz offline — gdy się połączą).") },
@@ -143,7 +143,7 @@ fun MessageActionsDialog(
     }
     val ephemeral = m.xmode != XMode.OFF
     val canReact = interact && m.kind != Kind.SYSTEM && !(m.xmode == XMode.AFTER_OPEN)
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Wiadomość") },
         text = {
@@ -207,7 +207,7 @@ fun MessageActionsDialog(
 @Composable
 fun ReactionsDialog(m: Message, list: List<Reaction>, onDismiss: () -> Unit) {
     val core = App.core
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Reakcje (${list.size})") },
         text = {
@@ -241,7 +241,7 @@ fun ReadByDialog(m: Message, g: Group, onDismiss: () -> Unit) {
     val r = reads ?: emptyMap()
     val read = others.filter { (r[it.pk]?.first ?: 0) >= St.READ }.sortedByDescending { r[it.pk]?.second ?: 0 }
     val notYet = others.filter { it !in read }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Informacje o wiadomości") },
         text = {
@@ -280,7 +280,7 @@ private fun PersonLine(mem: Member, trailing: String) {
 fun VotersDialog(m: Message, votes: List<Vote>, onDismiss: () -> Unit) {
     val core = App.core
     val poll = remember(m.body) { Poll.parse(m.body) }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(poll?.q ?: "Ankieta") },
         text = {
@@ -305,7 +305,7 @@ fun PollDialog(onDismiss: () -> Unit, onSend: (Poll) -> Unit) {
     val opts = remember { mutableStateListOf("", "") }
     var multi by remember { mutableStateOf(false) }
     val ready = q.isNotBlank() && opts.count { it.isNotBlank() } >= 2
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nowa ankieta") },
         text = {
@@ -338,7 +338,7 @@ fun PollDialog(onDismiss: () -> Unit, onSend: (Poll) -> Unit) {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun LocationDialog(onDismiss: () -> Unit, onPick: (liveMs: Long) -> Unit) {
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Lokalizacja") },
         text = {
@@ -380,7 +380,7 @@ fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
         add("Jutro w południe" to at(1, 12))
         add("Jutro wieczorem" to at(1, 18))
     }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Zaplanuj wysłanie") },
         text = {
@@ -428,7 +428,7 @@ private fun DateTimeDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
             dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
         ) { DatePicker(dateState) }
     } else {
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Godzina") },
             text = { TimePicker(timeState) },
@@ -458,7 +458,7 @@ fun scheduledPreview(s: Scheduled): String = when (s.kind) {
 @Composable
 fun ScheduledListDialog(list: List<Scheduled>, onDismiss: () -> Unit) {
     val core = App.core
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Zaplanowane (${list.size})") },
         text = {

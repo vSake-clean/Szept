@@ -83,7 +83,7 @@ fun DevicesScreen(nav: Nav) {
         }
     }
     forget?.let { d ->
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { forget = null },
             title = { Text("Zapomnieć „${d.name}”?") },
             text = { Text("Przestanie dostawać kopie Twoich wiadomości. Jeśli to urządzenie zostało skradzione, zmień też konto — kod dostępu jest na nim zapisany.") },

@@ -2,9 +2,12 @@
 
 package pl.szept.ui.games
 
+import pl.szept.ui.StyleAlertDialog
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -234,11 +237,21 @@ fun PlayHost() {
     var totals by remember(r) { mutableStateOf(false) }
     var help by remember(r) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    BackHandler { Play.req = null }
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    val gameFx = pl.szept.ui.style.LocalAnim.current[pl.szept.ui.style.Anim.GAME_FX]
+    var confirmExit by remember(r) { mutableStateOf(false) }
+    // gra trwa — przypadkowy gest „wstecz” (np. przesunięcie od krawędzi w Wężu) nie zamyka jej od razu
+    val playing = result == null && failed == null
+    BackHandler { if (playing) confirmExit = true else Play.req = null }
+    // ekran nie gaśnie w trakcie gry (dłuższe myślenie w sudoku, szachach…)
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+    Surface(Modifier.fillMaxSize(), color = pl.szept.ui.baseColor()) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { Play.req = null }) { Icon(Icons.Default.Close, "Zamknij grę") }
+                IconButton(onClick = { if (playing) confirmExit = true else Play.req = null }) { Icon(Icons.Default.Close, "Zamknij grę") }
                 GameBadge(info, 30.dp)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
@@ -250,12 +263,20 @@ fun PlayHost() {
                 }
                 IconButton(onClick = { help = true }) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "Jak grać") }
             }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            // przesunięcia palcem przy krawędziach należą do gry, nie do systemowego gestu „wstecz”
+            Box(Modifier.weight(1f).fillMaxWidth().systemGestureExclusion()) {
                 key(r, round) {
                     game(GameEnv(seed, finish = { score ->
                         if (result == null && failed == null) {
                             result = score
-                            scope.launch { prevBest = saveScore(info, score, r.chatId, r.chatMsg) }
+                            scope.launch {
+                                val pb = saveScore(info, score, r.chatId, r.chatMsg)
+                                prevBest = pb
+                                // konfetti przy wygranej i nowym rekordzie
+                                val wdl = info.score.kind == GameCatalog.Score.Kind.WDL
+                                val win = if (wdl) score >= 0.99 else info.score.has && (pb == null || info.score.better(score, pb))
+                                if (win && gameFx) pl.szept.ui.style.ScreenFx.celebrate()
+                            }
                         }
                     }, fail = { why -> if (result == null) failed = why }))
                 }
@@ -272,7 +293,14 @@ fun PlayHost() {
         }
     }
     if (totals) TotalsDialog(info, r.chatMsg, r.chatId) { totals = false }
-    if (help) AlertDialog(
+    if (confirmExit) StyleAlertDialog(
+        onDismissRequest = { confirmExit = false },
+        title = { Text("Zakończyć grę?") },
+        text = { Text(if (r.chatMsg != null) "Ta próba nie zostanie zapisana w wyzwaniu." else "Bieżąca gra nie zostanie zapisana.") },
+        confirmButton = { TextButton(onClick = { confirmExit = false; Play.req = null }) { Text("Zakończ") } },
+        dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Graj dalej") } },
+    )
+    if (help) StyleAlertDialog(
         onDismissRequest = { help = false },
         icon = { GameBadge(info) },
         title = { Text(info.name) },
@@ -390,11 +418,14 @@ private fun TableRow(cells: List<String>, weights: List<Float>, header: Boolean 
         odd -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         else -> Color.Transparent
     }
+    val fg = if (header || highlight) MaterialTheme.colorScheme.contentColorFor(bg) else androidx.compose.material3.LocalContentColor.current
     Row(Modifier.fillMaxWidth().background(bg).padding(horizontal = 12.dp, vertical = 8.dp)) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides fg) {
         cells.forEachIndexed { i, c ->
             Text(c, Modifier.weight(weights.getOrElse(i) { 1f }), fontWeight = if (header || (highlight && i == cells.lastIndex)) FontWeight.Bold else FontWeight.Normal,
                 style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 textAlign = if (i == 0) TextAlign.Start else TextAlign.End)
+        }
         }
     }
 }
@@ -451,7 +482,7 @@ fun MyScoresTable(info: GameCatalog.Info) {
             TextButton(onClick = { confirmClear = true }, Modifier.padding(8.dp)) { Icon(Icons.Default.DeleteOutline, null); Spacer(Modifier.width(4.dp)); Text("Wyczyść moje wyniki") }
         }
     }
-    if (confirmClear) AlertDialog(
+    if (confirmClear) StyleAlertDialog(
         onDismissRequest = { confirmClear = false },
         title = { Text("Wyczyścić wyniki?") },
         text = { Text("Wszystkie Twoje wyniki w grze „${info.name}” znikną z tego telefonu.") },

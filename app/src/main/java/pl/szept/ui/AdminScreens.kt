@@ -292,7 +292,7 @@ private fun PolicyTab(apk: File) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Najstarsza dozwolona wersja: ")
         OutlinedButton(onClick = { menu = true }) { Text(Admin.versionName(min)) }
-        DropdownMenu(menu, { menu = false }) {
+        StyleMenu(menu, { menu = false }) {
             versions.forEach { (n, c) -> DropdownMenuItem({ Text(n) }, { min = c; menu = false }) }
         }
     }
@@ -402,7 +402,7 @@ private fun ModerationTab() {
             }
         }
     }
-    if (confirmDel) AlertDialog(
+    if (confirmDel) StyleAlertDialog(
         onDismissRequest = { confirmDel = false },
         title = { Text("Usunąć konto?") },
         text = { Text("Konto ${target?.let { core.db.nameOf(it) }} zostanie skasowane z jej telefonu (wiadomości, kontakty, klucze), a inni przestaną dostawać od niej wiadomości. Tego nie da się cofnąć.") },
@@ -642,7 +642,7 @@ private fun PyGamesTab() {
         if (editing != null) TextButton(onClick = { reset() }) { Text("Anuluj") }
     }
     confirmDel?.let { g ->
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { confirmDel = null },
             title = { Text("Usunąć grę?") },
             text = { Text("„${g.name}” zniknie z telefonów wszystkich osób.") },

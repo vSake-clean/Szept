@@ -2,6 +2,8 @@
 
 package pl.szept.ui.games
 
+import pl.szept.ui.StyleAlertDialog
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -116,7 +118,7 @@ fun GamePickerDialog(chatId: String, isGroup: Boolean, onDismiss: () -> Unit) {
     val games = remember(isGroup, pyChanges) { GameCatalog.all().filter { it.inChat && (isGroup || !it.groupOnly) || it.solo } }
     var picked by remember { mutableStateOf<GameCatalog.Info?>(null) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Surface(Modifier.fillMaxSize(), color = pl.szept.ui.baseColor()) {
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                 TopAppBar(
                     title = { Text("Zagraj") },
@@ -142,7 +144,7 @@ fun GameDetailDialog(info: GameCatalog.Info, chatId: String?, isGroup: Boolean, 
     var truth by remember { mutableIntStateOf(0) }
     var totals by remember { mutableStateOf(false) }
     val canChat = chatId != null && info.inChat && (isGroup || !info.groupOnly)
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         icon = { GameBadge(info, 52.dp) },
         title = { Text(info.name) },

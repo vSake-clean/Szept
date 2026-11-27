@@ -26,6 +26,7 @@ object St {
     const val RECEIVED = 10
     const val DOWNLOADING = 11
     const val DOWNLOAD_FAILED = 12
+    const val DOWNLOAD_HELD = 13   // czeka na Wi-Fi albo na dotknięcie (oszczędzanie danych)
 }
 
 /** Tryb wiadomości znikających. */

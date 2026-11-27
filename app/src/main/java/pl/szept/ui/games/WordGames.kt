@@ -187,7 +187,7 @@ fun AnagramGame(env: GameEnv) {
             letters.forEachIndexed { i, ch ->
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).background(if (i in used) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer)
                     .clickable(enabled = i !in used && started && !over) { used.add(i) }, contentAlignment = Alignment.Center) {
-                    if (i !in used) Text(ch.toString(), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    if (i !in used) Text(ch.toString(), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
         }

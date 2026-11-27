@@ -100,32 +100,90 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 import pl.szept.App
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.ripple
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import pl.szept.ui.style.Anim
+import pl.szept.ui.style.LocalAnim
+import pl.szept.ui.style.LocalStyle
+import pl.szept.ui.style.BubbleTheme
+import pl.szept.ui.style.cascade
+import pl.szept.ui.style.cascadeIn
+import pl.szept.ui.style.onBar
+import pl.szept.ui.style.pop
+import pl.szept.ui.style.pressScale
+import pl.szept.ui.style.rememberCascade
+import pl.szept.ui.style.shimmer
+import pl.szept.ui.style.styleBarColors
+import pl.szept.ui.style.styleCard
+import pl.szept.ui.style.styleTopBar
+import pl.szept.ui.style.titleFx
 import pl.szept.core.Links
 import pl.szept.data.Chat
 import pl.szept.data.Contact
 import pl.szept.nostr.Relay
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material.icons.filled.ChevronRight
+import pl.szept.ui.style.Chrome
+import pl.szept.ui.style.FabStyle
+import pl.szept.ui.style.ListStyle
+import pl.szept.ui.style.rememberBackdrop
+import pl.szept.ui.style.backdropSource
+import pl.szept.ui.style.LocalBackdrop
+import pl.szept.ui.style.readable
+import pl.szept.ui.style.groupedCard
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import pl.szept.ui.style.styled
 
 // ======================= wspólne elementy =======================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BackBar(title: String, nav: Nav, actions: @Composable () -> Unit = {}) {
-    TopAppBar(
-        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wstecz") } },
-        actions = { actions() },
-    )
+fun BackBar(title: String, nav: Nav, actions: (@Composable () -> Unit)? = null) {
+    pl.szept.ui.style.StyleBackBar(title, { nav.back() }, actions != null) { actions?.invoke() }
 }
 
 @Composable
 fun Banner(text: String, action: String, onClick: () -> Unit) {
+    val st = LocalStyle.current
+    if (st.spec.chrome == Chrome.GLASS) {
+        // szklana karta (przez szkło prześwituje tło stylu)
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                .styled(pl.szept.ui.style.Role.CARD, RoundedCornerShape(24.dp)).padding(start = 16.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = st.pal.onBase)
+            TextButton(onClick = onClick) { Text(action, fontWeight = FontWeight.Bold, color = st.pal.primary) }
+        }
+        return
+    }
     Card(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = onClick) { Text(action) }
+        BubbleTheme(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = onClick) { Text(action, fontWeight = FontWeight.Bold) }
+            }
         }
     }
 }
@@ -133,7 +191,7 @@ fun Banner(text: String, action: String, onClick: () -> Unit) {
 @Composable
 fun ActionRow(icon: ImageVector, text: String, sub: String? = null, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().cascadeIn(text).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
@@ -263,46 +321,63 @@ fun HomeScreen(nav: Nav) {
         notif = MainActivity.hasNotificationPermission(ctx)
         onPauseOrDispose { }
     }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Szept", fontWeight = FontWeight.Bold)
-                        val (txt, col) = when {
-                            connected == 0 -> "Łączenie…" to MaterialTheme.colorScheme.error
-                            connected < 3 -> "● Połączono z $connected/${states.size} przekaźnikami" to Fire
-                            else -> "● Online · $connected/${states.size} przekaźników" to OkGreen
-                        }
-                        Text(txt, style = MaterialTheme.typography.labelSmall, color = col)
+    val anim = LocalAnim.current
+    val cascade = rememberCascade()
+    val st = LocalStyle.current
+    val glassUi = st.spec.chrome == Chrome.GLASS
+    val listTitle = hasListTitle()
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val collapsed by remember(listTitle) {
+        derivedStateOf { !listTitle || listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > with(density) { 44.dp.toPx() } }
+    }
+    val statusLine: @Composable (onBarColors: Boolean) -> Unit = { onBarColors ->
+        val (txt, col) = when {
+            connected == 0 -> "Łączenie…" to MaterialTheme.colorScheme.error
+            connected < 3 -> "● Połączono z $connected/${states.size} przekaźnikami" to Fire
+            else -> "● Online · $connected/${states.size} przekaźników" to OkGreen
+        }
+        Text(
+            txt, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+            color = if (onBarColors) onBar(col) else readable(col, st.pal.base, 3.5f),
+        )
+    }
+    val compact = compactHomeActions()
+    val actions = buildList {
+        // w szkle szukanie jest w pływającym pasku na dole
+        if (!glassUi) add(HomeAction(Icons.Default.Search, "Szukaj") { nav.go(Screen.Search) })
+        if (!compact) {
+            add(HomeAction(Icons.Default.QrCode, "Mój kod") { nav.go(Screen.MyCode) })
+            add(HomeAction(Icons.Default.PersonAdd, "Dodaj kontakt") { nav.go(Screen.AddContact()) })
+        }
+    }
+    val onCompose: (() -> Unit)? = if (st.spec.fab == FabStyle.NONE && !glassUi) ({ nav.go(Screen.NewChat) }) else null
+    val topBar: @Composable () -> Unit = {
+        HomeTopBar(
+            status = { statusLine(true) }, collapsed = collapsed, actions = actions, onMenu = { menu = true }, onCompose = onCompose,
+            menu = {
+                StyleMenu(menu, { menu = false }) {
+                    if (compact) {
+                        DropdownMenuItem({ Text("Mój kod") }, { menu = false; nav.go(Screen.MyCode) }, leadingIcon = { Icon(Icons.Default.QrCode, null) })
+                        DropdownMenuItem({ Text("Dodaj kontakt") }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.PersonAdd, null) })
                     }
-                },
-                actions = {
-                    IconButton(onClick = { nav.go(Screen.Search) }) { Icon(Icons.Default.Search, "Szukaj") }
-                    IconButton(onClick = { nav.go(Screen.MyCode) }) { Icon(Icons.Default.QrCode, "Mój kod") }
-                    IconButton(onClick = { nav.go(Screen.AddContact()) }) { Icon(Icons.Default.PersonAdd, "Dodaj kontakt") }
-                    Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Menu") }
-                        DropdownMenu(menu, { menu = false }) {
-                            DropdownMenuItem({ Text("Mój profil") }, { menu = false; nav.go(Screen.MyProfile) }, leadingIcon = { Icon(Icons.Default.AccountCircle, null) })
-                            DropdownMenuItem({ Text("Osoby") }, { menu = false; nav.go(Screen.People) }, leadingIcon = { Icon(Icons.Default.People, null) })
-                            DropdownMenuItem({ Text("Nowa grupa") }, { menu = false; nav.go(Screen.NewGroup) }, leadingIcon = { Icon(Icons.Default.GroupAdd, null) })
-                            DropdownMenuItem({ Text("Wiadomość do wielu") }, { menu = false; nav.go(Screen.Broadcast) }, leadingIcon = { Icon(Icons.Default.Campaign, null) })
-                            DropdownMenuItem({ Text("Archiwum") }, { menu = false; nav.go(Screen.Archive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
-                            DropdownMenuItem({ Text("Gry") }, { menu = false; nav.go(Screen.Games) }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
-                            DropdownMenuItem({ Text("Dołącz do grupy (link)") }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.Link, null) })
-                            DropdownMenuItem({ Text("Wyślij aplikację znajomym") }, { menu = false; shareApp(ctx) }, leadingIcon = { Icon(Icons.Default.Share, null) })
-                            DropdownMenuItem({ Text("Ustawienia") }, { menu = false; nav.go(Screen.Settings) }, leadingIcon = { Icon(Icons.Default.Settings, null) })
-                        }
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { nav.go(Screen.NewChat) }) { Icon(Icons.Default.Edit, "Nowa rozmowa") }
-        },
-    ) { pad ->
-        LazyColumn(Modifier.padding(pad).fillMaxSize()) {
+                    DropdownMenuItem({ Text("Mój profil") }, { menu = false; nav.go(Screen.MyProfile) }, leadingIcon = { Icon(Icons.Default.AccountCircle, null) })
+                    DropdownMenuItem({ Text("Osoby") }, { menu = false; nav.go(Screen.People) }, leadingIcon = { Icon(Icons.Default.People, null) })
+                    DropdownMenuItem({ Text("Nowa grupa") }, { menu = false; nav.go(Screen.NewGroup) }, leadingIcon = { Icon(Icons.Default.GroupAdd, null) })
+                    DropdownMenuItem({ Text("Wiadomość do wielu") }, { menu = false; nav.go(Screen.Broadcast) }, leadingIcon = { Icon(Icons.Default.Campaign, null) })
+                    DropdownMenuItem({ Text("Archiwum") }, { menu = false; nav.go(Screen.Archive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
+                    DropdownMenuItem({ Text("Gry") }, { menu = false; nav.go(Screen.Games) }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
+                    DropdownMenuItem({ Text("Styl i animacje") }, { menu = false; nav.go(Screen.Styles) }, leadingIcon = { Icon(Icons.Default.Palette, null) })
+                    DropdownMenuItem({ Text("Dołącz do grupy (link)") }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.Link, null) })
+                    DropdownMenuItem({ Text("Wyślij aplikację znajomym") }, { menu = false; shareApp(ctx) }, leadingIcon = { Icon(Icons.Default.Share, null) })
+                    DropdownMenuItem({ Text("Ustawienia") }, { menu = false; nav.go(Screen.Settings) }, leadingIcon = { Icon(Icons.Default.Settings, null) })
+                }
+            },
+        )
+    }
+    val list: @Composable (Modifier, PaddingValues) -> Unit = { mod, inner ->
+        LazyColumn(mod, state = listState, contentPadding = inner) {
+            if (listTitle) item(key = "tytul") { ListTitleBlock({ statusLine(false) }, { nav.go(Screen.Search) }) }
             if (!battery) item {
                 Banner("Zezwól na działanie w tle bez ograniczeń baterii — inaczej wiadomości mogą docierać z opóźnieniem.", "Zezwól") {
                     MainActivity.askBattery(ctx)
@@ -324,9 +399,40 @@ fun HomeScreen(nav: Nav) {
                 }
                 if (archived.isNotEmpty()) item { ArchiveEntry(archived) { nav.go(Screen.Archive) } }
                 if (visible.isEmpty() && archived.isEmpty()) item { EmptyHome(nav) }
-                items(visible, key = { it.id }) { c -> ChatRow(c, onLong = { chatMenu = c }) { nav.go(Screen.Chat(c.id)) } }
+                itemsIndexed(visible, key = { _, it -> it.id }) { i, c ->
+                    val pos = when {
+                        visible.size == 1 -> 0
+                        i == 0 -> 1
+                        i == visible.size - 1 -> 3
+                        else -> 2
+                    }
+                    ChatRow(
+                        c, onLong = { chatMenu = c },
+                        modifier = (if (anim[Anim.APPEAR]) Modifier.animateItem() else Modifier).cascade(cascade, c.id),
+                        pos = pos,
+                    ) { nav.go(Screen.Chat(c.id)) }
+                }
+            } else items(6) { LoadingRow() }
+        }
+    }
+    if (glassUi) {
+        // szklane przyciski nad listą — lista przewija się pod nimi
+        val backdrop = rememberBackdrop()
+        var topH by remember { mutableStateOf(0.dp) }
+        var bottomH by remember { mutableStateOf(0.dp) }
+        Box(Modifier.fillMaxSize()) {
+            list(Modifier.fillMaxSize().backdropSource(backdrop), PaddingValues(top = topH, bottom = bottomH + 8.dp))
+            CompositionLocalProvider(LocalBackdrop provides backdrop) {
+                Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { topH = with(density) { it.height.toDp() } }) { topBar() }
+                // pływający szklany pasek: szukanie i nowa rozmowa
+                GlassBottomBar(
+                    onSearch = { nav.go(Screen.Search) }, onCompose = { nav.go(Screen.NewChat) },
+                    modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { bottomH = with(density) { it.height.toDp() } },
+                )
             }
         }
+    } else Scaffold(topBar = topBar, floatingActionButton = { HomeFab { nav.go(Screen.NewChat) } }) { pad ->
+        list(Modifier.padding(pad).fillMaxSize(), PaddingValues(bottom = if (st.spec.id == "classic") 0.dp else if (st.spec.fab == FabStyle.NONE) 8.dp else 88.dp))
     }
     chatMenu?.let { c -> ChatMenuDialog(c, nav) { chatMenu = null } }
 }
@@ -335,7 +441,7 @@ fun HomeScreen(nav: Nav) {
 private fun ArchiveEntry(archived: List<Chat>, onClick: () -> Unit) {
     val unread = archived.sumOf { it.unread }
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().styleCard().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(50.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
@@ -354,7 +460,7 @@ fun ChatMenuDialog(c: Chat, nav: Nav, onDismiss: () -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     var needPin by remember { mutableStateOf(false) }
     if (confirmDelete) {
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Usunąć rozmowę „${c.name}” z telefonu?") },
             text = { Text("Wiadomości znikną tylko u Ciebie.") },
@@ -364,7 +470,7 @@ fun ChatMenuDialog(c: Chat, nav: Nav, onDismiss: () -> Unit) {
         return
     }
     if (needPin) {
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Najpierw ustaw PIN ukrytych czatów") },
             text = { Text("Ukryte czaty znikają z listy. Pokażesz je, wpisując ten PIN w wyszukiwarce (lupa na górze) albo w „Prywatność i blokada”.") },
@@ -373,7 +479,7 @@ fun ChatMenuDialog(c: Chat, nav: Nav, onDismiss: () -> Unit) {
         )
         return
     }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         text = {
@@ -425,42 +531,119 @@ private fun EmptyHome(nav: Nav) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ChatRow(c: Chat, onLong: () -> Unit = {}, onClick: () -> Unit) {
+fun ChatRow(c: Chat, onLong: () -> Unit = {}, modifier: Modifier = Modifier, pos: Int = 0, onClick: () -> Unit) {
     // awatar: zdjęcie profilowe kontaktu albo ikona grupy
     val image = if (c.isGroup) App.core.db.group(c.id.removePrefix("g:"))?.icon?.ifBlank { null }
     else c.peer?.let { App.core.db.contact(it)?.avatar?.ifBlank { null } }
+    val st = LocalStyle.current
+    val cs = MaterialTheme.colorScheme
+    val ls = st.spec.listStyle
+    val chromeKind = st.spec.chrome
+    val src = remember { MutableInteractionSource() }
+    val press = LocalAnim.current[Anim.PRESS]
+    // iOS: niebieska kropka przy nieprzeczytanych, szewron przy godzinie; Messenger: godzina obok podglądu i kropka
+    val iosList = chromeKind == Chrome.GLASS || chromeKind == Chrome.IOS6
+    val messengerList = chromeKind == Chrome.MESSENGER || chromeKind == Chrome.FACEBOOK
+    val inCard = ls == ListStyle.GROUPED || ls == ListStyle.SEGMENTED
+    val rowMod = when (ls) {
+        ListStyle.CARDS -> Modifier.pressScale(src, press).styleCard()
+        ListStyle.GROUPED -> Modifier.groupedCard(pos).then(if (pos == 1 || pos == 2) Modifier.innerDivider(st.pal.line.copy(alpha = 0.45f), 78.dp) else Modifier)
+        ListStyle.SEGMENTED -> Modifier.pressScale(src, press).groupedCard(pos, segmented = true)
+        else -> Modifier
+    }
+    val avatarSize = when {
+        messengerList -> 56.dp
+        iosList || chromeKind == Chrome.TELEGRAM -> 52.dp
+        else -> 50.dp
+    }
+    Column(modifier) {
     Row(
-        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLong).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth()
+            .then(rowMod)
+            .combinedClickable(
+                interactionSource = src,
+                // szklane karty: ugięcie i podświetlenie stylu zamiast fali
+                indication = if ((ls == ListStyle.CARDS || ls == ListStyle.SEGMENTED) && chromeKind != Chrome.GLASS) ripple() else LocalIndication.current,
+                onClick = onClick, onLongClick = onLong,
+            )
+            .padding(start = if (iosList) 4.dp else if (ls == ListStyle.CARDS || inCard) 12.dp else 16.dp, end = if (ls == ListStyle.CARDS || inCard) 12.dp else 16.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (iosList) Box(Modifier.width(18.dp), contentAlignment = Alignment.Center) {
+            if (c.unread > 0) Box(Modifier.pop(c.unread).size(10.dp).clip(CircleShape).background(if (c.muted) cs.outline else st.pal.primary).semantics { contentDescription = "Nieprzeczytane: ${c.unread}" })
+        }
         Box {
-            Avatar(c.name, c.peer ?: c.id, 50.dp, c.isGroup, image)
+            Avatar(c.name, c.peer ?: c.id, avatarSize, c.isGroup, image)
             if (!c.isGroup) rememberSeen(c.peer)?.let { (s, _) -> PresenceDot(s, Modifier.align(Alignment.BottomEnd)) }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(c.name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (c.unread > 0) FontWeight.Bold else FontWeight.Normal)
+                    fontWeight = if (c.unread > 0 || iosList) FontWeight.SemiBold.takeIf { c.unread == 0 } ?: FontWeight.Bold else FontWeight.Normal)
                 if (!c.isGroup && App.core.isVerified(c.peer)) VerifiedBadge()
-                if (c.muted) Icon(Icons.Default.NotificationsOff, "Wyciszony", Modifier.padding(start = 4.dp).size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (c.hidden) Icon(Icons.Default.Lock, "Ukryty", Modifier.padding(start = 4.dp).size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (c.pinned > 0) Icon(Icons.Default.PushPin, "Przypięty", Modifier.padding(start = 4.dp).size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                if (c.muted) Icon(Icons.Default.NotificationsOff, "Wyciszony", Modifier.padding(start = 4.dp).size(16.dp), tint = cs.onSurfaceVariant)
+                if (c.hidden) Icon(Icons.Default.Lock, "Ukryty", Modifier.padding(start = 4.dp).size(16.dp), tint = cs.onSurfaceVariant)
+                if (c.pinned > 0) Icon(Icons.Default.PushPin, "Przypięty", Modifier.padding(start = 4.dp).size(16.dp), tint = cs.primary)
                 Spacer(Modifier.weight(1f))
-                Text(formatListTime(c.lastTs), style = MaterialTheme.typography.labelSmall,
-                    color = if (c.unread > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!messengerList) Text(formatListTime(c.lastTs), style = MaterialTheme.typography.labelSmall,
+                    color = if (c.unread > 0 && !iosList) unreadColor() else cs.onSurfaceVariant)
+                if (iosList) Icon(Icons.Default.ChevronRight, null, Modifier.size(16.dp), tint = cs.onSurfaceVariant.copy(alpha = 0.6f))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (c.draft.isNotBlank()) Text(
                     "Szkic: " + c.draft.replace('\n', ' '), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium, color = cs.error,
                 ) else Text(
-                    (if (c.xmode != 0) "🔥 " else "") + c.lastText.ifEmpty { if (c.isGroup) "Grupa" else "Nowa rozmowa" },
-                    Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    (if (c.xmode != 0) "🔥 " else "") + c.lastText.ifEmpty { if (c.isGroup) "Grupa" else "Nowa rozmowa" } +
+                        (if (messengerList) " · " + formatListTime(c.lastTs) else ""),
+                    Modifier.weight(1f), maxLines = if (iosList) 2 else 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (messengerList && c.unread > 0) cs.onSurface else cs.onSurfaceVariant,
+                    fontWeight = if (messengerList && c.unread > 0) FontWeight.SemiBold else null,
                 )
-                if (c.unread > 0) Badge(containerColor = if (c.muted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary) { Text(c.unread.toString()) }
+                when {
+                    c.unread <= 0 || iosList -> {}
+                    messengerList -> Box(Modifier.padding(start = 8.dp).pop(c.unread).size(12.dp).clip(CircleShape).background(st.pal.primary).semantics { contentDescription = "Nieprzeczytane: ${c.unread}" })
+                    else -> Badge(
+                        Modifier.pop(c.unread),
+                        containerColor = if (c.muted) cs.outline else unreadColor(),
+                        contentColor = if (c.muted) androidx.compose.material3.contentColorFor(cs.outline) else unreadOnColor(),
+                    ) { Text(c.unread.toString()) }
+                }
             }
+        }
+    }
+    if (st.spec.dividers || (ls == ListStyle.SEPARATORS && pos != 3 && pos != 0)) HorizontalDivider(
+        Modifier.padding(start = if (iosList) 86.dp else 78.dp), thickness = 0.5.dp, color = if (ls == ListStyle.SEPARATORS) st.pal.line.copy(alpha = 0.6f) else cs.outlineVariant,
+    )
+    }
+}
+
+/** Kolor licznika nieprzeczytanych (WhatsApp — jasnozielony). */
+@Composable
+private fun unreadColor(): Color = when (LocalStyle.current.spec.chrome) {
+    Chrome.WHATSAPP -> Color(0xFF25D366)
+    else -> MaterialTheme.colorScheme.primary
+}
+
+@Composable
+private fun unreadOnColor(): Color = when (LocalStyle.current.spec.chrome) {
+    Chrome.WHATSAPP -> if (LocalStyle.current.dark) Color(0xFF111B21) else Color.White
+    else -> MaterialTheme.colorScheme.onPrimary
+}
+
+/** Zaślepka rozmowy w trakcie wczytywania (z połyskiem). */
+@Composable
+private fun LoadingRow() {
+    val c = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    Row(Modifier.fillMaxWidth().styleCard().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(50.dp).clip(CircleShape).shimmer(c))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Box(Modifier.fillMaxWidth(0.5f).height(14.dp).clip(RoundedCornerShape(7.dp)).shimmer(c))
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.fillMaxWidth(0.8f).height(12.dp).clip(RoundedCornerShape(6.dp)).shimmer(c))
         }
     }
 }
@@ -493,7 +676,7 @@ fun NewChatScreen(nav: Nav) {
 @Composable
 fun PersonRow(p: Contact, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().cascadeIn(p.pk).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Avatar(p.display, p.pk, 42.dp, image = p.avatar.ifBlank { null })

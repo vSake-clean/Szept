@@ -114,7 +114,7 @@ private fun ProfileHeader(name: String, key: String, avatar: String?, banner: St
             }
         }
         Box(Modifier.padding(start = 16.dp).padding(top = 56.dp)) {
-            Box(Modifier.size(96.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background).padding(3.dp)) {
+            Box(Modifier.size(96.dp).clip(CircleShape).background(baseColor()).padding(3.dp)) {
                 Avatar(name, key, 90.dp, image = avatar)
             }
             if (onAvatar != null) IconButton(
@@ -307,7 +307,7 @@ fun ProfileView(nav: Nav, pk: String) {
 
     if (aliasDialog) {
         var alias by remember { mutableStateOf(contact?.alias ?: "") }
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { aliasDialog = false },
             title = { Text("Nazwa u Ciebie") },
             text = {
@@ -323,7 +323,7 @@ fun ProfileView(nav: Nav, pk: String) {
     }
     if (confirmUnfriend) {
         var alsoChat by remember { mutableStateOf(true) }
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { confirmUnfriend = false },
             title = { Text("Usunąć ${contact?.display ?: ""} ze znajomych?") },
             text = {
@@ -345,7 +345,7 @@ fun ProfileView(nav: Nav, pk: String) {
             dismissButton = { TextButton(onClick = { confirmUnfriend = false }) { Text("Anuluj") } },
         )
     }
-    if (confirmDelete) AlertDialog(
+    if (confirmDelete) StyleAlertDialog(
         onDismissRequest = { confirmDelete = false },
         title = { Text("Usunąć całą rozmowę z telefonu?") },
         confirmButton = { TextButton(onClick = { core.deleteChat(dmChatId(pk)); confirmDelete = false; nav.home() }) { Text("Usuń") } },
@@ -678,7 +678,7 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
     confirm?.let { what ->
         var code by remember(what) { mutableStateOf("") }
         var err by remember(what) { mutableStateOf<String?>(null) }
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { confirm = null },
             icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(if (what == "pin") "Usunąć PIN?" else "Usunąć kod awaryjny?") },
@@ -730,7 +730,7 @@ fun SecurityScreen(nav: Nav, act: MainActivity) {
     }
     if (revealDialog) {
         var code by remember { mutableStateOf("") }
-        AlertDialog(
+        StyleAlertDialog(
             onDismissRequest = { revealDialog = false },
             title = { Text("PIN ukrytych czatów") },
             text = { PinField(code, "PIN") { code = it } },
@@ -752,7 +752,7 @@ private fun SetPinDialog(canBiometric: Boolean, onDismiss: () -> Unit, onSave: (
     var again by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf(canBiometric) }
     var err by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Ustaw PIN") },
         text = {
@@ -784,7 +784,7 @@ private fun HiddenPinDialog(onDismiss: () -> Unit, title: String = "PIN ukrytych
     var pin by remember { mutableStateOf("") }
     var again by remember { mutableStateOf("") }
     var err by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -833,7 +833,7 @@ private fun WipeDialog(onDismiss: () -> Unit) {
     val chats = remember { core.db.chats() }
     val contacts = remember { core.db.contacts(false) }
 
-    AlertDialog(
+    StyleAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Kod awaryjny") },
         text = {

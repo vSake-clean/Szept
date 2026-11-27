@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
@@ -47,7 +48,7 @@ class UiFeaturesTest {
             if (rule.onAllNodesWithText(t, substring = true).fetchSemanticsNodes().isNotEmpty()) return
             Thread.sleep(150)
         }
-        println("BRAK TEKSTU: $t\n" + rule.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).printToString())
+        println("BRAK TEKSTU: $t screen=" + rule.activity.nav.current + "\n" + rule.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).printToString(Int.MAX_VALUE))
         throw AssertionError("Brak tekstu: $t")
     }
 
@@ -242,6 +243,10 @@ class UiFeaturesTest {
         rule.onNodeWithText("Opublikuj").performClick()
         until("relacja zapisana") { core.db.stories().any { it.body == "Piękny dzień!" } }
         waitGone("Nowa relacja")
+        // pasek relacji odświeża się w tle — czekamy, aż pokaże zapisaną relację (inaczej dotknięcie otworzy „Nowa relacja”)
+        rule.waitUntil(10_000) {
+            rule.onAllNodes(androidx.compose.ui.test.hasStateDescription("relacja widoczna — dotknij, aby obejrzeć")).fetchSemanticsNodes().isNotEmpty()
+        }
         // zegar stoi — relacja sama by się przewinęła i zamknęła po kilku sekundach
         rule.mainClock.autoAdvance = false
         rule.onNodeWithText("Twoja relacja").performClick()
@@ -283,9 +288,9 @@ class UiFeaturesTest {
         // ---- wygląd ----
         go(Screen.Appearance)
         waitText("Motyw")
-        rule.onNodeWithText("Czarny (AMOLED, oszczędza baterię)").performClick()
-        rule.onNodeWithText("Zieleń").performClick()
-        rule.onNodeWithText("Duży").performClick()
+        rule.onNodeWithText("Czarny (AMOLED, oszczędza baterię)").performScrollTo().performClick()
+        rule.onNodeWithText("Zieleń").performScrollTo().performClick()
+        rule.onNodeWithText("Duży").performScrollTo().performClick()
         until("wygląd zapisany") { UiPrefs.theme == 3 && UiPrefs.accent == 1 && UiPrefs.fontScale == 1.15f }
         rule.onNode(hasScrollAction()).performScrollToNode(hasText("Podgląd"))
         waitText("Cześć! Jak leci?")
