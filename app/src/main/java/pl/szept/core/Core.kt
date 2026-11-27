@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.util.Log
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -523,6 +524,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         relay.subscribe("pol", listOf(JSONObject().put("kinds", JSONArray().put(Admin.POLICY_KIND)).put("authors", JSONArray().put(Admin.PUB))
             .put("#d", JSONArray().put(Admin.POLICY_D)).put("limit", 2)))
         if (!isLocal(relay.url) && courier) { courierSubAt = 0; scope.launch { refreshCourierSubs() } }
+        probeRelay(relay)
         scope.launch { maintenance() }
     }
 
@@ -562,14 +564,16 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 inboxOldest.merge(relay.url, ca) { a, b -> min(a, b) }
                 incoming.trySend(event)
             }
-            subId.startsWith("m-") -> downloads.values.firstOrNull { it.subId == subId }?.onChunk(event)
+            subId.startsWith("m-") -> downloads.values.firstOrNull { it.owns(subId) }?.onChunk(event)
             subId == "pol" -> scope.launch { handlePolicy(event) }
+            subId == "sp" -> onStoreProbe(relay, true)
             subId == "cr" -> if (lanCreated && lan.running.value) scope.launch { lan.relay.accept(event, LocalRelay.ORIGIN_COURIER) }
         }
     }
 
     override fun onRelayClosed(relay: Relay, subId: String, message: String) {
-        if (subId.startsWith("m-")) downloads.values.firstOrNull { it.subId == subId }?.onEose(relay.url)
+        if (subId.startsWith("m-")) downloads.values.firstOrNull { it.owns(subId) }?.onEose(relay.url, subId)
+        else if (subId == "sp") onStoreProbe(relay, false)
     }
 
     override fun onRelayEose(relay: Relay, subId: String) {
@@ -590,8 +594,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 prefs.edit().putLong("since:${relay.url}", Clock.nowSec() - 60).apply()
             }
         } else if (subId.startsWith("m-")) {
-            downloads.values.firstOrNull { it.subId == subId }?.onEose(relay.url)
-        }
+            downloads.values.firstOrNull { it.owns(subId) }?.onEose(relay.url, subId)
+        } else if (subId == "sp") onStoreProbe(relay, false)
     }
 
     // ================= wysyłanie kopert =================
@@ -1016,8 +1020,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     /** Postęp wysyłek administratora: id → procent wgranych paczek. */
     fun adminProgress(): Map<String, Int> = adminJobs.value.keys.associateWith { id ->
         val u = db.uploadForMsg(id) ?: return@associateWith 100
-        val best = internetTargets().maxOfOrNull { u.done.optInt(it, 0) } ?: 0
-        (best * 100 / u.chunks.coerceAtLeast(1)).coerceIn(0, 99)
+        (uploadCovered(u) * 100 / u.chunks.coerceAtLeast(1)).coerceIn(0, 99)
     }
 
     /** Nadaje albo odbiera znaczek weryfikacji (podpisany kluczem administratora). */
@@ -2051,6 +2054,13 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     }
 
     fun setAlias(pk: String, alias: String) = db.setAlias(pk, alias)
+
+    /** Czy kod bezpieczeństwa z tą osobą został porównany osobiście (pamiętane tylko na tym telefonie). */
+    fun isKeyVerified(pk: String): Boolean = prefs.getLong("safe:$pk", 0L) > 0
+
+    fun setKeyVerified(pk: String, on: Boolean) {
+        if (on) prefs.edit().putLong("safe:$pk", System.currentTimeMillis()).apply() else prefs.edit().remove("safe:$pk").apply()
+    }
 
     private fun systemMessage(chatId: String, id: String, text: String) {
         val now = Clock.now()
@@ -3383,12 +3393,161 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     private fun internetTargets(): List<String> = configuredRelays().take(MEDIA_RELAYS)
 
-    /** Internet + połączone przekaźniki w sieci lokalnej (tam paczki trafiają od razu, nawet bez internetu). */
-    private fun mediaTargets(): List<String> = internetTargets() + localUrls.filter { relays[it]?.isConnected == true }
+    // ================= szybka wysyłka i rozkład paczek =================
+
+    /** Szybka wysyłka: 0 = automatycznie (Wi-Fi — włączona, dane komórkowe — wyłączona), 1 = zawsze, 2 = nigdy. */
+    val fastSendMode: Int get() = prefs.getInt("fast_send", 0)
+
+    fun setFastSendMode(mode: Int) {
+        prefs.edit().putInt("fast_send", mode.coerceIn(0, 2)).apply()
+        kickUploads(); kickDownloads()
+    }
+
+    /** Czy teraz wysyłamy najszybciej: na wszystkie przekaźniki naraz i więcej paczek równolegle, bez oglądania się na zużycie internetu. */
+    fun fastSendActive(): Boolean = when (fastSendMode) { 1 -> true; 2 -> false; else -> isUnmetered() }
+
+    /** Czy telefon jest teraz na Wi-Fi (sieć bez limitu). */
+    fun onWifi(): Boolean = isUnmetered()
+
+    /** Czy przekaźnik przechowuje paczki mediów (null = jeszcze nie wiadomo). Sprawdzane samym odczytem, co kilka dni. */
+    private fun relayStores(url: String): Boolean? = prefs.getString("rs:$url", null)?.let { it.substringBefore(':') == "1" }
+
+    /** Ile zdarzeń przekaźnik oddaje na jedno zapytanie (NIP-11 max_limit). */
+    private fun relayCap(url: String): Int =
+        prefs.getString("rl:$url", null)?.substringBefore(':')?.toIntOrNull()?.takeIf { it > 0 } ?: ChunkPlan.DEFAULT_CAP
+
+    private val storeProbeHit = ConcurrentHashMap.newKeySet<String>()
+
+    /** Dla testów: znany limit odpowiedzi przekaźnika i rozkład paczek wysyłanego pliku. */
+    internal fun mediaCapOf(url: String): Int? = prefs.getString("rl:$url", null)?.substringBefore(':')?.toIntOrNull()
+    internal fun uploadPlanFor(msgId: String): ChunkPlan? = db.uploadForMsg(msgId)?.let { ChunkPlan.fromJson(it.done.optJSONObject("_p"), it.chunks) }
+
+    /** Po połączeniu: czy przekaźnik trzyma paczki mediów i jaki ma limit odpowiedzi (nic nie wysyłamy). */
+    private fun probeRelay(relay: Relay) {
+        if (isLocal(relay.url)) return
+        val now = System.currentTimeMillis()
+        fun stale(key: String) = (prefs.getString(key, null)?.substringAfter(':', "0")?.toLongOrNull() ?: 0L) < now - 3 * 86400_000L
+        if (stale("rs:${relay.url}")) {
+            storeProbeHit.remove(relay.url)
+            relay.subscribe("sp", listOf(JSONObject().put("kinds", JSONArray().put(CHUNK_KIND)).put("limit", 1)))
+        }
+        if (stale("rl:${relay.url}")) scope.launch(Dispatchers.IO) {
+            val limit = try {
+                val http = relay.url.replaceFirst("wss://", "https://").replaceFirst("ws://", "http://")
+                val req = okhttp3.Request.Builder().url(http).header("Accept", "application/nostr+json").build()
+                this@Core.http.newCall(req).execute().use { r ->
+                    if (!r.isSuccessful) 0 else JSONObject(r.body?.string()?.take(100_000) ?: "{}").optJSONObject("limitation")?.optInt("max_limit") ?: 0
+                }
+            } catch (e: Exception) { 0 }
+            prefs.edit().putString("rl:${relay.url}", "${limit.coerceIn(0, 100_000)}:${System.currentTimeMillis()}").apply()
+        }
+    }
+
+    private fun onStoreProbe(relay: Relay, hit: Boolean) {
+        if (hit) storeProbeHit.add(relay.url)
+        else if (relay.url in storeProbeHit) return
+        relay.unsubscribe("sp")
+        prefs.edit().putString("rs:${relay.url}", (if (hit) "1:" else "0:") + System.currentTimeMillis()).apply()
+    }
+
+    /** Przekaźniki w internecie, na które warto wysyłać paczki (bez tych, które ich nie przechowują). */
+    private fun storageRelays(): List<String> {
+        val conf = configuredRelays()
+        val ok = conf.filter { relayStores(it) != false }
+        return if (ok.size >= min(2, conf.size)) ok else conf
+    }
+
+    /**
+     * Nowy rozkład paczek pliku. Zwykle: pełna kopia na 3 przekaźnikach (mało internetu).
+     * Szybka wysyłka albo duży plik (np. aktualizacja): plik rozłożony na wszystkie przekaźniki —
+     * każdy dostaje swój kawałek równolegle, a żaden nie ma więcej paczek, niż odda na jedno zapytanie.
+     */
+    private fun newPlan(chunks: Int): ChunkPlan? {
+        val all = storageRelays()
+        if (all.isEmpty()) return null
+        val few = all.take(MEDIA_RELAYS)
+        return when {
+            fastSendActive() -> ChunkPlan.build(chunks, all, 3) { relayCap(it) }
+            chunks <= few.minOf { relayCap(it) } -> ChunkPlan.build(chunks, few, 3) { relayCap(it) }
+            else -> ChunkPlan.build(chunks, all, 2) { relayCap(it) }
+        }
+    }
+
+    private val planLock = Any()
+
+    /** Rozkład paczek wysyłanego pliku (zapisany przy pierwszym użyciu; stare wysyłki — po staremu). */
+    private fun planOf(u0: Db.Upload): ChunkPlan? {
+        ChunkPlan.fromJson(u0.done.optJSONObject("_p"), u0.chunks)?.let { return it }
+        // jeden plan na plik, także gdy wysyłka rusza naraz z kilku miejsc
+        synchronized(planLock) {
+            val u = db.upload(u0.media) ?: u0
+            ChunkPlan.fromJson(u.done.optJSONObject("_p"), u.chunks)?.let { return it }
+            val started = u.done.keys().asSequence().filter { it != "_p" && !isLocal(it) }.toList()
+            val plan = if (started.any { u.done.optInt(it, 0) != 0 }) {
+                // wysyłka zaczęta przed 3.3.5: każdy przekaźnik dostaje cały plik od początku
+                val list = (internetTargets() + started).distinct()
+                if (list.isEmpty()) return null
+                ChunkPlan(list, u.chunks, list.size, legacy = true)
+            } else newPlan(u.chunks) ?: return null
+            db.setUploadPlan(u.media, plan.toJson())
+            return plan
+        }
+    }
+
+    /** Przekaźniki, na które idą paczki: z planu + połączone w sieci lokalnej (tam zawsze cały plik). */
+    private fun uploadTargets(u: Db.Upload, plan: ChunkPlan?): List<String> =
+        ((plan?.let { it.relays + it.extra.keys } ?: emptyList()) + localUrls.filter { relays[it]?.isConnected == true }).distinct()
+
+    private fun uploadNeed(url: String, u: Db.Upload, plan: ChunkPlan?): Int =
+        if (isLocal(url) || plan == null) u.chunks else plan.sizeOf(url)
+
+    /** Ile różnych paczek pliku jest już do pobrania (z przekaźników w internecie albo w sieci lokalnej). */
+    private fun uploadCovered(u: Db.Upload): Int {
+        val plan = planOf(u)
+        val net = plan?.covered { u.done.optInt(it, 0) } ?: 0
+        val lan = localUrls.maxOfOrNull { u.done.optInt(it, 0).coerceIn(0, u.chunks) } ?: 0
+        return max(net, lan)
+    }
 
     private fun uploadComplete(msgId: String): Boolean {
         val u = db.uploadForMsg(msgId) ?: return true
-        return internetTargets().all { val d = u.done.optInt(it, 0); d >= u.chunks || d < 0 }
+        val plan = planOf(u) ?: return true
+        return (plan.relays + plan.extra.keys).distinct().all { val d = u.done.optInt(it, 0); d >= plan.sizeOf(it) || d < 0 }
+    }
+
+    /** Gdy cały plik jest już do pobrania — wysyła czekające koperty (z rozkładem paczek w opisie pliku). */
+    private suspend fun releaseUpload(u: Db.Upload) {
+        if (uploadCovered(u) < u.chunks) return
+        stateLock.withLock {
+            val pend = db.pending(u.msg) ?: return@withLock
+            db.removePending(u.msg)
+            val payload = JSONObject(pend.first)
+            planOf(u)?.takeIf { !it.legacy }?.let { attachPlan(payload, u.media, it) }
+            release(u.msg, payload, pend.second)
+        }
+    }
+
+    /** Wkłada rozkład paczek do opisu pliku w kopercie — odbiorca pyta wtedy od razu właściwe przekaźniki. */
+    private fun attachPlan(payload: JSONObject, mediaId: String, plan: ChunkPlan) {
+        val m = payload.optJSONObject("m")
+        if (m != null && m.optString("id") == mediaId) m.put("pl", plan.toJson())
+    }
+
+    /**
+     * Przekaźnik odmówił przyjęcia paczek: jego kawałek pliku, którego nie ma nikt inny, przenosimy
+     * na sprawny przekaźnik. Zwraca false, gdy nie ma już dokąd wysłać.
+     */
+    private fun rehomeOrphans(mediaId: String): Boolean {
+        val u = db.upload(mediaId) ?: return true
+        val plan = planOf(u) ?: return false
+        val failed = (plan.relays + plan.extra.keys).filter { u.done.optInt(it, 0) < 0 }.toSet()
+        val orphans = plan.orphans(failed)
+        if (orphans.isEmpty()) return true
+        val target = (plan.relays + storageRelays()).distinct()
+            .filter { it !in failed && u.done.optInt(it, 0) >= 0 && relays[it]?.isConnected == true }
+            .minByOrNull { plan.sizeOf(it) } ?: return false
+        db.setUploadPlan(mediaId, plan.withExtra(target, orphans).toJson())
+        return true
     }
 
     /** Czy wiadomość/relacja, do której należy wysyłany plik, nadal istnieje. */
@@ -3441,9 +3600,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 if (!u.msg.startsWith("story:")) File(u.path).delete()
                 continue
             }
-            for (url in mediaTargets()) {
+            val plan = planOf(u)
+            for (url in uploadTargets(u, plan)) {
                 val d = u.done.optInt(url, 0)
-                if (d >= u.chunks || d < 0) continue
+                if (d >= uploadNeed(url, u, plan) || d < 0) continue
                 val relay = relays[url] ?: continue
                 if (!relay.isConnected) continue
                 val key = url + "|" + u.media
@@ -3460,11 +3620,16 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val file = File(u.path)
         if (!file.exists()) { db.updateStatus(u.msg, St.FAILED, false); return }
         var done = u.done.optInt(relay.url, 0)
-        val ids = if (u.ids.isEmpty()) arrayOfNulls<String>(u.chunks) else u.ids.split(',').toTypedArray<String?>()
+        val plan = planOf(u)
+        // kolejność paczek dla tego przekaźnika (w sieci lokalnej — cały plik po kolei)
+        val order = if (isLocal(relay.url) || plan == null) (0 until u.chunks).toList() else plan.orderOf(relay.url)
+        val ids = arrayOfNulls<String>(u.chunks)
         RandomAccessFile(file, "r").use { raf ->
-            while (done < u.chunks) {
+            while (done < order.size) {
                 if (!uploadOwnerExists(u.msg)) return
-                val batch = (done until min(done + 4, u.chunks)).toList()
+                // szybka wysyłka: więcej paczek naraz na jeden przekaźnik
+                val par = if (fastSendActive()) 8 else 4
+                val batch = order.subList(done, min(done + par, order.size))
                 val results = coroutineScopeAsync(batch) { idx ->
                     val len = min(CHUNK_RAW.toLong(), file.length() - idx.toLong() * CHUNK_RAW).toInt()
                     val buf = ByteArray(len)
@@ -3483,25 +3648,24 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     if (PERMANENT_ERRORS.any { fail.second.startsWith(it) }) {
                         Log.w(TAG, "${relay.url} odrzucił media: ${fail.second}")
                         db.setUploadDone(mediaId, relay.url, -1)
-                        if (internetTargets().all { db.upload(mediaId)?.done?.optInt(it, 0) == -1 }) db.updateStatus(u.msg, St.FAILED, false)
+                        if (isLocal(relay.url)) return
+                        // jego kawałek przejmuje inny przekaźnik; gdy nie ma żadnego — wysyłka się nie udała
+                        if (rehomeOrphans(mediaId)) kickUploads()
+                        else if (uploadCovered(db.upload(mediaId) ?: return) < u.chunks) db.updateStatus(u.msg, St.FAILED, false)
                     }
                     return
                 }
-                done = batch.last() + 1
+                done += batch.size
                 db.setUploadDone(mediaId, relay.url, done)
-                if (ids.all { it != null }) db.setUploadIds(mediaId, ids.joinToString(","))
-                val best = mediaTargets().maxOf { db.upload(mediaId)?.done?.optInt(it, 0) ?: 0 }
-                db.setProgress(u.msg, (best * 100 / u.chunks).coerceIn(0, 100))
+                db.mergeUploadIds(mediaId, u.chunks, batch.associateWith { ids[it] ?: "" }.filterValues { it.isNotEmpty() })
+                val fresh = db.upload(mediaId) ?: return
+                val covered = uploadCovered(fresh)
+                db.setProgress(u.msg, (covered * 100 / u.chunks).coerceIn(0, 100))
+                // cały plik jest już do pobrania (choćby w jednej kopii) — koperty mogą iść od razu
+                if (covered >= u.chunks) releaseUpload(fresh)
             }
         }
-        // pierwszy przekaźnik ma komplet — można wysłać koperty
-        stateLock.withLock {
-            val pend = db.pending(u.msg)
-            if (pend != null) {
-                db.removePending(u.msg)
-                release(u.msg, JSONObject(pend.first), pend.second)
-            }
-        }
+        releaseUpload(db.upload(mediaId) ?: return)
         if (uploadComplete(u.msg) && !u.msg.startsWith("story:")) {
             val m = db.message(u.msg)
             if (m == null || m.path == null) file.delete()
@@ -3520,7 +3684,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         for (d in db.downloads()) {
             if (downloads.containsKey(d.media)) continue
             // oszczędzanie danych: wstrzymane media czekają, aż będzie Wi-Fi albo użytkownik je dotknie
-            if (!(autoDownloadAllowed() || d.media in forcedDl)) continue
+            // wymuszona aktualizacja (bez niej Szept jest zablokowany) pobiera się zawsze
+            if (!(autoDownloadAllowed() || d.media in forcedDl || d.msg.startsWith("upd:"))) continue
             if (connectedRelays().isEmpty() || downloads.size >= 4) return
             // uszkodzony wpis (np. zły klucz) — usuwamy, zamiast wywracać aplikację przy każdym starcie
             val job = try { DownloadJob(d) } catch (e: Exception) { CrashLog.record("Zły plik do pobrania", e); db.removeDownload(d.media); continue }
@@ -3543,6 +3708,12 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         private val signal = Channel<Unit>(Channel.CONFLATED)
         private var job: Job? = null
         private var asked = listOf<Relay>()
+        /** Zapytania o konkretne paczki: „url|subId” → koniec odpowiedzi (EOSE/CLOSED). */
+        private val waiters = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+        private val seq = java.util.concurrent.atomic.AtomicInteger()
+
+        /** Czy subskrypcja należy do tego pobierania („m-<id>” albo „m-<id>-<nr>”). */
+        fun owns(sid: String) = sid == subId || sid.startsWith("$subId-")
 
         fun start() {
             job = scope.launch {
@@ -3558,12 +3729,17 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
         private suspend fun run() {
             if (have.size < d.meta.chunks) {
-                val all = connectedRelays()
-                // najpierw pytamy kilka przekaźników; resztę dokładamy, tylko gdy to nie wystarcza
-                // (ten sam plik leżący na kilku przekaźnikach nie schodzi wtedy po kilka razy)
-                val deadline = System.currentTimeMillis() + 120_000
-                gather(all.take(3), deadline)
-                if (have.size < d.meta.chunks) gather(all.drop(3), deadline)
+                // duży plik (np. aktualizacja) ma więcej czasu — paczki i tak zostają w telefonie między próbami
+                val deadline = System.currentTimeMillis() + max(120_000L, d.meta.chunks * 300L)
+                // 1) sieć lokalna — za darmo i najszybciej
+                val local = connectedRelays().filter { isLocal(it.url) }
+                if (local.isNotEmpty()) rounds(local, null, deadline)
+                // 2) internet: pytamy o konkretne numery paczek, każdą tylko na jednym przekaźniku
+                //    (nie ma limitu 500 zdarzeń na odpowiedź i nic nie schodzi po kilka razy)
+                if (have.size < d.meta.chunks) rounds(internetRelaysInOrder(), d.meta.chunkPlan(), deadline)
+                // 3) nic nie przyszło po numerach (przekaźniki nie rozumieją filtra #c) — stary sposób, cały plik naraz.
+                //    Tylko gdy nie mamy jeszcze żadnej paczki: inaczej ściągalibyśmy ponownie to, co już jest.
+                if (have.isEmpty()) gather(connectedRelays(), deadline)
             }
             if (have.size >= d.meta.chunks) finish()
             else {
@@ -3573,6 +3749,84 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     db.removeDownload(d.media); db.updateStatus(d.msg, St.DOWNLOAD_FAILED, false); dir.deleteRecursively()
                 }
             }
+        }
+
+        /** Połączone przekaźniki w internecie w kolejności z ustawień (taka sama u nadawcy → trafiamy od razu). */
+        private fun internetRelaysInOrder(): List<Relay> {
+            val conf = configuredRelays()
+            return connectedRelays().filter { !isLocal(it.url) }.sortedBy { conf.indexOf(it.url).let { i -> if (i < 0) Int.MAX_VALUE else i } }
+        }
+
+        /** Rundy pytań o brakujące paczki: w każdej rundzie każda paczka do innego przekaźnika niż wcześniej. */
+        private suspend fun rounds(list: List<Relay>, plan: ChunkPlan?, deadline: Long) {
+            val asked = HashMap<String, MutableSet<Int>>()
+            while (have.size < d.meta.chunks && System.currentTimeMillis() < deadline) {
+                val live = list.filter { it.isConnected }
+                if (live.isEmpty()) return
+                val missing = (0 until d.meta.chunks).filter { it !in have }
+                val work = ChunkPlan.assign(missing, d.meta.chunks, live.map { it.url }, plan, asked)
+                if (work.isEmpty()) return
+                val par = if (fastSendActive()) 2 else 1
+                val done = ConcurrentHashMap<String, List<Int>>()
+                kotlinx.coroutines.coroutineScope {
+                    work.forEach { (url, idxs) ->
+                        val relay = live.first { it.url == url }
+                        launch { done[url] = fetch(relay, idxs, deadline, par) }
+                    }
+                }
+                var progress = false
+                work.keys.forEach { url ->
+                    val got = done[url] ?: emptyList()
+                    if (got.isNotEmpty()) progress = true
+                    asked.getOrPut(url) { HashSet() }.addAll(got)
+                }
+                if (!progress) return   // żaden przekaźnik nie odpowiedział — spróbujemy przy następnej okazji
+            }
+        }
+
+        /**
+         * Pyta przekaźnik o paczki [idxs] porcjami po 100 (tyle odda każdy przekaźnik).
+         * Zwraca numery, o które zapytano do końca (przekaźnik odpowiedział EOSE albo CLOSED).
+         */
+        private suspend fun fetch(relay: Relay, idxs: List<Int>, deadline: Long, par: Int): List<Int> {
+            val answered = java.util.Collections.synchronizedList(ArrayList<Int>())
+            val parts = idxs.chunked(100)
+            val queue = Channel<List<Int>>(Channel.UNLIMITED)
+            parts.forEach { queue.trySend(it) }
+            queue.close()
+            kotlinx.coroutines.coroutineScope {
+                repeat(min(par, parts.size)) {
+                    launch {
+                        for (part in queue) {
+                            if (!relay.isConnected || System.currentTimeMillis() >= deadline) break
+                            val want = part.filter { it !in have }
+                            if (want.isEmpty()) { answered.addAll(part); continue }
+                            val sid = subId + "-" + seq.incrementAndGet()
+                            val key = relay.url + "|" + sid
+                            val end = CompletableDeferred<Unit>()
+                            waiters[key] = end
+                            val f = JSONObject().put("kinds", JSONArray().put(CHUNK_KIND)).put("#x", JSONArray().put(d.media))
+                                .put("#c", JSONArray(want.map { it.toString() })).put("limit", want.size)
+                            relay.subscribe(sid, listOf(f))
+                            try {
+                                // do końca odpowiedzi; przestój 15 s bez nowej paczki = przekaźnik się zaciął
+                                var last = have.size
+                                var idle = 0L
+                                while (!end.isCompleted && relay.isConnected && System.currentTimeMillis() < deadline && idle < 15_000) {
+                                    withTimeoutOrNull(1000) { end.await() }
+                                    if (have.size != last) { last = have.size; idle = 0; db.setProgress(d.msg, have.size * 100 / d.meta.chunks) } else idle += 1000
+                                }
+                            } finally {
+                                relay.unsubscribe(sid)
+                                waiters.remove(key)
+                            }
+                            if (end.isCompleted) answered.addAll(part)
+                        }
+                    }
+                }
+            }
+            db.setProgress(d.msg, have.size * 100 / d.meta.chunks)
+            return answered
         }
 
         /** Subskrybuje kolejną porcję przekaźników i czeka na paczki (wspólny limit czasu z [run]). */
@@ -3593,7 +3847,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             }
         }
 
-        fun onEose(url: String) { eose.add(url); signal.trySend(Unit) }
+        fun onEose(url: String, sid: String = subId) {
+            if (sid == subId) { eose.add(url); signal.trySend(Unit) }
+            else waiters["$url|$sid"]?.complete(Unit)
+        }
 
         fun onChunk(o: JSONObject) {
             try {

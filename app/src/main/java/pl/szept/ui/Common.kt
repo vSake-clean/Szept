@@ -453,6 +453,13 @@ fun shareText(ctx: Context, text: String) {
 
 fun fileUri(ctx: Context, f: File) = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
 
+/** Otwiera stronę w przeglądarce. */
+fun openUrl(ctx: Context, url: String) {
+    try {
+        ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (e: Exception) { toast(ctx, "Nie można otworzyć przeglądarki") }
+}
+
 /** Otwiera instalator Androida dla pliku APK (użytkownik sam potwierdza instalację). */
 fun installApk(ctx: Context, path: String) {
     try {
@@ -599,5 +606,47 @@ fun PresenceDot(s: pl.szept.core.Core.Seen, modifier: Modifier = Modifier, size:
             .background(MaterialTheme.colorScheme.surface).padding(2.dp).clip(androidx.compose.foundation.shape.CircleShape)
             .background(presenceColor(s))
             .semantics { contentDescription = "Status: " + presenceText(s, 0L).substringBefore(" ·") },
+    )
+}
+
+/** Stan szybkiej wysyłki (odświeżany, gdy zmienia się sieć albo ustawienie). */
+class FastSendState(val mode: Int, val active: Boolean, val wifi: Boolean)
+
+@androidx.compose.runtime.Composable
+fun rememberFastSend(): androidx.compose.runtime.MutableState<FastSendState> {
+    val core = pl.szept.App.core
+    val st = remember { mutableStateOf(FastSendState(core.fastSendMode, core.fastSendActive(), core.onWifi())) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            st.value = FastSendState(core.fastSendMode, core.fastSendActive(), core.onWifi())
+            kotlinx.coroutines.delay(3_000)
+        }
+    }
+    return st
+}
+
+/** Opis stanu szybkiej wysyłki, np. „włączona automatycznie (Wi-Fi)”. */
+fun fastSendLabel(s: FastSendState): String = when (s.mode) {
+    1 -> "włączona"
+    2 -> "wyłączona"
+    else -> if (s.active) "włączona automatycznie (Wi-Fi)" else "wyłączona automatycznie (dane komórkowe)"
+}
+
+/**
+ * Przełącznik „⚡ Szybko” przy wysyłaniu: włączenie zostaje na stałe (także na danych komórkowych),
+ * wyłączenie też — do czasu wybrania „Automatycznie” w ustawieniach.
+ */
+@androidx.compose.runtime.Composable
+fun FastSendChip(modifier: Modifier = Modifier) {
+    val core = pl.szept.App.core
+    var st by rememberFastSend()
+    androidx.compose.material3.FilterChip(
+        selected = st.active,
+        onClick = {
+            core.setFastSendMode(if (st.active) 2 else 1)
+            st = FastSendState(core.fastSendMode, core.fastSendActive(), core.onWifi())
+        },
+        label = { androidx.compose.material3.Text(if (st.active) "⚡ Szybko" else "⚡ Szybko: wył.") },
+        modifier = modifier.semantics { contentDescription = "Szybka wysyłka: " + fastSendLabel(st) },
     )
 }

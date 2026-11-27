@@ -28,6 +28,11 @@ Z właścicielem rozmawiaj po polsku, prosto i krótko. Pytaj przed rzeczami nie
 4. Testy (Robolectric): `./gradlew testDebugUnitTest`; z prawdziwymi przekaźnikami: `-Dszept.network=1`.
    `SafetyTest.builtInTurnServers` wymaga `secrets.properties`.
 
+## Rozsyłanie aktualizacji
+- APK musi zmieścić się w limitach przekaźników: dziś ok. 33 MB = ok. 750 paczek po 44 000 B (tylko ARM, bez x86).
+- Starsze wersje (≤ 3.3.4) pobierają bez numerów paczek — dostaną komplet tylko, gdy żaden przekaźnik nie ma więcej
+  niż ~500 paczek pliku (pilnuje tego `ChunkPlan.build`). Zapasowo: link do wydań na GitHubie (`Admin.RELEASES_URL`).
+
 ## Nowa wersja
 - `app/build.gradle.kts`: podnieś `versionCode` i `versionName`.
 - Dopisz zmiany na górze `CHANGELOG.md` (ten sam tekst widać w aplikacji: Ustawienia → Co nowego) i sekcję „Nowe w …” w `README.md` oraz `README.en.md`.
@@ -35,6 +40,10 @@ Z właścicielem rozmawiaj po polsku, prosto i krótko. Pytaj przed rzeczami nie
 
 ## Mapa kodu
 - `core/Core.kt` — serce: wysyłka i odbiór, koperty, grupy, panel administratora, PIN-y, gry, rozmowy.
+- `core/ChunkPlan.kt` — rozkład paczek pliku na przekaźniki (od 3.3.5). Przekaźniki oddają max ~500 zdarzeń
+  na zapytanie (relay.nostr.net 100), więc każdy przekaźnik dostaje ≤ limit paczek pliku; pobieranie pyta o numery (`#c`).
+  Szybka wysyłka (`fastSendMode`: 0 auto = Wi-Fi tak / dane nie, 1 zawsze, 2 nigdy) = wszystkie przekaźniki, więcej równolegle.
+- `core/SafetyCode.kt` — kod bezpieczeństwa rozmowy (60 cyfr + QR `szept://verify`).
 - `crypto/Crypto.kt` — secp256k1 (Schnorr BIP-340), ECDH → HKDF-SHA256 → AES-256-GCM.
 - `nostr/` — przekaźniki i zdarzenia. Koperta: kind 1059, w środku kind 14; paczki mediów: kind 4334 po 44 000 B; wygasanie 21 dni.
 - `lan/` — własny przekaźnik (port 4869) i wykrywanie w Wi-Fi (NSD).

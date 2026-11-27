@@ -182,6 +182,12 @@ fun AdminScreen(nav: Nav) {
                     Spacer(Modifier.height(8.dp))
                     RecipientPicker(chats, extra)
                     OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text("Krótki opis zmian (opcjonalnie)") }, maxLines = 4)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FastSendChip()
+                        Spacer(Modifier.width(8.dp))
+                        Text("Szybka wysyłka: plik idzie naraz na wszystkie przekaźniki.", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    }
                     Button(onClick = {
                         scope.launch {
                             try {
@@ -297,6 +303,11 @@ private fun PolicyTab(apk: File) {
         }
     }
     OutlinedTextField(msg, { msg = it }, Modifier.fillMaxWidth(), label = { Text("Komunikat dla użytkowników") }, maxLines = 4)
+    if (apk != null) Row(verticalAlignment = Alignment.CenterVertically) {
+        FastSendChip()
+        Spacer(Modifier.width(8.dp))
+        Text("Szybka wysyłka pliku nowej wersji.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     Button(onClick = {
         scope.launch {
             try { core.adminPolicy(min, msg, apk, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE); toast(ctx, "Wysyłam — wersje starsze niż ${Admin.versionName(min)} będą musiały się zaktualizować") }
@@ -336,6 +347,12 @@ fun ForcedUpdateScreen() {
                 LinearProgressIndicator(progress = { pending.progress / 100f }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
             else -> Text("Czekam na plik nowej wersji. Jeśli to trwa, poproś znajomego o przesłanie nowej wersji Szepta.", textAlign = TextAlign.Center)
+        }
+        if (path == null) {
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = { openUrl(ctx, Admin.RELEASES_URL) }, Modifier.fillMaxWidth()) { Text("Pobierz ze strony") }
+            Text("Gdy pobieranie stoi w miejscu, nową wersję pobierzesz też ze strony Szepta (GitHub).",
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }

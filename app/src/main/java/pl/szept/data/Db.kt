@@ -934,6 +934,23 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         w.execSQL("UPDATE uploads SET done=? WHERE media=?", arrayOf<Any?>(u.done.toString(), media))
     }
 
+    /** Rozkład paczek na przekaźniki ([pl.szept.core.ChunkPlan]) — trzymany razem z postępem. */
+    @Synchronized
+    fun setUploadPlan(media: String, plan: JSONObject) {
+        val u = upload(media) ?: return
+        u.done.put("_p", plan)
+        w.execSQL("UPDATE uploads SET done=? WHERE media=?", arrayOf<Any?>(u.done.toString(), media))
+    }
+
+    /** Dopisuje identyfikatory wysłanych paczek (nr → id zdarzenia) — potrzebne do ich późniejszego skasowania. */
+    @Synchronized
+    fun mergeUploadIds(media: String, chunks: Int, add: Map<Int, String>) {
+        val u = upload(media) ?: return
+        val cur = u.ids.split(',').takeIf { it.size == chunks }?.toTypedArray() ?: Array(chunks) { "" }
+        add.forEach { (i, id) -> if (i in 0 until chunks) cur[i] = id }
+        w.execSQL("UPDATE uploads SET ids=? WHERE media=?", arrayOf<Any?>(cur.joinToString(","), media))
+    }
+
     fun setUploadIds(media: String, ids: String) { w.execSQL("UPDATE uploads SET ids=? WHERE media=?", arrayOf<Any?>(ids, media)) }
     fun removeUpload(media: String) { w.delete("uploads", "media=?", arrayOf(media)) }
 

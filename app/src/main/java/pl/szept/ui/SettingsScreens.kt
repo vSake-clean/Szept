@@ -75,6 +75,16 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.3.5" to listOf(
+        "Aktualizacje i duże pliki pobierają się do końca. Wcześniej przekaźnik oddawał najwyżej 500 kawałków pliku naraz, więc aktualizacja 3.3.4 (ponad 1100 kawałków) stawała w połowie i nie dało się jej zainstalować.",
+        "Plik jest teraz rozkładany na kilka przekaźników tak, żeby każdy oddał swoją część w całości — działa to także u osób, które mają jeszcze starszą wersję Szepta.",
+        "Pobieranie pyta o konkretne kawałki pliku i każdy bierze tylko z jednego przekaźnika: szybciej i bez ściągania tego samego kilka razy.",
+        "Szybka wysyłka ⚡ (Ustawienia → Połączenie i bateria, albo „⚡ Szybko” przy wysyłaniu zdjęcia, filmu, GIF-a i aktualizacji): pliki idą naraz na wszystkie przekaźniki i więcej kawałków jednocześnie. Domyślnie włączona na Wi-Fi, a wyłączona na danych komórkowych; gdy raz ją włączysz, zostaje włączona.",
+        "Mniejszy plik aplikacji (ok. 33 MB zamiast 51 MB) — bez niepotrzebnych bibliotek dla procesorów x86.",
+        "Wymuszona aktualizacja pobiera się także przy ustawieniu „Tylko przez Wi-Fi”, a gdy coś nie idzie, przycisk „Pobierz ze strony” otwiera plik nowej wersji w internecie.",
+        "Kod bezpieczeństwa rozmowy (profil osoby): 60 cyfr, takich samych u was obojga. Porównajcie je na żywo albo zeskanujcie nawzajem kody QR — zgodny kod oznacza, że nikt nie podmienił klucza.",
+        "Przekaźniki, które nie przechowują plików, są pomijane przy wysyłce zdjęć i filmów.",
+    ),
     "3.3.4" to listOf(
         "Mniej zużytego internetu: w Ustawieniach → Połączenie i bateria możesz wybrać, kiedy pobierać zdjęcia, filmy i pliki — zawsze, tylko przez Wi-Fi albo dopiero po dotknięciu.",
         "Oszczędniejsza wysyłka mediów (na mniej przekaźników) i pobieranie, które nie ściąga tego samego pliku po kilka razy z różnych serwerów.",
@@ -307,6 +317,7 @@ fun ConnectionScreen(nav: Nav) {
     val states by core.relayStates.collectAsState()
     var bgMode by remember { mutableStateOf(core.bgMode) }
     var mediaDl by remember { mutableStateOf(core.mediaDlMode) }
+    var fast by rememberFastSend()
     var relays by remember { mutableStateOf(core.configuredRelays()) }
     var newRelay by remember { mutableStateOf("") }
     var battery by remember { mutableStateOf(true) }
@@ -380,6 +391,30 @@ fun ConnectionScreen(nav: Nav) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(mediaDl == mode, { mediaDl = mode; core.setMediaDlMode(mode) })
+                        Column {
+                            Text(title, style = MaterialTheme.typography.bodyLarge)
+                            Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Heading("⚡ Szybka wysyłka")
+                Text(
+                    "Zdjęcia, filmy, GIF-y i pliki idą najszybciej, jak się da: naraz na wszystkie przekaźniki " +
+                        "i więcej kawałków jednocześnie. Zużywa więcej internetu. Teraz: " + fastSendLabel(fast) + ".",
+                    Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                listOf(
+                    Triple(0, "Automatycznie (zalecane)", "Na Wi-Fi włączona, na danych komórkowych wyłączona."),
+                    Triple(1, "Zawsze włączona", "Najszybciej także na danych komórkowych."),
+                    Triple(2, "Zawsze wyłączona", "Mniej internetu, wysyłanie trwa trochę dłużej."),
+                ).forEach { (mode, title, sub) ->
+                    fun pick() { core.setFastSendMode(mode); fast = FastSendState(core.fastSendMode, core.fastSendActive(), core.onWifi()) }
+                    Row(
+                        Modifier.fillMaxWidth().clickable { pick() }.padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(fast.mode == mode, { pick() })
                         Column {
                             Text(title, style = MaterialTheme.typography.bodyLarge)
                             Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

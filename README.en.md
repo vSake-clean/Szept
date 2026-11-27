@@ -18,6 +18,12 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.3.5
+- **Updates install again**: large files (such as an update) are spread over several relays and downloaded piece by piece, so they no longer stall halfway — also for people still on an older version. As a fallback there is a “Download from the website” button.
+- **⚡ Fast sending**: photos, videos, GIFs, files and updates go to all relays at once. On by default on Wi-Fi, off on mobile data; once you turn it on, it stays on (Settings → Connection & battery, or “⚡ Szybko” when sending).
+- **Conversation safety code** in a person's profile: the same digits for both of you, compared in person or by scanning a QR code.
+- **Smaller app file**: about 33 MB instead of 51 MB.
+
 ### New in 3.3.4
 - **Less data**: choose when to download photos, videos and files (always / Wi-Fi only / on tap), leaner media upload and download, and presence (“active”) sent less often.
 - **Liquid Glass closer to the original**: smooth continuous (squircle) glass corners, a more natural corner highlight and a softer shadow.

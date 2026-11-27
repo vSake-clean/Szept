@@ -498,11 +498,19 @@ private fun UpdateContent(m: Message) {
             Text("Nowa wersja Szept ${m.body}", fontWeight = FontWeight.Bold)
             Text(
                 when {
+                    m.path == null && m.status == St.DOWNLOAD_HELD -> "Dotknij, aby pobrać (" + formatSize(m.media?.size ?: 0) + ")"
+                    m.path == null && m.status == St.DOWNLOAD_FAILED -> "Nie udało się pobrać — dotknij, aby spróbować ponownie"
                     m.path == null -> "Pobieranie ${m.progress}%…"
                     !newer -> "Masz już wersję $current lub nowszą"
                     else -> "Dotknij, aby zainstalować"
                 },
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // zapasowo: plik ze strony (gdy przekaźniki nie oddają całego pliku)
+            if (m.path == null && newer) Text(
+                "Nie pobiera się? Pobierz ze strony",
+                Modifier.padding(top = 4.dp).clickable { openUrl(ctx, pl.szept.core.Admin.RELEASES_URL) },
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
             )
         }
     }

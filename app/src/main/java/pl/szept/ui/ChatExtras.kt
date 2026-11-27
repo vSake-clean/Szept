@@ -245,6 +245,7 @@ fun MediaPreviewDialog(
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(!timed, { timed = false }, { Text("Zwykłe") })
                     FilterChip(timed, { timed = true }, { Text("⏱ Czasowe") })
+                    FastSendChip()
                 }
                 if (timed) {
                     Text(

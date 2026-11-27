@@ -2,6 +2,16 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.3.5
+- Aktualizacje i duże pliki pobierają się do końca. Wcześniej przekaźnik oddawał najwyżej 500 kawałków pliku naraz, więc aktualizacja 3.3.4 (ponad 1100 kawałków) stawała w połowie i nie dało się jej zainstalować.
+- Plik jest teraz rozkładany na kilka przekaźników tak, żeby każdy oddał swoją część w całości — działa to także u osób, które mają jeszcze starszą wersję Szepta.
+- Pobieranie pyta o konkretne kawałki pliku i każdy bierze tylko z jednego przekaźnika: szybciej i bez ściągania tego samego kilka razy.
+- Szybka wysyłka ⚡ (Ustawienia → Połączenie i bateria, albo „⚡ Szybko” przy wysyłaniu zdjęcia, filmu, GIF-a i aktualizacji): pliki idą naraz na wszystkie przekaźniki i więcej kawałków jednocześnie. Domyślnie włączona na Wi-Fi, a wyłączona na danych komórkowych; gdy raz ją włączysz, zostaje włączona.
+- Mniejszy plik aplikacji (ok. 33 MB zamiast 51 MB) — bez niepotrzebnych bibliotek dla procesorów x86.
+- Wymuszona aktualizacja pobiera się także przy ustawieniu „Tylko przez Wi-Fi”, a gdy coś nie idzie, przycisk „Pobierz ze strony” otwiera plik nowej wersji w internecie.
+- Kod bezpieczeństwa rozmowy (profil osoby): 60 cyfr, takich samych u was obojga. Porównajcie je na żywo albo zeskanujcie nawzajem kody QR — zgodny kod oznacza, że nikt nie podmienił klucza.
+- Przekaźniki, które nie przechowują plików, są pomijane przy wysyłce zdjęć i filmów.
+
 ## 3.3.4
 - Mniej zużytego internetu: w Ustawieniach → Połączenie i bateria wybierzesz, kiedy pobierać zdjęcia, filmy i pliki — zawsze, tylko przez Wi-Fi albo dopiero po dotknięciu.
 - Oszczędniejsza wysyłka mediów (na mniej przekaźników) i pobieranie, które nie ściąga tego samego pliku po kilka razy z różnych serwerów.

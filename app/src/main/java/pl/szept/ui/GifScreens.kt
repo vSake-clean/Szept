@@ -362,6 +362,7 @@ fun GifPreviewDialog(
                     GifImage(shown.absolutePath, Modifier.fillMaxSize(), crop = false)
                 }
                 if (!remote?.title.isNullOrBlank()) Text(remote!!.title, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
+                if (onSend != null) FastSendChip(Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!isSaved) OutlinedButton(enabled = full != null, onClick = { onSave(shown); isSaved = true }) { Text("Zapisz w moich") }

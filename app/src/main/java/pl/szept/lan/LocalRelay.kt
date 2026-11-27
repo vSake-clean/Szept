@@ -87,10 +87,14 @@ class LocalRelay(ctx: Context, dbName: String = "lan_relay.db", private val maxB
 
     override fun onClose(c: WsServer.Conn) { clients.remove(c.id); subs.remove(c.id) }
 
+    /** Najwięcej zdarzeń w jednej odpowiedzi (jak max_limit w prawdziwych przekaźnikach; w testach mniej). */
+    @Volatile var maxLimit = MAX_LIMIT
+
     override fun onHttp(path: String, accept: String?): Pair<String, String>? =
         if (accept?.contains("application/nostr+json") == true) "application/nostr+json" to JSONObject()
             .put("name", "Szept (sieć lokalna)").put("description", "Przekaźnik w telefonie — tylko zaszyfrowane koperty Szept")
-            .put("supported_nips", JSONArray(listOf(1, 9, 11, 40))).put("software", "szept").toString()
+            .put("supported_nips", JSONArray(listOf(1, 9, 11, 40))).put("software", "szept")
+            .put("limitation", JSONObject().put("max_limit", maxLimit)).toString()
         else null
 
     override fun onText(c: WsServer.Conn, text: String) {
@@ -203,13 +207,15 @@ class LocalRelay(ctx: Context, dbName: String = "lan_relay.db", private val maxB
         if (f.has("since")) { where.add("ca >= ?"); args.add(f.optLong("since").toString()) }
         if (f.has("until")) { where.add("ca <= ?"); args.add(f.optLong("until").toString()) }
         where.add("exp > ?"); args.add(Clock.nowSec().toString())
-        val limit = f.optInt("limit", 500).coerceIn(0, MAX_LIMIT)
+        val limit = f.optInt("limit", 500).coerceIn(0, maxLimit)
         if (limit == 0) return emptyList()
-        // pozostałe tagi (#e, #k…) sprawdzamy po odczycie
+        // pozostałe tagi (#e, #k, #c…) sprawdzamy po odczycie; paczki jednego pliku (#x) przeglądamy wszystkie,
+        // bo pytanie o konkretne numery (#c) może dotyczyć dowolnej z nich
         val extraTags = f.keys().asSequence().filter { it.startsWith("#") && it != "#p" && it != "#x" }.toList()
+        val scan = when { extraTags.isEmpty() -> limit; f.has("#x") -> 5000; else -> limit * 4 }
         val out = ArrayList<String>()
         db.rawQuery(
-            "SELECT json FROM ev WHERE " + where.joinToString(" AND ") + " ORDER BY ca DESC LIMIT " + (if (extraTags.isEmpty()) limit else limit * 4),
+            "SELECT json FROM ev WHERE " + where.joinToString(" AND ") + " ORDER BY ca DESC LIMIT " + scan,
             args.toTypedArray(),
         ).use { c ->
             while (c.moveToNext() && out.size < limit) {

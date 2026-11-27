@@ -233,7 +233,13 @@ class UiTest {
 
         // informacje o kontakcie
         rule.runOnUiThread { rule.activity.nav.go(pl.szept.ui.Screen.ContactInfo(peer)) }
-        waitText("Odcisk klucza")
+        waitText("Kod bezpieczeństwa")
+        // kod bezpieczeństwa: te same cyfry co u rozmówcy; oznaczenie „zweryfikowany” po porównaniu na żywo
+        waitText(pl.szept.core.SafetyCode.groups(core.myPub, peer).first())
+        rule.onNode(hasScrollAction()).performScrollToNode(hasText("oznacz jako zweryfikowany", substring = true))
+        rule.onNodeWithText("oznacz jako zweryfikowany", substring = true).performClick()
+        check(core.isKeyVerified(peer)) { "kontakt nie oznaczony jako zweryfikowany" }
+        waitText("Kod bezpieczeństwa — zweryfikowany ✓")
 
         // nowa grupa
         rule.runOnUiThread { rule.activity.nav.home(); rule.activity.nav.go(pl.szept.ui.Screen.NewGroup) }
@@ -270,6 +276,14 @@ class UiTest {
         check(core.bgMode == pl.szept.core.Core.BG_SAVER) { "tryb tła nie zmieniony" }
         rule.onNodeWithText("Normalnie (zalecane)").performClick()
         check(core.bgMode == pl.szept.core.Core.BG_BALANCED)
+        // szybka wysyłka: domyślnie automatycznie, wybór zostaje zapamiętany
+        rule.onNode(hasScrollAction()).performScrollToNode(hasText("Zawsze włączona"))
+        rule.onNodeWithText("Zawsze włączona").performClick()
+        check(core.fastSendMode == 1 && core.fastSendActive()) { "szybka wysyłka nie włączona" }
+        rule.onNodeWithText("Automatycznie (zalecane)").performClick()
+        check(core.fastSendMode == 0)
+        // ekran jest długi — przycisk trzeba najpierw przewinąć na widok
+        rule.onNode(hasScrollAction()).performScrollToNode(hasText("Dla zaawansowanych: przekaźniki"))
         rule.onNodeWithText("Dla zaawansowanych: przekaźniki").performClick()
         rule.onNode(hasScrollAction()).performScrollToNode(hasText("Przywróć domyślne"))
         waitText("Przywróć domyślne")

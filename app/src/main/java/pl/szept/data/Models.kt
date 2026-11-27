@@ -126,12 +126,17 @@ data class MediaMeta(
     val name: String, val thumb: String?, val w: Int, val h: Int, val dur: Long,
     /** Przebieg głosówki (48 słupków, szesnastkowo). */
     val wave: String? = null,
+    /** Gdzie leżą paczki ([pl.szept.core.ChunkPlan]) — dopisywane przez nadawcę od 3.3.5. */
+    val plan: JSONObject? = null,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("key", key); put("sz", size); put("c", chunks); put("mime", mime); put("h", sha)
         put("name", name); if (thumb != null) put("th", thumb); put("w", w); put("ht", h); put("dur", dur)
         if (wave != null) put("wf", wave)
+        if (plan != null) put("pl", plan)
     }
+
+    fun chunkPlan(): pl.szept.core.ChunkPlan? = pl.szept.core.ChunkPlan.fromJson(plan, chunks)
 
     companion object {
         private val ID_RX = Regex("^[0-9a-f]{32}$")
@@ -147,6 +152,7 @@ data class MediaMeta(
             o.getString("id"), o.getString("key"), o.getLong("sz"), o.getInt("c"), o.optString("mime"),
             o.getString("h"), o.optString("name"), o.optString("th").ifEmpty { null }, o.optInt("w"),
             o.optInt("ht"), o.optLong("dur"), o.optString("wf").take(400).ifEmpty { null },
+            o.optJSONObject("pl"),
         )
 
         fun fromNetwork(o: JSONObject): MediaMeta {
@@ -154,6 +160,8 @@ data class MediaMeta(
                 o.getString("id"), o.getString("key"), o.getLong("sz"), o.getInt("c"), o.optString("mime").take(100),
                 o.getString("h"), o.optString("name").substringAfterLast('/').take(120), o.optString("th").ifEmpty { null }, o.optInt("w"),
                 o.optInt("ht"), o.optLong("dur"), o.optString("wf").take(400).ifEmpty { null },
+                // plan sprawdzony i przepisany na nowo (bez obcych pól)
+                pl.szept.core.ChunkPlan.fromJson(o.optJSONObject("pl"), o.optInt("c"))?.toJson(),
             )
             require(ID_RX.matches(m.id)) { "złe id pliku" }
             require(m.size in 0..MAX_SIZE && m.chunks in 0..(m.size / CHUNK_RAW + 2).toInt()) { "zły rozmiar pliku" }

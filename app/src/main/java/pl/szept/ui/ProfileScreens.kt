@@ -248,7 +248,7 @@ fun ProfileView(nav: Nav, pk: String) {
                     Card(Modifier.fillMaxWidth()) { Text(contact!!.bio, Modifier.padding(12.dp)) }
                 }
                 Spacer(Modifier.height(10.dp))
-                Card(Modifier.fillMaxWidth()) {
+                if (pk != core.myPub) SafetyCard(pk) else Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text("Stały ID: ${pl.szept.data.shortId(pk)}", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(6.dp))
