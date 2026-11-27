@@ -18,6 +18,9 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.4.2
+- **Sending doesn't upset relays**: one file at a time, slowing down when a relay asks, and a relay that blocked the phone or has a full disk is skipped for a few hours.
+
 ### New in 3.4.1
 - **Updates from the admin panel don't get stuck**: a relay that doesn't answer hands its part over to others; sending the same version again doesn't upload the file a second time; “In progress” shows every relay's state and a “Cancel” button.
 

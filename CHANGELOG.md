@@ -2,6 +2,13 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.4.2
+- Grzeczniejsza wysyłka dużych plików: jeden plik naraz na przekaźnik, mniej paczek jednocześnie, zwalnianie, gdy przekaźnik o to prosi („slow down”), i przerwa, gdy dalej narzeka — przekaźniki nie blokują już telefonu za zbyt szybkie wysyłanie.
+- Przekaźnik, który zablokował telefon albo ma pełny dysk, jest omijany przez kilka godzin, a jego część pliku od razu przejmują inne.
+- Przekaźniki bez połączenia nie dostają części pliku.
+- Zapasowe kopie (po „wysłane”) idą tylko wtedy, gdy przekaźnik nie narzeka.
+- „W toku” pokazuje, który przekaźnik odpoczywa albo jest omijany i do której godziny.
+
 ## 3.4.1
 - Wysyłka aktualizacji z panelu administratora nie staje: przekaźnik, który nie odpowiada albo odmawia, oddaje swoją część innym, a po chwilowym błędzie wysyłka sama rusza dalej.
 - Ponowne „Wyślij aktualizację” tej samej wersji dopisuje odbiorców do trwającej wysyłki, zamiast wgrywać plik drugi raz. Gdy plik jest już wysłany, kolejne osoby dostają go od razu.

@@ -87,6 +87,11 @@ class LocalRelay(ctx: Context, dbName: String = "lan_relay.db", private val maxB
 
     override fun onClose(c: WsServer.Conn) { clients.remove(c.id); subs.remove(c.id) }
 
+    /** Tylko testy: odpowiedź na każde zdarzenie (np. „banned: …”) i co które zdarzenie „rate-limited”. */
+    @Volatile var refuseWith: String? = null
+    @Volatile var slowEvery = 0
+    private val slowCount = java.util.concurrent.atomic.AtomicInteger()
+
     /** Najwięcej zdarzeń w jednej odpowiedzi (jak max_limit w prawdziwych przekaźnikach; w testach mniej). */
     @Volatile var maxLimit = MAX_LIMIT
 
@@ -102,6 +107,11 @@ class LocalRelay(ctx: Context, dbName: String = "lan_relay.db", private val maxB
         when (arr.optString(0)) {
             "EVENT" -> {
                 val o = arr.optJSONObject(1) ?: return
+                // tylko w testach: przekaźnik, który odmawia albo każe zwolnić (jak publiczne przekaźniki)
+                refuseWith?.let { c.send(JSONArray().put("OK").put(o.optString("id")).put(false).put(it).toString()); return }
+                if (slowEvery > 0 && slowCount.incrementAndGet() % slowEvery == 0) {
+                    c.send(JSONArray().put("OK").put(o.optString("id")).put(false).put("rate-limited: slow down").toString()); return
+                }
                 val (ok, msg) = accept(o, if (isSelf(c)) ORIGIN_SELF else ORIGIN_LAN)
                 c.send(JSONArray().put("OK").put(o.optString("id")).put(ok).put(msg).toString())
             }

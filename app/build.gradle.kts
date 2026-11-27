@@ -50,8 +50,8 @@ android {
         applicationId = "pl.szept.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 31
-        versionName = "3.4.1"
+        versionCode = 32
+        versionName = "3.4.2"
         // tylko procesory ARM (telefony) — biblioteki dla x86 to ok. 18 MB, których telefony nie używają;
         // mniejszy plik = szybsza i pewniejsza aktualizacja przez przekaźniki
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }

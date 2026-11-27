@@ -3541,7 +3541,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val missing = plan.uncoveredSegments { u.done.optInt(it, 0) }
         if (missing.isEmpty()) return
         val healthy = (plan.relays + plan.extra.keys + storageRelays()).distinct()
-            .filter { relays[it]?.isConnected == true && u.done.optInt(it, 0) >= 0 }
+            .filter { relays[it]?.isConnected == true && u.done.optInt(it, 0) >= 0 && !inCooldown(it) && paceOf(it).pausedUntil <= now }
             // najpierw te, które skończyły już swoją część (dodatkowe odcinki idą u nich od razu), potem najświeższe
             .sortedWith(compareByDescending<String> { u.done.optInt(it, 0) >= plan.sizeOf(it) }.thenByDescending { uploadOkAt["${u.media}|$it"] ?: 0L })
         if (healthy.isEmpty()) return
@@ -3557,7 +3557,11 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     }
 
     /** Stan wysyłki pliku na jednym przekaźniku — do panelu administratora. */
-    data class RelayUpload(val host: String, val done: Int, val need: Int, val connected: Boolean, val rejected: Boolean, val error: String?)
+    data class RelayUpload(
+        val host: String, val done: Int, val need: Int, val connected: Boolean, val rejected: Boolean, val error: String?,
+        /** Do kiedy przekaźnik odpoczywa (prosił o wolniej) i do kiedy go omijamy (ban, pełny dysk). */
+        val restUntil: Long = 0, val skipUntil: Long = 0,
+    )
 
     fun uploadRelays(msgId: String): List<RelayUpload> {
         val u = db.uploadForMsg(msgId) ?: return emptyList()
@@ -3565,7 +3569,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         return uploadTargets(u, plan).map { url ->
             val d = u.done.optInt(url, 0)
             RelayUpload(url.removePrefix("wss://").removePrefix("ws://"), d.coerceAtLeast(0), uploadNeed(url, u, plan),
-                relays[url]?.isConnected == true, d < 0, uploadErr["${u.media}|$url"])
+                relays[url]?.isConnected == true, d < 0, uploadErr["${u.media}|$url"],
+                pace[url]?.pausedUntil ?: 0L, mediaCooldownUntil(url))
         }
     }
 
@@ -3604,8 +3609,12 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     /** Przekaźniki w internecie, na które warto wysyłać paczki (bez tych, które ich nie przechowują). */
     private fun storageRelays(): List<String> {
         val conf = configuredRelays()
-        val ok = conf.filter { relayStores(it) != false }
-        return if (ok.size >= min(2, conf.size)) ok else conf
+        val need = min(2, conf.size)
+        val ok = conf.filter { relayStores(it) != false && !inCooldown(it) }
+        val base = if (ok.size >= need) ok else conf.filter { !inCooldown(it) }.ifEmpty { conf }
+        // do nowego planu tylko przekaźniki połączone teraz (martwy przekaźnik nie dostaje części pliku)
+        val live = base.filter { relays[it]?.isConnected == true }
+        return if (live.size >= need) live else base
     }
 
     /**
@@ -3688,16 +3697,69 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * Przekaźnik odmówił przyjęcia paczek: jego kawałek pliku, którego nie ma nikt inny, przenosimy
      * na sprawny przekaźnik. Zwraca false, gdy nie ma już dokąd wysłać.
      */
+    // ---------- tempo wysyłki: jeden plik naraz na przekaźnik, zwalnianie, gdy przekaźnik o to prosi ----------
+
+    /** Tempo wysyłki na przekaźnik: ile paczek naraz, przerwa między porcjami, ile razy z rzędu kazał zwolnić, pauza. */
+    private class Pace(@Volatile var win: Int, @Volatile var gap: Long = 0, @Volatile var strikes: Int = 0, @Volatile var pausedUntil: Long = 0)
+    private val pace = ConcurrentHashMap<String, Pace>()
+    /** Od kiedy przekaźnik jest bez połączenia (po 90 s jego część plików przejmują inne). */
+    private val relayDownSince = ConcurrentHashMap<String, Long>()
+
+    private fun maxWin() = if (fastSendActive()) 6 else 4
+    private fun paceOf(url: String) = pace.getOrPut(url) { Pace(if (fastSendActive()) 4 else 2) }
+
+    /** Przekaźnik nie przyjmuje teraz plików (ban, pełny dysk…) — omijamy go do tego czasu. */
+    internal fun mediaCooldownUntil(url: String): Long = prefs.getLong("mc:$url", 0L)
+    private fun inCooldown(url: String) = mediaCooldownUntil(url) > System.currentTimeMillis()
+
+    private enum class Refusal { SLOW, REFUSE, TRANSIENT }
+
+    /** Co znaczy odpowiedź przekaźnika: zwolnij, odmowa (nie próbuj długo) albo chwilowy kłopot. */
+    private fun classify(msg: String): Refusal {
+        val m = msg.lowercase()
+        return when {
+            m.startsWith("banned") || "no space" in m || ("disk" in m && "full" in m) || "quota" in m || "payment" in m -> Refusal.REFUSE
+            m.startsWith("rate-limited") || "rate limit" in m || "slow down" in m || "too many" in m || "too fast" in m -> Refusal.SLOW
+            PERMANENT_ERRORS.any { m.startsWith(it) } || "write error" in m -> Refusal.REFUSE
+            else -> Refusal.TRANSIENT
+        }
+    }
+
+    /** Przekaźniki, które nie wyślą swojej części pliku: odmówiły, są omijane albo od dawna bez połączenia. */
+    private fun failedFor(u: Db.Upload, plan: ChunkPlan): Set<String> {
+        val now = System.currentTimeMillis()
+        return (plan.relays + plan.extra.keys).filter { url ->
+            u.done.optInt(url, 0) < 0 || inCooldown(url) ||
+                (relays[url]?.isConnected != true && now - (relayDownSince[url] ?: now) > 90_000)
+        }.toSet()
+    }
+
+    /**
+     * Kawałki pliku, których nie wyśle już żaden sprawny przekaźnik, przechodzą na przekaźnik, który działa
+     * (najpierw bez kłopotów z tempem i z najmniejszą resztą do wysłania). Zwraca false, gdy nie ma dokąd.
+     */
     private fun rehomeOrphans(mediaId: String): Boolean {
         val u = db.upload(mediaId) ?: return true
         val plan = planOf(u) ?: return false
-        val failed = (plan.relays + plan.extra.keys).filter { u.done.optInt(it, 0) < 0 }.toSet()
+        if (plan.legacy) return true
+        val failed = failedFor(u, plan)
         val orphans = plan.orphans(failed)
         if (orphans.isEmpty()) return true
-        val target = (plan.relays + storageRelays()).distinct()
-            .filter { it !in failed && u.done.optInt(it, 0) >= 0 && relays[it]?.isConnected == true }
-            .minByOrNull { plan.sizeOf(it) } ?: return false
-        db.setUploadPlan(mediaId, plan.withExtra(target, orphans).toJson())
+        val now = System.currentTimeMillis()
+        val healthy = (plan.relays + plan.extra.keys + storageRelays()).distinct()
+            .filter { it !in failed && u.done.optInt(it, 0) >= 0 && relays[it]?.isConnected == true && !inCooldown(it) }
+        if (healthy.isEmpty()) return false
+        var p = plan
+        orphans.forEach { seg ->
+            val t = healthy.filter { seg !in p.segmentsOf(it) }
+                .minWithOrNull(compareBy<String> { if (paceOf(it).pausedUntil > now) 1 else 0 }.thenBy { paceOf(it).strikes }.thenBy { p.sizeOf(it) - u.done.optInt(it, 0) })
+                ?: return@forEach
+            p = p.withExtra(t, listOf(seg))
+        }
+        if (p != plan) {
+            db.setUploadPlan(mediaId, p.toJson())
+            CrashLog.note("Wysyłka pliku: ${orphans.size} kawałków przejmują inne przekaźniki (${failed.joinToString { it.removePrefix("wss://") }} nie wyśle)")
+        }
         return true
     }
 
@@ -3744,47 +3806,62 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     }
 
     fun kickUploads() {
-        val list = db.uploads()
-        for (u in list) {
-            if (!uploadOwnerExists(u.msg) && db.pending(u.msg) == null) {
-                db.removeUpload(u.media)
-                if (!u.msg.startsWith("story:")) File(u.path).delete()
+        val now = System.currentTimeMillis()
+        relays.forEach { (url, r) -> if (r.isConnected) relayDownSince.remove(url) else relayDownSince.putIfAbsent(url, now) }
+        // praca dla każdego przekaźnika: (plik, czy odbiorcy już go dostali — wtedy to tylko zapasowa kopia)
+        val work = HashMap<String, MutableList<Pair<Db.Upload, Boolean>>>()
+        for (u0 in db.uploads()) {
+            if (!uploadOwnerExists(u0.msg) && db.pending(u0.msg) == null) {
+                db.removeUpload(u0.media)
+                if (!u0.msg.startsWith("story:")) File(u0.path).delete()
                 continue
             }
-            var plan = planOf(u)
-            if (plan != null && !plan.legacy) {
-                rescueStall(u, plan, uploadCovered(u))
-                plan = planOf(db.upload(u.media) ?: continue)
+            val p0 = planOf(u0)
+            if (p0 != null && !p0.legacy) {
+                rehomeOrphans(u0.media)
+                db.upload(u0.media)?.let { cur -> planOf(cur)?.let { rescueStall(cur, it, uploadCovered(cur)) } }
             }
-            val fresh = db.upload(u.media) ?: continue
-            for (url in uploadTargets(fresh, plan)) {
-                val d = fresh.done.optInt(url, 0)
-                if (d >= uploadNeed(url, fresh, plan) || d < 0) continue
-                val relay = relays[url] ?: continue
-                if (!relay.isConnected) continue
-                val key = url + "|" + u.media
-                if (!uploading.add(key)) continue
-                scope.launch {
-                    try { uploadTo(relay, u.media) } catch (e: Exception) { Log.w(TAG, "upload", e) } finally { uploading.remove(key) }
-                }
+            val u = db.upload(u0.media) ?: continue
+            val plan = planOf(u)
+            val backup = db.pending(u.msg) == null && uploadCovered(u) >= u.chunks
+            for (url in uploadTargets(u, plan)) {
+                val d = u.done.optInt(url, 0)
+                if (d >= uploadNeed(url, u, plan) || d < 0) continue
+                work.getOrPut(url) { ArrayList() }.add(u to backup)
+            }
+        }
+        for ((url, list) in work) {
+            val relay = relays[url] ?: continue
+            if (!relay.isConnected || (inCooldown(url) && !isLocal(url))) continue
+            val p = paceOf(url)
+            if (p.pausedUntil > now) { scheduleUploadRetry(p.pausedUntil - now + 500); continue }
+            // najpierw pliki, na które czekają odbiorcy; zapasowe kopie tylko, gdy przekaźnik nie narzeka
+            val next = list.filter { !it.second }.minByOrNull { it.first.created }
+                ?: list.takeIf { p.strikes == 0 && p.gap == 0L }?.minByOrNull { it.first.created } ?: continue
+            if (!uploading.add(url)) continue   // jeden plik naraz na przekaźnik
+            scope.launch {
+                val progressed = try { uploadTo(relay, next.first.media, next.second) } catch (e: Exception) { Log.w(TAG, "upload", e); false } finally { uploading.remove(url) }
+                if (progressed) kickUploads() else scheduleUploadRetry(15_000)
             }
         }
     }
 
-    private suspend fun uploadTo(relay: Relay, mediaId: String) {
-        val u = db.upload(mediaId) ?: return
+    /** Wysyła kolejne paczki pliku na przekaźnik we wspólnym tempie tego przekaźnika. Zwraca true, gdy przyjął choć jedną. */
+    private suspend fun uploadTo(relay: Relay, mediaId: String, backup: Boolean = false): Boolean {
+        val u = db.upload(mediaId) ?: return false
         val file = File(u.path)
-        if (!file.exists()) { db.updateStatus(u.msg, St.FAILED, false); return }
+        if (!file.exists()) { db.updateStatus(u.msg, St.FAILED, false); db.setUploadDone(mediaId, relay.url, -1); return false }
         var done = u.done.optInt(relay.url, 0)
         val plan = planOf(u)
         // kolejność paczek dla tego przekaźnika (w sieci lokalnej — cały plik po kolei)
         val order = if (isLocal(relay.url) || plan == null) (0 until u.chunks).toList() else plan.orderOf(relay.url)
         val ids = arrayOfNulls<String>(u.chunks)
+        val p = paceOf(relay.url)
+        var progressed = false
         RandomAccessFile(file, "r").use { raf ->
             while (done < order.size) {
-                if (!uploadOwnerExists(u.msg)) return
-                // szybka wysyłka: więcej paczek naraz na jeden przekaźnik
-                val par = if (fastSendActive()) 8 else 4
+                if (!uploadOwnerExists(u.msg) || !relay.isConnected) break
+                val par = p.win.coerceIn(1, if (backup) 2 else maxWin())
                 val batch = order.subList(done, min(done + par, order.size))
                 val results = coroutineScopeAsync(batch) { idx ->
                     val len = min(CHUNK_RAW.toLong(), file.length() - idx.toLong() * CHUNK_RAW).toInt()
@@ -3792,47 +3869,77 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     synchronized(raf) { raf.seek(idx.toLong() * CHUNK_RAW); raf.readFully(buf) }
                     val ev = chunkEvent(u, idx, buf)
                     ids[idx] = ev.id
-                    var r = relay.publish(ev.toJson(), ev.id, 30_000)
-                    var tries = 0
-                    // limit przekaźnika: czekamy coraz dłużej (do ok. 2 min), zamiast od razu odpuszczać
-                    while (!r.first && r.second.startsWith("rate-limited") && tries++ < 6) {
-                        delay(min(30_000L, 3000L shl (tries - 1))); r = relay.publish(ev.toJson(), ev.id, 30_000)
-                    }
-                    r
+                    relay.publish(ev.toJson(), ev.id, 30_000)
                 }
-                val fail = results.firstOrNull { !it.first && !it.second.startsWith("duplicate") }
-                if (fail != null) {
-                    noteUploadError(mediaId, relay.url, fail.second)
-                    if (!PERMANENT_ERRORS.any { fail.second.startsWith(it) }) scheduleUploadRetry(20_000)
-                    if (PERMANENT_ERRORS.any { fail.second.startsWith(it) }) {
-                        Log.w(TAG, "${relay.url} odrzucił media: ${fail.second}")
+                // przyjęte od początku porcji (kolejność musi się zgadzać z postępem)
+                val okCount = results.indexOfFirst { !it.first && !it.second.startsWith("duplicate") }.let { if (it < 0) results.size else it }
+                if (okCount > 0) {
+                    val okIdx = batch.take(okCount)
+                    done += okCount
+                    progressed = true
+                    db.setUploadDone(mediaId, relay.url, done)
+                    uploadOkAt["$mediaId|${relay.url}"] = System.currentTimeMillis()
+                    uploadErr.remove("$mediaId|${relay.url}")
+                    db.mergeUploadIds(mediaId, u.chunks, okIdx.associateWith { ids[it] ?: "" }.filterValues { it.isNotEmpty() })
+                    val fresh = db.upload(mediaId) ?: return progressed
+                    val covered = uploadCovered(fresh)
+                    db.setProgress(u.msg, (covered * 100 / u.chunks).coerceIn(0, 100))
+                    // cały plik jest już do pobrania (choćby w jednej kopii) — koperty mogą iść od razu
+                    if (covered >= u.chunks) releaseUpload(fresh)
+                }
+                if (okCount == results.size) {
+                    // wszystko przyjęte — ostrożnie przyspieszamy
+                    p.strikes = 0
+                    p.win = min(p.win + 1, maxWin())
+                    p.gap = p.gap * 2 / 3
+                    if (p.gap > 0) delay(p.gap)
+                    continue
+                }
+                val fail = results[okCount].second
+                noteUploadError(mediaId, relay.url, fail)
+                when (classify(fail)) {
+                    Refusal.SLOW -> {
+                        // przekaźnik prosi o wolniej: jedna paczka naraz i coraz dłuższa przerwa
+                        p.win = 1
+                        p.gap = max(p.gap * 2, 2_000L).coerceAtMost(30_000L)
+                        p.strikes++
+                        if (backup || p.strikes >= 5) {
+                            // dalej narzeka — dajemy mu odpocząć (zapasowe kopie ustępują od razu); jego część mogą przejąć inne
+                            p.pausedUntil = System.currentTimeMillis() + if (backup) 5 * 60_000L else 3 * 60_000L
+                            if (!backup) p.strikes = 2
+                            break
+                        }
+                        delay(p.gap)
+                    }
+                    Refusal.REFUSE -> {
+                        if (!isLocal(relay.url)) {
+                            val m = fail.lowercase()
+                            val ms = when { "no space" in m || "disk" in m -> 24 * 3600_000L; m.startsWith("banned") -> 6 * 3600_000L; else -> 3 * 3600_000L }
+                            prefs.edit().putLong("mc:${relay.url}", System.currentTimeMillis() + ms).apply()
+                            CrashLog.note("Przekaźnik ${relay.url.removePrefix("wss://")} odmówił plików („${fail.take(80)}”) — omijam go przez ${ms / 3600_000} h")
+                        }
+                        Log.w(TAG, "${relay.url} odrzucił media: $fail")
                         db.setUploadDone(mediaId, relay.url, -1)
-                        if (isLocal(relay.url)) return
-                        // jego kawałek przejmuje inny przekaźnik; gdy nie ma żadnego — wysyłka się nie udała
-                        if (rehomeOrphans(mediaId)) kickUploads()
-                        else if (uploadCovered(db.upload(mediaId) ?: return) < u.chunks) db.updateStatus(u.msg, St.FAILED, false)
+                        if (!isLocal(relay.url) && !rehomeOrphans(mediaId) && uploadCovered(db.upload(mediaId) ?: return progressed) < u.chunks)
+                            db.updateStatus(u.msg, St.FAILED, false)
+                        break
                     }
-                    return
+                    Refusal.TRANSIENT -> {
+                        p.pausedUntil = System.currentTimeMillis() + 15_000
+                        break
+                    }
                 }
-                done += batch.size
-                db.setUploadDone(mediaId, relay.url, done)
-                uploadOkAt["$mediaId|${relay.url}"] = System.currentTimeMillis()
-                uploadErr.remove("$mediaId|${relay.url}")
-                db.mergeUploadIds(mediaId, u.chunks, batch.associateWith { ids[it] ?: "" }.filterValues { it.isNotEmpty() })
-                val fresh = db.upload(mediaId) ?: return
-                val covered = uploadCovered(fresh)
-                db.setProgress(u.msg, (covered * 100 / u.chunks).coerceIn(0, 100))
-                // cały plik jest już do pobrania (choćby w jednej kopii) — koperty mogą iść od razu
-                if (covered >= u.chunks) releaseUpload(fresh)
             }
         }
-        releaseUpload(db.upload(mediaId) ?: return)
-        // ten przekaźnik skończył swoją część, a pliku wciąż nie ma w całości — sprawdź za chwilę, czy coś nie stoi
-        db.upload(mediaId)?.let { if (uploadCovered(it) < it.chunks) scheduleUploadRetry(stallMs + 2_000) }
+        val fresh = db.upload(mediaId) ?: return progressed
+        releaseUpload(fresh)
+        // pliku wciąż nie ma w całości — sprawdź za chwilę, czy coś nie stoi
+        if (uploadCovered(fresh) < fresh.chunks) scheduleUploadRetry(stallMs + 2_000)
         if (uploadComplete(u.msg) && !u.msg.startsWith("story:")) {
             val m = db.message(u.msg)
             if (m == null || m.path == null) file.delete()
         }
+        return progressed
     }
 
     private suspend fun <T> coroutineScopeAsync(items: List<Int>, block: suspend (Int) -> T): List<T> =

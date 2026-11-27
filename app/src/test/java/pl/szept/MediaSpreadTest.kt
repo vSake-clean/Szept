@@ -109,6 +109,7 @@ class MediaSpreadTest {
         val a = core("Nadawca")
         val b = core("Odbiorca")
         waitFor("nadawca zna limity") { urls.drop(1).all { a.mediaCapOf(it) == cap } }
+        waitFor("nadawca połączony z działającymi przekaźnikami") { a.connectedRelays().size >= 3 }
         a.addContact(b.myPub, "Odbiorca"); b.addContact(a.myPub, "Nadawca")
         a.setFastSendMode(2)
         val f = File(ctx.cacheDir, "martwy.bin").apply { writeBytes(ByteArray(100 * 44_000).also { java.util.Random(3).nextBytes(it) }) }
@@ -118,13 +119,42 @@ class MediaSpreadTest {
         assertEquals(sha0, sha(File(b.db.message(m.id)!!.path!!)))
         val plan = b.db.message(m.id)!!.media!!.chunkPlan()!!
         println("plan: ${plan.relays.size} przekaźniki, kopie ${plan.copies}, przejęte: ${plan.extra}")
-        assertTrue("martwy przekaźnik w planie", dead in plan.relays)
-        assertTrue("część martwego przejął inny przekaźnik", plan.extra.isNotEmpty())
-        // panel administratora widzi stan każdego przekaźnika
-        val st = a.uploadRelays(m.id)
-        assertTrue(st.any { !it.connected })
+        // 3.4.2: przekaźnik bez połączenia w ogóle nie dostaje części pliku
+        assertTrue("martwy przekaźnik nie powinien być w planie", dead !in plan.relays)
         listOf(a, b).forEach { it.stop() }
         nets.forEach { it.close() }
         println("MARTWY PRZEKAŹNIK NIE BLOKUJE WYSYŁKI OK")
+    }
+
+    /**
+     * Jak na zrzucie z 3.4.1: jeden przekaźnik banuje („banned: too many rate-limit violations”),
+     * drugi co chwilę każe zwolnić. Wysyłka ma się skończyć, zbanowany przekaźnik ma być omijany.
+     */
+    @Test
+    fun bannedAndSlowRelays() = runBlocking {
+        val cap = 60
+        val nets = List(4) { LocalRelay(ctx, "ban_${it}_${System.nanoTime()}.db").apply { maxLimit = cap } }
+        nets[0].refuseWith = "banned: too many rate-limit violations, try again later"
+        nets[1].slowEvery = 3
+        val urls = nets.map { "ws://127.0.0.1:" + it.start(0) }
+        fun core(name: String) = Core(ctx, name + System.nanoTime()).apply {
+            createIdentity(name); setRelays(urls); appVisible = true; stallMs = 5_000; start()
+        }
+        val a = core("Nadawca")
+        val b = core("Odbiorca")
+        waitFor("nadawca zna limity") { urls.all { a.mediaCapOf(it) == cap } }
+        a.addContact(b.myPub, "Odbiorca"); b.addContact(a.myPub, "Nadawca")
+        a.setFastSendMode(1)
+        val f = File(ctx.cacheDir, "ban.bin").apply { writeBytes(ByteArray(100 * 44_000).also { java.util.Random(4).nextBytes(it) }) }
+        val sha0 = sha(f)
+        val m = a.send(dmChatId(b.myPub), Kind.FILE, "mimo bana", Core.Attachment(f, "application/octet-stream", "ban.bin", null, 0, 0, 0))
+        waitFor("odbiorca pobrał plik mimo bana i limitów", 150_000) { b.db.message(m.id)?.path != null }
+        assertEquals(sha0, sha(File(b.db.message(m.id)!!.path!!)))
+        assertTrue("zbanowany przekaźnik powinien być omijany", a.mediaCooldownUntil(urls[0]) > System.currentTimeMillis())
+        val st = a.uploadRelays(m.id)
+        println(st.joinToString("\n") { "${it.host}: ${it.done}/${it.need} rejected=${it.rejected} err=${it.error}" })
+        listOf(a, b).forEach { it.stop() }
+        nets.forEach { it.close() }
+        println("BAN I LIMITY NIE BLOKUJĄ WYSYŁKI OK")
     }
 }

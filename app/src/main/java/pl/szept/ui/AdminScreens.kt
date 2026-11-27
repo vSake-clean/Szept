@@ -239,10 +239,14 @@ fun AdminScreen(nav: Nav) {
                     LinearProgressIndicator(progress = { job.progress / 100f }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                     // każdy przekaźnik: ile paczek przyjął i co ostatnio odpowiedział
                     relayState[job.id].orEmpty().forEach { r ->
+                        val now = System.currentTimeMillis()
+                        val hm = java.text.SimpleDateFormat("HH:mm", pl.szept.I18n.locale)
                         val state = when {
-                            r.rejected -> "⛔ " + tr("odmówił") + (r.error?.let { ": $it" } ?: "")
                             r.done >= r.need -> "✓"
+                            r.skipUntil > now -> "⛔ " + tr("omijany do {0}", hm.format(java.util.Date(r.skipUntil))) + (r.error?.let { " ($it)" } ?: "")
+                            r.rejected -> "⛔ " + tr("odmówił") + (r.error?.let { ": $it" } ?: "")
                             !r.connected -> "✗ " + tr("bez połączenia")
+                            r.restUntil > now -> "⏸ " + tr("odpoczywa do {0} (prosił o wolniej)", hm.format(java.util.Date(r.restUntil)))
                             r.error != null -> "⚠ " + r.error
                             else -> "↑"
                         }

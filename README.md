@@ -16,6 +16,9 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.4.2
+- **Wysyłka nie drażni przekaźników**: jeden plik naraz, zwalnianie na prośbę przekaźnika, a przekaźnik, który zablokował telefon lub ma pełny dysk, jest omijany przez kilka godzin.
+
 ### Nowe w 3.4.1
 - **Aktualizacje z panelu nie stają**: przekaźnik, który nie odpowiada, oddaje swoją część innym; ponowne wysłanie tej samej wersji nie wgrywa pliku drugi raz; w „W toku” widać stan każdego przekaźnika i przycisk „Anuluj”.
 

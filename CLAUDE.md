@@ -30,6 +30,10 @@ Z właścicielem rozmawiaj po polsku, prosto i krótko. Pytaj przed rzeczami nie
 
 ## Rozsyłanie aktualizacji
 - APK musi zmieścić się w limitach przekaźników: dziś ok. 33 MB = ok. 750 paczek po 44 000 B (tylko ARM, bez x86).
+- Publiczne przekaźniki limitują zapis: damus banuje IP po wielu „rate-limited”, nos.lol/oxtr każą zwolnić,
+  oxtr bywa pełny („No space left on device”), wellorder bywa martwy. Wysyłka (od 3.4.2): jeden plik naraz na
+  przekaźnik, okno 2–6 paczek, na „slow down” okno 1 + przerwa, po 5 skargach pauza 3 min; „banned”/pełny dysk =
+  omijanie 6–24 h (`mc:<url>` w prefs) i przeniesienie części pliku. Nie przyspieszaj tego bez pomiaru.
 - Starsze wersje (≤ 3.3.4) pobierają bez numerów paczek — dostaną komplet tylko, gdy żaden przekaźnik nie ma więcej
   niż ~500 paczek pliku (pilnuje tego `ChunkPlan.build`). Zapasowo: link do wydań na GitHubie (`Admin.RELEASES_URL`).
 
