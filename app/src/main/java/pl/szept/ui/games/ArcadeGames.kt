@@ -1,5 +1,6 @@
 package pl.szept.ui.games
 
+import pl.szept.tr
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -66,7 +67,7 @@ fun SnakeGame(env: GameEnv) {
         if (n == food) { score++; placeFood() } else body.removeLast()
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$score pkt", "długość ${body.size}")
+        GameHud("$score pkt", tr("długość {0}", body.size))
         ArcadeBox(Modifier.weight(1f), Color(0xFF1B3A1B)) { sz ->
             val cell = sz.width.toFloat() / cols
             LaunchedEffect(sz) { if (!started) { rows = max(10, (sz.height / cell).toInt()); reset() } }
@@ -89,7 +90,7 @@ fun SnakeGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Przesuwaj palcem, aby skręcać.\nDotknij, aby zacząć") { started = true }
+    if (!started) StartOverlay(tr("Przesuwaj palcem, aby skręcać.\nDotknij, aby zacząć")) { started = true }
 }
 
 // ============================ ptaszek ============================
@@ -148,7 +149,7 @@ fun FlappyGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Dotykaj, aby podlecieć") { started = true; vy = -0.85f }
+    if (!started) StartOverlay(tr("Dotykaj, aby podlecieć")) { started = true; vy = -0.85f }
 }
 
 // ============================ klocki ============================
@@ -248,7 +249,7 @@ fun TetrisGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Przesuwaj w bok, dotknij = obrót,\nprzesuń w dół = szybciej") { started = true }
+    if (!started) StartOverlay(tr("Przesuwaj w bok, dotknij = obrót,\nprzesuń w dół = szybciej")) { started = true }
 }
 
 // ============================ arkanoid ============================
@@ -290,7 +291,7 @@ fun BreakoutGame(env: GameEnv) {
         if (by > 1f) { lives--; if (lives <= 0) { over = true; env.finish(score.toDouble()) } else serve() }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$score pkt", "życia: $lives · poziom $level")
+        GameHud("$score pkt", tr("życia: {0} · poziom {1}", lives, level))
         ArcadeBox(Modifier.weight(1f)) { sz ->
             LaunchedEffect(sz) { aspect = sz.height.toFloat() / sz.width }
             Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
@@ -311,7 +312,7 @@ fun BreakoutGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Przesuwaj paletkę palcem") { started = true; serve() }
+    if (!started) StartOverlay(tr("Przesuwaj paletkę palcem")) { started = true; serve() }
 }
 
 // ============================ odbijanka ============================
@@ -357,7 +358,7 @@ fun PongGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Nie pozwól piłce spaść!") { started = true }
+    if (!started) StartOverlay(tr("Nie pozwól piłce spaść!")) { started = true }
 }
 
 // ============================ unik ============================
@@ -386,7 +387,7 @@ fun DodgeGame(env: GameEnv) {
         }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud(pl.szept.core.GameCatalog.fmtTime(time * 1000.0), "przetrwaj")
+        GameHud(pl.szept.core.GameCatalog.fmtTime(time * 1000.0), tr("przetrwaj"))
         ArcadeBox(Modifier.weight(1f), Color(0xFF26113D)) { sz ->
             LaunchedEffect(sz) { aspect = sz.height.toFloat() / sz.width }
             Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
@@ -402,7 +403,7 @@ fun DodgeGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Przesuwaj palcem i unikaj bloków") { started = true }
+    if (!started) StartOverlay(tr("Przesuwaj palcem i unikaj bloków")) { started = true }
 }
 
 // ============================ kosmiczna obrona ============================
@@ -450,7 +451,7 @@ fun ShooterGame(env: GameEnv) {
         if (lives <= 0) { over = true; env.finish(score.toDouble()) }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$score pkt", "osłony: ${"♥".repeat(max(0, lives))}")
+        GameHud("$score pkt", tr("osłony: {0}", "♥".repeat(max(0, lives))))
         ArcadeBox(Modifier.weight(1f), Color(0xFF05070F)) { sz ->
             LaunchedEffect(sz) { aspect = sz.height.toFloat() / sz.width }
             val stars = remember { List(60) { Offset(Random(it).nextFloat(), Random(it * 7 + 3).nextFloat()) } }
@@ -470,7 +471,7 @@ fun ShooterGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Statek strzela sam — przesuwaj go palcem") { started = true }
+    if (!started) StartOverlay(tr("Statek strzela sam — przesuwaj go palcem")) { started = true }
 }
 
 // ============================ biegacz ============================
@@ -515,7 +516,7 @@ fun RunnerGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Dotknij, aby skoczyć") { started = true }
+    if (!started) StartOverlay(tr("Dotknij, aby skoczyć")) { started = true }
 }
 
 // ============================ skoczek ============================
@@ -558,7 +559,7 @@ fun JumperGame(env: GameEnv) {
         if (py < cam - 0.1f) { over = true; env.finish((cam * 100).toInt().toDouble()) }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("${(cam * 100).toInt()} pkt", "wysokość")
+        GameHud("${(cam * 100).toInt()} pkt", tr("wysokość"))
         ArcadeBox(Modifier.weight(1f), Color(0xFFE3F2FD)) { sz ->
             LaunchedEffect(sz) { viewH = sz.height.toFloat() / sz.width }
             Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
@@ -575,7 +576,7 @@ fun JumperGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Trzymaj palec tam, dokąd ma skakać") { started = true }
+    if (!started) StartOverlay(tr("Trzymaj palec tam, dokąd ma skakać")) { started = true }
 }
 
 // ============================ wieża ============================
@@ -605,7 +606,7 @@ fun StackGame(env: GameEnv) {
         dir = if (layers.size % 2 == 0) 1f else -1f
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("${layers.size - 1} pkt", "piętra")
+        GameHud("${layers.size - 1} pkt", tr("piętra"))
         ArcadeBox(Modifier.weight(1f), Color(0xFF263238)) { _ ->
             Canvas(Modifier.fillMaxSize().pointerInput(started, over) { detectTapGestures { if (started && !over) dropBlock() } }) {
                 frame.value
@@ -625,7 +626,7 @@ fun StackGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Dotknij, by upuścić blok na wieżę") { started = true }
+    if (!started) StartOverlay(tr("Dotknij, by upuścić blok na wieżę")) { started = true }
 }
 
 // ============================ balony ============================
@@ -676,7 +677,7 @@ fun BalloonsGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Przebijaj kolorowe balony. Czarne odejmują 3 punkty!") { started = true }
+    if (!started) StartOverlay(tr("Przebijaj kolorowe balony. Czarne odejmują 3 punkty!")) { started = true }
 }
 
 // ============================ kret ============================
@@ -726,7 +727,7 @@ fun MoleGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Uderzaj krety! Złoty = 3 punkty") { started = true }
+    if (!started) StartOverlay(tr("Uderzaj krety! Złoty = 3 punkty")) { started = true }
 }
 
 // ============================ celownik ============================
@@ -742,7 +743,7 @@ fun AimGame(env: GameEnv) {
     var penalty by remember { mutableLongStateOf(0L) }
     val ms = rememberStopwatch(started && !over)
     Column(Modifier.fillMaxSize()) {
-        GameHud(pl.szept.core.GameCatalog.fmtTime((ms.value + penalty).toDouble()), "cel ${hits + 1}/$total")
+        GameHud(pl.szept.core.GameCatalog.fmtTime((ms.value + penalty).toDouble()), tr("cel {0}/{1}", hits + 1, total))
         ArcadeBox(Modifier.weight(1f), Color(0xFF212121)) { sz ->
             val aspect = sz.height.toFloat() / sz.width
             Canvas(Modifier.fillMaxSize().pointerInput(started, over) {
@@ -763,7 +764,7 @@ fun AimGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Trafiaj w cele jak najszybciej.\nPudło = +0,5 s") { started = true }
+    if (!started) StartOverlay(tr("Trafiaj w cele jak najszybciej.\nPudło = +0,5 s")) { started = true }
 }
 
 // ============================ klikacz ============================
@@ -823,7 +824,7 @@ fun EggsGame(env: GameEnv) {
         if (spawnIn <= 0) { eggs.add(Egg(rnd.nextInt(4), 0)); spawnIn = max(1, 3 - score / 20) + rnd.nextInt(2) }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$score pkt", "stłuczone: $broken/3")
+        GameHud("$score pkt", tr("stłuczone: {0}/3", broken))
         ArcadeBox(Modifier.weight(1f), Color(0xFFCFD8C5)) { _ ->
             Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
                 detectTapGestures(onPress = { p ->
@@ -861,5 +862,5 @@ fun EggsGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Dotykaj rogów ekranu, by przesunąć koszyk") { started = true }
+    if (!started) StartOverlay(tr("Dotykaj rogów ekranu, by przesunąć koszyk")) { started = true }
 }

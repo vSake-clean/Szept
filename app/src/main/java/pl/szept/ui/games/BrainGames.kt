@@ -1,5 +1,6 @@
 package pl.szept.ui.games
 
+import pl.szept.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,7 +54,7 @@ fun MemoryGame(env: GameEnv) {
         }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$moves ruchów", "pary: ${done.size / 2}/10")
+        GameHud(tr("{0} ruchów", moves), tr("pary: {0}/10", done.size / 2))
         Box(Modifier.weight(1f).fillMaxWidth().padding(10.dp), contentAlignment = Alignment.Center) {
             Column(Modifier.widthIn(max = 520.dp).aspectRatio(4f / 5f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (r in 0 until 5) Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -100,7 +101,7 @@ fun SimonGame(env: GameEnv) {
         if (pos == seq.size) seq.add(rnd.nextInt(4))
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("poziom ${seq.size}", if (showing) "patrz…" else "powtórz")
+        GameHud("poziom ${seq.size}", if (showing) tr("patrz…") else tr("powtórz"))
         SquareBoard(Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (r in 0 until 2) Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -122,7 +123,7 @@ fun SimonGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("Zapamiętaj kolejność kolorów i powtórz ją") { started = true }
+    if (!started) StartOverlay(tr("Zapamiętaj kolejność kolorów i powtórz ją")) { started = true }
 }
 
 // ============================ pamięć cyfr ============================
@@ -148,16 +149,16 @@ fun DigitsGame(env: GameEnv) {
         Spacer(Modifier.weight(1f))
         if (showing) Text(number, fontSize = if (level < 10) 48.sp else 32.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, letterSpacing = 4.sp)
         else {
-            Text("Jaka to była liczba?", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Jaka to była liczba?"), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(input, { input = it.filter { c -> c.isDigit() }.take(40) }, singleLine = true, textStyle = MaterialTheme.typography.headlineMedium,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             Button(onClick = {
                 if (input == number) level++ else { over = true; env.finish((level - 3).toDouble()) }
-            }, enabled = input.isNotEmpty() && !over, modifier = Modifier.padding(top = 12.dp)) { Text("Sprawdź") }
+            }, enabled = input.isNotEmpty() && !over, modifier = Modifier.padding(top = 12.dp)) { Text(tr("Sprawdź")) }
         }
         Spacer(Modifier.weight(1f))
     }
-    if (!started) StartOverlay("Zapamiętaj liczbę, a potem ją wpisz") { started = true }
+    if (!started) StartOverlay(tr("Zapamiętaj liczbę, a potem ją wpisz")) { started = true }
 }
 
 // ============================ test szympansa ============================
@@ -205,7 +206,7 @@ fun ChimpGame(env: GameEnv) {
                 }
             }
         }
-        Text("Dotykaj od 1 w górę. Po pierwszym dotknięciu liczby znikają!", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Dotykaj od 1 w górę. Po pierwszym dotknięciu liczby znikają!"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -227,13 +228,13 @@ fun ReflexGame(env: GameEnv) {
         if (phase == 3) { delay(1200); phase = 0 }
     }
     val (bg, label) = when (phase) {
-        1 -> Color(0xFFC62828) to "Czekaj na zielone…"
-        2 -> Color(0xFF2E7D32) to "TERAZ!"
-        3 -> Color(0xFF424242) to "Za wcześnie! Jeszcze raz"
-        else -> MaterialTheme.colorScheme.primary to "Dotknij, aby zacząć próbę ${results.size + 1}/5"
+        1 -> Color(0xFFC62828) to tr("Czekaj na zielone…")
+        2 -> Color(0xFF2E7D32) to tr("TERAZ!")
+        3 -> Color(0xFF424242) to tr("Za wcześnie! Jeszcze raz")
+        else -> MaterialTheme.colorScheme.primary to tr("Dotknij, aby zacząć próbę {0}/5", results.size + 1)
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud(if (results.isEmpty()) "— ms" else "${results.average().roundToInt()} ms", "próby: ${results.size}/5")
+        GameHud(if (results.isEmpty()) tr("— ms") else "${results.average().roundToInt()} ms", tr("próby: {0}/5", results.size))
         Box(Modifier.weight(1f).fillMaxWidth().background(bg).pointerInput(Unit) {
             awaitEachGesture {
                 awaitFirstDown()
@@ -317,7 +318,7 @@ fun ShadeGame(env: GameEnv) {
                 }
             }
         }
-        Text("Dotknij pola, które ma inny odcień", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Dotknij pola, które ma inny odcień"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -333,10 +334,10 @@ fun StopwatchGame(env: GameEnv) {
         while (running) { shown = (System.nanoTime() - start) / 1_000_000; delay(16) }
     }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("Zatrzymaj dokładnie na", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Zatrzymaj dokładnie na"), style = MaterialTheme.typography.titleMedium)
         Text("10,00 s", fontSize = 40.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
-        Text(if (running && shown > 3000) "?,?? s" else GameCatalog.fmtTime(shown.toDouble()), fontSize = 56.sp, fontWeight = FontWeight.Bold,
+        Text(if (running && shown > 3000) tr("?,?? s") else GameCatalog.fmtTime(shown.toDouble()), fontSize = 56.sp, fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(24.dp))
         Button(onClick = {
@@ -350,13 +351,13 @@ fun StopwatchGame(env: GameEnv) {
             }
         }, Modifier.size(160.dp), shape = RoundedCornerShape(80.dp)) { Text(if (running) "STOP" else "START", fontSize = 24.sp) }
         Spacer(Modifier.height(16.dp))
-        Text("Wynik to różnica od 10 sekund (mniej = lepiej)", style = MaterialTheme.typography.labelMedium)
+        Text(tr("Wynik to różnica od 10 sekund (mniej = lepiej)"), style = MaterialTheme.typography.labelMedium)
     }
 }
 
 // ============================ kolory (Stroop) ============================
 
-private val STROOP = listOf("CZERWONY" to Color(0xFFE53935), "NIEBIESKI" to Color(0xFF1E88E5), "ZIELONY" to Color(0xFF43A047), "ŻÓŁTY" to Color(0xFFFDD835), "FIOLETOWY" to Color(0xFF8E24AA))
+private val STROOP = listOf(tr("CZERWONY") to Color(0xFFE53935), tr("NIEBIESKI") to Color(0xFF1E88E5), tr("ZIELONY") to Color(0xFF43A047), tr("ŻÓŁTY") to Color(0xFFFDD835), tr("FIOLETOWY") to Color(0xFF8E24AA))
 
 @Composable
 fun StroopGame(env: GameEnv) {
@@ -372,7 +373,7 @@ fun StroopGame(env: GameEnv) {
     Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         GameHud("$score pkt", "${left.value} s")
         Spacer(Modifier.weight(1f))
-        Text("Jakiego KOLORU jest napis?", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Jakiego KOLORU jest napis?"), style = MaterialTheme.typography.titleMedium)
         Text(STROOP[word].first, fontSize = 44.sp, fontWeight = FontWeight.Black, color = STROOP[ink].second, modifier = Modifier.padding(16.dp))
         Spacer(Modifier.weight(1f))
         STROOP.forEachIndexed { k, (name, _) ->
@@ -382,7 +383,7 @@ fun StroopGame(env: GameEnv) {
             }, Modifier.fillMaxWidth().padding(vertical = 3.dp)) { Text(name.lowercase().replaceFirstChar { it.uppercase() }) }
         }
     }
-    if (!started) StartOverlay("Wybieraj kolor napisu, a nie jego treść.\nBłąd = −1 pkt") { started = true }
+    if (!started) StartOverlay(tr("Wybieraj kolor napisu, a nie jego treść.\nBłąd = −1 pkt")) { started = true }
 }
 
 // ============================ szybkie liczenie ============================
@@ -423,5 +424,5 @@ fun MathGame(env: GameEnv) {
         }
         Spacer(Modifier.height(16.dp))
     }
-    if (!started) StartOverlay("Rozwiązuj działania. Błąd = −1 pkt") { started = true }
+    if (!started) StartOverlay(tr("Rozwiązuj działania. Błąd = −1 pkt")) { started = true }
 }

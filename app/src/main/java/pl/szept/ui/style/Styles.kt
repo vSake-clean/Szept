@@ -1,5 +1,6 @@
 package pl.szept.ui.style
 
+import pl.szept.tr
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.GenericShape
@@ -63,12 +64,12 @@ object Trans {
     const val DEPTH = 5
     const val SHARED_X = 6
     const val NONE = 7
-    val NAMES = listOf("Zależnie od stylu", "Przesunięcie z głębią", "Przenikanie", "Powiększenie", "Wsunięcie z dołu", "Głębia", "Wspólna oś", "Bez animacji")
+    val NAMES = listOf(tr("Zależnie od stylu"), tr("Przesunięcie z głębią"), tr("Przenikanie"), tr("Powiększenie"), tr("Wsunięcie z dołu"), tr("Głębia"), tr("Wspólna oś"), tr("Bez animacji"))
 }
 
 /** Grupa stylów w galerii. */
 enum class Category(val label: String) {
-    CLASSIC("Klasyczny"), PHONE("Telefony i nakładki"), APPS("Komunikatory i aplikacje"), DESKTOP("Komputery"), OTHER("Inne"),
+    CLASSIC(tr("Klasyczny")), PHONE(tr("Telefony i nakładki")), APPS(tr("Komunikatory i aplikacje")), DESKTOP(tr("Komputery")), OTHER(tr("Inne")),
 }
 
 /** Nagłówek listy rozmów. */
@@ -159,18 +160,18 @@ object Motions {
 
 /** Charakter ruchu do wyboru w ustawieniach (0 = jak w stylu). */
 val MOTION_PRESETS: List<Pair<String, MotionSpec?>> = listOf(
-    "Jak w stylu" to null,
-    "Sprężysty" to Motions.Apple,
-    "Materiałowy" to Motions.Material,
-    "Z odbiciem" to Motions.Expressive,
-    "Płynna fizyka" to Motions.Fluid,
-    "Szybki" to Motions.Snappy,
-    "Spokojny" to Motions.Calm,
-    "Ostry" to Motions.Crisp,
-    "Zabawny" to Motions.Playful,
-    "Okienkowy" to Motions.Fluent,
-    "Retro" to Motions.Retro,
-    "Terminal" to Motions.Terminal,
+    tr("Jak w stylu") to null,
+    tr("Sprężysty") to Motions.Apple,
+    tr("Materiałowy") to Motions.Material,
+    tr("Z odbiciem") to Motions.Expressive,
+    tr("Płynna fizyka") to Motions.Fluid,
+    tr("Szybki") to Motions.Snappy,
+    tr("Spokojny") to Motions.Calm,
+    tr("Ostry") to Motions.Crisp,
+    tr("Zabawny") to Motions.Playful,
+    tr("Okienkowy") to Motions.Fluent,
+    tr("Retro") to Motions.Retro,
+    tr("Terminal") to Motions.Terminal,
 )
 
 /** Wypełnienie powierzchni: kolor (może być przezroczysty), gradient, obwódka i kolor tekstu na niej. */
@@ -392,16 +393,16 @@ private fun seedScheme(dark: Boolean, ai: Int): ColorScheme {
 val STYLES: List<StyleSpec> = listOf(
     // ======================= klasyczny =======================
     StyleSpec(
-        "classic", "Szept klasyczny", "Wygląd znany z poprzednich wersji Szepta — bez zmian, w wybranym kolorze.",
-        accent = true, origin = "Szept", category = Category.CLASSIC,
-        motion = MotionSpec(Trans.SLIDE, 300, bez(0.2f, 0f, 0f, 1f), 0.9f, 420f, Press.RIPPLE, MenuAnim.DROP, Appear.SPRING, DialogAnim.SCALE, "przesunięcie, jak dotąd"),
+        "classic", tr("Szept klasyczny"), tr("Wygląd znany z poprzednich wersji Szepta — bez zmian, w wybranym kolorze."),
+        accent = true, origin = tr("Szept"), category = Category.CLASSIC,
+        motion = MotionSpec(Trans.SLIDE, 300, bez(0.2f, 0f, 0f, 1f), 0.9f, 420f, Press.RIPPLE, MenuAnim.DROP, Appear.SPRING, DialogAnim.SCALE, tr("przesunięcie, jak dotąd")),
         palette = ::classicPal,
     ),
     // ======================= telefony i nakładki =======================
     StyleSpec(
-        "liquid", "Liquid Glass", "Szkło wszędzie: pływające przyciski, które rozmywają i załamują treść, szklane karty rozmów i dymki na miękkiej kolorowej poświacie, pasek szukania na dole i dymki z zawiniętymi ogonkami.",
+        "liquid", tr("Liquid Glass"), tr("Szkło wszędzie: pływające przyciski, które rozmywają i załamują treść, szklane karty rozmów i dymki na miękkiej kolorowej poświacie, pasek szukania na dole i dymki z zawiniętymi ogonkami."),
         surf = Surf.GLASS, bg = Bg.AURA, chatBg = Bg.AURA, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true,
-        chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = "iOS 26", category = Category.PHONE,
+        chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = tr("iOS 26"), category = Category.PHONE,
         homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.CARDS, input = InputStyle.GLASS, fab = FabStyle.NONE, tilt = true, motion = Motions.Apple,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -419,9 +420,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "liquid_sky", "Liquid Glass Niebo", "Szkło na tle nieba z chmurami na każdym ekranie: przydymione szklane karty i dymki, białe napisy, przyciski, przez które prześwituje niebo, i pasek szukania na dole.",
+        "liquid_sky", tr("Liquid Glass Niebo"), tr("Szkło na tle nieba z chmurami na każdym ekranie: przydymione szklane karty i dymki, białe napisy, przyciski, przez które prześwituje niebo, i pasek szukania na dole."),
         surf = Surf.GLASS, bg = Bg.SKY, chatBg = Bg.SKY, radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 34), floatingBars = true, moving = true,
-        chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = "iOS 26", category = Category.PHONE,
+        chrome = Chrome.GLASS, tailKind = Tail.IMESSAGE, origin = tr("iOS 26"), category = Category.PHONE,
         homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.CARDS, input = InputStyle.GLASS, fab = FabStyle.NONE, tilt = true, motion = Motions.Apple,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -439,21 +440,21 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "materialyou", "Material You", "Kolory dobrane do tapety telefonu, zaokrąglone pole wiadomości z buźką, dymki w serii, rozszerzony przycisk „Nowa rozmowa” i fala przy dotknięciu.",
+        "materialyou", tr("Material You"), tr("Kolory dobrane do tapety telefonu, zaokrąglone pole wiadomości z buźką, dymki w serii, rozszerzony przycisk „Nowa rozmowa” i fala przy dotknięciu."),
         radius = 20.dp, tail = 20.dp, corners = intArrayOf(8, 12, 16, 24, 28), grouped = true, dynamic = true, accent = true,
-        origin = "Android 12–15", category = Category.PHONE, input = InputStyle.PILL, fab = FabStyle.EXTENDED, motion = Motions.Material,
+        origin = tr("Android 12–15"), category = Category.PHONE, input = InputStyle.PILL, fab = FabStyle.EXTENDED, motion = Motions.Material,
     ) { dark, ai, _ -> palFromScheme(seedScheme(dark, ai), dark) },
     StyleSpec(
-        "expressive", "Expressive Pop", "Rozmowa w zaokrąglonym kontenerze, lista z segmentów, pigułki i sprężysty ruch z odbiciem.",
+        "expressive", tr("Expressive Pop"), tr("Rozmowa w zaokrąglonym kontenerze, lista z segmentów, pigułki i sprężysty ruch z odbiciem."),
         radius = 20.dp, tail = 20.dp, corners = intArrayOf(10, 16, 24, 28, 32), cards = true, grouped = true, dynamic = true, accent = true,
-        headWeight = FontWeight.Medium, chrome = Chrome.EXPRESSIVE, origin = "Android 16", category = Category.PHONE,
+        headWeight = FontWeight.Medium, chrome = Chrome.EXPRESSIVE, origin = tr("Android 16"), category = Category.PHONE,
         listStyle = ListStyle.SEGMENTED, input = InputStyle.PILL, fab = FabStyle.EXTENDED, motion = Motions.Expressive,
     ) { dark, ai, _ -> palFromScheme(seedScheme(dark, ai), dark) },
     StyleSpec(
-        "oneui", "One Flow", "Wielki nagłówek do obsługi jedną ręką, lista w jednej zaokrąglonej karcie, niebieskie dymki i okna wysuwane od dołu.",
+        "oneui", tr("One Flow"), tr("Wielki nagłówek do obsługi jedną ręką, lista w jednej zaokrąglonej karcie, niebieskie dymki i okna wysuwane od dołu."),
         radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 20, 26, 30), cards = true, chrome = Chrome.ONEUI,
-        origin = "One UI 7", category = Category.PHONE, homeHeader = HomeHeader.BIG, listStyle = ListStyle.GROUPED, input = InputStyle.PILL,
-        motion = MotionSpec(Trans.ZOOM, 380, bez(0.33f, 0f, 0.3f, 1f), 0.95f, 340f, Press.SCALE, MenuAnim.GROW, Appear.SLIDE_UP, DialogAnim.SLIDE_UP, "powiększanie, okna od dołu"),
+        origin = tr("One UI 7"), category = Category.PHONE, homeHeader = HomeHeader.BIG, listStyle = ListStyle.GROUPED, input = InputStyle.PILL,
+        motion = MotionSpec(Trans.ZOOM, 380, bez(0.33f, 0f, 0.3f, 1f), 0.95f, 340f, Press.SCALE, MenuAnim.GROW, Appear.SLIDE_UP, DialogAnim.SLIDE_UP, tr("powiększanie, okna od dołu")),
     ) { dark, _, _ ->
         if (!dark) Pal(
             false, c(0xFFF6F6F8), Color.Black, c(0xFF66666B), c(0xFF3570EC), Color.White,
@@ -466,9 +467,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "hyper", "Hyper Minimal", "Szare tło, białe karty z dużymi zaokrągleniami, ogromny cienki tytuł, pole szukania pod nim i płynna fizyka animacji.",
+        "hyper", tr("Hyper Minimal"), tr("Szare tło, białe karty z dużymi zaokrągleniami, ogromny cienki tytuł, pole szukania pod nim i płynna fizyka animacji."),
         radius = 18.dp, tail = 6.dp, corners = intArrayOf(10, 14, 18, 22, 28), cards = true, chrome = Chrome.HYPER,
-        origin = "HyperOS 2", category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.GROUPED,
+        origin = tr("HyperOS 2"), category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.GROUPED,
         input = InputStyle.PILL, searchPill = true, headWeight = FontWeight.Light, motion = Motions.Fluid,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -482,9 +483,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "nothing", "Nothing Dot", "Czerń, biel i czerwony akcent, tytuł z kropek jak na wyświetlaczu matrycowym, szeryfowe nagłówki i ostre, szybkie przenikania.",
+        "nothing", tr("Nothing Dot"), tr("Czerń, biel i czerwony akcent, tytuł z kropek jak na wyświetlaczu matrycowym, szeryfowe nagłówki i ostre, szybkie przenikania."),
         radius = 20.dp, tail = 20.dp, corners = intArrayOf(8, 12, 18, 22, 28), cards = true, chrome = Chrome.NOTHING,
-        origin = "Nothing OS 3", category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.PLAIN,
+        origin = tr("Nothing OS 3"), category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.PLAIN,
         input = InputStyle.PILL, dotTitle = true, titleFont = FontFamily.Serif, motion = Motions.Crisp,
     ) { dark, _, _ ->
         if (dark) Pal(
@@ -499,9 +500,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "oxygen", "Fluid Clean", "Jasnoszare tło, białe karty, pogrubione nagłówki, niebieskie pigułki i menu na rozmytym tle — szybki, zdecydowany ruch.",
+        "oxygen", tr("Fluid Clean"), tr("Jasnoszare tło, białe karty, pogrubione nagłówki, niebieskie pigułki i menu na rozmytym tle — szybki, zdecydowany ruch."),
         radius = 18.dp, tail = 18.dp, corners = intArrayOf(10, 14, 16, 22, 28), cards = true, chrome = Chrome.OXYGEN, headWeight = FontWeight.Bold,
-        origin = "OxygenOS 15", category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.GROUPED,
+        origin = tr("OxygenOS 15"), category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.GROUPED,
         input = InputStyle.PILL, motion = Motions.Snappy,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -515,10 +516,10 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "coloros", "Soft Breeze", "Miękkie, jasne powierzchnie, zielony akcent, zaokrąglone karty i spokojne, powiększające przejścia.",
+        "coloros", tr("Soft Breeze"), tr("Miękkie, jasne powierzchnie, zielony akcent, zaokrąglone karty i spokojne, powiększające przejścia."),
         radius = 20.dp, tail = 20.dp, corners = intArrayOf(10, 14, 18, 24, 28), cards = true, chrome = Chrome.COLOROS,
-        origin = "ColorOS 15", category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.GROUPED,
-        input = InputStyle.PILL, motion = MotionSpec(Trans.ZOOM, 380, bez(0.4f, 0f, 0.2f, 1f), 0.92f, 320f, Press.SCALE, MenuAnim.GROW, Appear.SLIDE_UP, DialogAnim.SLIDE_UP, "spokojne powiększanie"),
+        origin = tr("ColorOS 15"), category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.GROUPED,
+        input = InputStyle.PILL, motion = MotionSpec(Trans.ZOOM, 380, bez(0.4f, 0f, 0.2f, 1f), 0.92f, 320f, Press.SCALE, MenuAnim.GROW, Appear.SLIDE_UP, DialogAnim.SLIDE_UP, tr("spokojne powiększanie")),
     ) { dark, _, _ ->
         if (!dark) Pal(
             false, c(0xFFF5F6F8), Color.Black, c(0xFF65686D), c(0xFF0B8C55), Color.White,
@@ -531,9 +532,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "emui", "Crystal Blue", "Duży tytuł z kapsułką wyszukiwania, lista z cienkimi liniami, intensywny błękit i okna wysuwane od dołu.",
+        "emui", tr("Crystal Blue"), tr("Duży tytuł z kapsułką wyszukiwania, lista z cienkimi liniami, intensywny błękit i okna wysuwane od dołu."),
         radius = 18.dp, tail = 18.dp, corners = intArrayOf(8, 12, 16, 24, 28), chrome = Chrome.EMUI,
-        origin = "EMUI 14", category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS,
+        origin = tr("EMUI 14"), category = Category.PHONE, homeHeader = HomeHeader.LARGE_TITLE, listStyle = ListStyle.SEPARATORS,
         input = InputStyle.PILL, searchPill = true, motion = Motions.Calm,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -547,9 +548,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "ios6", "Glossy 2012", "Błyszczące dymki z ogonkami, niebiesko-szary pasek z wytłoczonym napisem, przycisk „Wyślij” i podskakujące okna.",
+        "ios6", tr("Glossy 2012"), tr("Błyszczące dymki z ogonkami, niebiesko-szary pasek z wytłoczonym napisem, przycisk „Wyślij” i podskakujące okna."),
         mode = Mode.LIGHT, surf = Surf.GLOSSY, bg = Bg.IOS6, radius = 16.dp, tail = 16.dp, corners = intArrayOf(4, 6, 8, 10, 12),
-        chrome = Chrome.IOS6, tailKind = Tail.IMESSAGE, avatar = AvatarShape.SQUIRCLE, origin = "iOS 6", category = Category.PHONE,
+        chrome = Chrome.IOS6, tailKind = Tail.IMESSAGE, avatar = AvatarShape.SQUIRCLE, origin = tr("iOS 6"), category = Category.PHONE,
         listStyle = ListStyle.SEPARATORS, input = InputStyle.IOS6, fab = FabStyle.NONE, motion = Motions.Glossy,
     ) { _, _, _ ->
         Pal(
@@ -563,9 +564,9 @@ val STYLES: List<StyleSpec> = listOf(
     },
     // ======================= komunikatory i aplikacje =======================
     StyleSpec(
-        "telegram", "Doodle Gradient", "Niebieski pasek, jasnozielone dymki z ostrymi ogonkami i animowany gradient z rysunkami, który przesuwa się przy każdej wysłanej wiadomości.",
+        "telegram", tr("Doodle Gradient"), tr("Niebieski pasek, jasnozielone dymki z ostrymi ogonkami i animowany gradient z rysunkami, który przesuwa się przy każdej wysłanej wiadomości."),
         chatBg = Bg.TELEGRAM, radius = 16.dp, tail = 16.dp, corners = intArrayOf(6, 8, 12, 14, 16), chrome = Chrome.TELEGRAM,
-        tailKind = Tail.TELEGRAM, origin = "Telegram", category = Category.APPS, listStyle = ListStyle.SEPARATORS, input = InputStyle.BAR,
+        tailKind = Tail.TELEGRAM, origin = tr("Telegram"), category = Category.APPS, listStyle = ListStyle.SEPARATORS, input = InputStyle.BAR,
         motion = Motions.Messaging,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -581,10 +582,10 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "whatsapp", "Green Doodle", "Zielony pasek, beżowe tło z rysunkami, zielone dymki z „uszkiem” u góry, białe pole z okrągłym zielonym przyciskiem.",
+        "whatsapp", tr("Green Doodle"), tr("Zielony pasek, beżowe tło z rysunkami, zielone dymki z „uszkiem” u góry, białe pole z okrągłym zielonym przyciskiem."),
         chatBg = Bg.WHATSAPP, radius = 8.dp, tail = 8.dp, corners = intArrayOf(4, 6, 8, 10, 12), chrome = Chrome.WHATSAPP,
         tailKind = Tail.WHATSAPP, origin = "WhatsApp", category = Category.APPS, input = InputStyle.PILL, fab = FabStyle.SQUARE,
-        motion = MotionSpec(Trans.SHARED_X, 260, bez(0.2f, 0f, 0f, 1f), 1f, 500f, Press.RIPPLE, MenuAnim.DROP, Appear.FADE, DialogAnim.SCALE, "wspólna oś, przenikanie"),
+        motion = MotionSpec(Trans.SHARED_X, 260, bez(0.2f, 0f, 0f, 1f), 1f, 500f, Press.RIPPLE, MenuAnim.DROP, Appear.FADE, DialogAnim.SCALE, tr("wspólna oś, przenikanie")),
     ) { dark, _, _ ->
         if (!dark) Pal(
             false, Color.White, c(0xFF111B21), c(0xFF667781), c(0xFF008069), Color.White,
@@ -597,9 +598,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "messenger", "Gradient Bubbles", "Okrągłe dymki w serii z gradientem zależnym od miejsca na ekranie, rząd kolorowych ikon, pole „Aa” i kciuk w górę.",
+        "messenger", tr("Gradient Bubbles"), tr("Okrągłe dymki w serii z gradientem zależnym od miejsca na ekranie, rząd kolorowych ikon, pole „Aa” i kciuk w górę."),
         radius = 18.dp, tail = 18.dp, corners = intArrayOf(8, 12, 16, 20, 24), grouped = true, gradientMine = true, chrome = Chrome.MESSENGER,
-        origin = "Messenger", category = Category.APPS, homeHeader = HomeHeader.LARGE_TITLE, input = InputStyle.MESSENGER, fab = FabStyle.NONE,
+        origin = tr("Messenger"), category = Category.APPS, homeHeader = HomeHeader.LARGE_TITLE, input = InputStyle.MESSENGER, fab = FabStyle.NONE,
         searchPill = true, motion = Motions.Playful,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -613,9 +614,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "facebook", "Social Blue", "Niebieski napis z nazwą w rogu, okrągłe szare przyciski, białe karty na jasnoszarym tle i niebieskie dymki.",
+        "facebook", tr("Social Blue"), tr("Niebieski napis z nazwą w rogu, okrągłe szare przyciski, białe karty na jasnoszarym tle i niebieskie dymki."),
         radius = 18.dp, tail = 18.dp, corners = intArrayOf(6, 8, 8, 12, 12), grouped = true, cards = true, chrome = Chrome.FACEBOOK,
-        origin = "Facebook", category = Category.APPS, homeHeader = HomeHeader.WORDMARK, listStyle = ListStyle.CARDS,
+        origin = tr("Facebook"), category = Category.APPS, homeHeader = HomeHeader.WORDMARK, listStyle = ListStyle.CARDS,
         input = InputStyle.MESSENGER, fab = FabStyle.NONE, motion = Motions.Corporate,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -629,9 +630,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "discord", "Blurple Night", "Ciemny czat bez dymków: awatar, nazwa i godzina nad wiadomością, fioletowo-niebieski akcent i menu wysuwane od dołu.",
+        "discord", tr("Blurple Night"), tr("Ciemny czat bez dymków: awatar, nazwa i godzina nad wiadomością, fioletowo-niebieski akcent i menu wysuwane od dołu."),
         mode = Mode.DARK, radius = 8.dp, tail = 8.dp, corners = intArrayOf(4, 6, 8, 12, 16), chrome = Chrome.DISCORD,
-        origin = "Discord", category = Category.APPS, homeHeader = HomeHeader.COMPACT, input = InputStyle.DISCORD, flatMessages = true,
+        origin = tr("Discord"), category = Category.APPS, homeHeader = HomeHeader.COMPACT, input = InputStyle.DISCORD, flatMessages = true,
         searchPill = true, motion = Motions.Gamer,
     ) { _, _, _ ->
         Pal(
@@ -642,9 +643,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "signal", "Clean Messaging", "Biel, jeden intensywny błękit, dymki w serii, czytelna typografia i spokojne przejścia — nic zbędnego.",
+        "signal", tr("Clean Messaging"), tr("Biel, jeden intensywny błękit, dymki w serii, czytelna typografia i spokojne przejścia — nic zbędnego."),
         radius = 18.dp, tail = 18.dp, corners = intArrayOf(8, 12, 16, 20, 24), grouped = true, chrome = Chrome.SIGNAL,
-        origin = "Signal", category = Category.APPS, input = InputStyle.PILL, motion = Motions.Material,
+        origin = tr("Signal"), category = Category.APPS, input = InputStyle.PILL, motion = Motions.Material,
     ) { dark, _, _ ->
         if (!dark) Pal(
             false, Color.White, c(0xFF1B1B1D), c(0xFF5E5E5E), c(0xFF2C6BED), Color.White,
@@ -658,9 +659,9 @@ val STYLES: List<StyleSpec> = listOf(
     },
     // ======================= komputery =======================
     StyleSpec(
-        "win11", "Soft Mica", "Materiał delikatnie zabarwiony tapetą, rogi 8 px, białe karty i okna wsuwające się z dołu z wygaszeniem.",
+        "win11", tr("Soft Mica"), tr("Materiał delikatnie zabarwiony tapetą, rogi 8 px, białe karty i okna wsuwające się z dołu z wygaszeniem."),
         bg = Bg.MICA, radius = 8.dp, tail = 8.dp, corners = intArrayOf(4, 4, 8, 8, 8), cards = true, chrome = Chrome.WIN11,
-        origin = "Windows 11", category = Category.DESKTOP, listStyle = ListStyle.CARDS, input = InputStyle.WINDOW, fab = FabStyle.SQUARE,
+        origin = tr("Windows 11"), category = Category.DESKTOP, listStyle = ListStyle.CARDS, input = InputStyle.WINDOW, fab = FabStyle.SQUARE,
         motion = Motions.Fluent,
     ) { dark, _, _ ->
         if (!dark) Pal(
@@ -676,9 +677,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "win7", "Aero Glass", "Szklany, rozmyty pasek tytułu z połyskiem nad tapetą, jasne okna i błyszczące dymki.",
+        "win7", tr("Aero Glass"), tr("Szklany, rozmyty pasek tytułu z połyskiem nad tapetą, jasne okna i błyszczące dymki."),
         mode = Mode.LIGHT, surf = Surf.GLOSSY, chatBg = Bg.HARMONY, radius = 5.dp, tail = 5.dp, corners = intArrayOf(3, 3, 4, 5, 6),
-        chrome = Chrome.WIN7, origin = "Windows 7", category = Category.DESKTOP, listStyle = ListStyle.SEPARATORS, input = InputStyle.WINDOW,
+        chrome = Chrome.WIN7, origin = tr("Windows 7"), category = Category.DESKTOP, listStyle = ListStyle.SEPARATORS, input = InputStyle.WINDOW,
         fab = FabStyle.SQUARE, motion = Motions.Aero,
     ) { _, _, _ ->
         Pal(
@@ -691,9 +692,9 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "winxp", "Luna Blue", "Niebieski pasek tytułu, beżowe okna, żółte dymki jak „baloniki”, wysuwane menu i zielone wzgórze w tle rozmowy.",
+        "winxp", tr("Luna Blue"), tr("Niebieski pasek tytułu, beżowe okna, żółte dymki jak „baloniki”, wysuwane menu i zielone wzgórze w tle rozmowy."),
         mode = Mode.LIGHT, bg = Bg.PLAIN, chatBg = Bg.BLISS, radius = 6.dp, tail = 6.dp, corners = intArrayOf(3, 3, 4, 6, 8),
-        chrome = Chrome.WINXP, tailKind = Tail.TELEGRAM, origin = "Windows XP", category = Category.DESKTOP, listStyle = ListStyle.SEPARATORS,
+        chrome = Chrome.WINXP, tailKind = Tail.TELEGRAM, origin = tr("Windows XP"), category = Category.DESKTOP, listStyle = ListStyle.SEPARATORS,
         input = InputStyle.WINDOW, fab = FabStyle.SQUARE, motion = Motions.Luna,
     ) { _, _, _ ->
         Pal(
@@ -705,10 +706,10 @@ val STYLES: List<StyleSpec> = listOf(
         )
     },
     StyleSpec(
-        "retro", "Retro Grey", "Szare okna z ramkami 3D, granatowy pasek tytułu, turkusowy pulpit i przyciski, które naprawdę się wciskają.",
+        "retro", tr("Retro Grey"), tr("Szare okna z ramkami 3D, granatowy pasek tytułu, turkusowy pulpit i przyciski, które naprawdę się wciskają."),
         mode = Mode.LIGHT, surf = Surf.BEVEL, bg = Bg.RETRO, chatBg = Bg.DESKTOP, radius = 0.dp, tail = 0.dp, corners = intArrayOf(0, 0, 0, 0, 0),
         cards = true, font = FontFamily.SansSerif, chrome = Chrome.WIN95, avatar = AvatarShape.SQUARE,
-        origin = "Windows 95", category = Category.DESKTOP, listStyle = ListStyle.CARDS, input = InputStyle.WINDOW, fab = FabStyle.SQUARE,
+        origin = tr("Windows 95"), category = Category.DESKTOP, listStyle = ListStyle.CARDS, input = InputStyle.WINDOW, fab = FabStyle.SQUARE,
         motion = Motions.Retro,
     ) { _, _, _ ->
         Pal(
@@ -720,10 +721,10 @@ val STYLES: List<StyleSpec> = listOf(
     },
     // ======================= inne =======================
     StyleSpec(
-        "terminal", "Terminal Green", "Zielony fosfor na czerni, czcionka maszynowa, ostre ramki, odwrócenie kolorów przy dotknięciu i tekst pisany znak po znaku.",
+        "terminal", tr("Terminal Green"), tr("Zielony fosfor na czerni, czcionka maszynowa, ostre ramki, odwrócenie kolorów przy dotknięciu i tekst pisany znak po znaku."),
         mode = Mode.DARK, bg = Bg.TERMINAL, radius = 0.dp, tail = 0.dp, corners = intArrayOf(0, 0, 0, 0, 0),
         dividers = true, font = FontFamily.Monospace, avatar = AvatarShape.SQUARE, chrome = Chrome.TERMINAL,
-        origin = "Terminal", category = Category.OTHER, homeHeader = HomeHeader.COMPACT, fab = FabStyle.SQUARE, motion = Motions.Terminal,
+        origin = tr("Terminal"), category = Category.OTHER, homeHeader = HomeHeader.COMPACT, fab = FabStyle.SQUARE, motion = Motions.Terminal,
     ) { _, _, _ ->
         Pal(
             true, Color.Black, c(0xFF33FF66), c(0xFF29B34A), c(0xFF33FF66), Color.Black,

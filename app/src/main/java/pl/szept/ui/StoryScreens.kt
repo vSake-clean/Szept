@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -104,15 +105,15 @@ fun StoriesRow(nav: Nav) {
     ) {
         item(key = "me") {
             StoryBubble(
-                "Twoja relacja", core.myName, core.myPub, myAvatar, ring = if (mine.isEmpty()) null else true, plus = true,
-                state = if (mine.isEmpty()) "brak relacji — dotknij, aby dodać" else "relacja widoczna — dotknij, aby obejrzeć",
+                tr("Twoja relacja"), core.myName, core.myPub, myAvatar, ring = if (mine.isEmpty()) null else true, plus = true,
+                state = if (mine.isEmpty()) tr("brak relacji — dotknij, aby dodać") else tr("relacja widoczna — dotknij, aby obejrzeć"),
                 onClick = { if (mine.isNotEmpty()) nav.go(Screen.Stories(core.myPub)) else newStory = true },
             )
         }
         items(others, key = { it.key }) { (pk, l) ->
             val c = core.db.contact(pk)
             val fresh = l.any { !it.seen }
-            StoryBubble(c?.display ?: "?", c?.display ?: "?", pk, c?.avatar?.ifBlank { null }, ring = fresh, state = if (fresh) "nowa relacja" else "relacja obejrzana") {
+            StoryBubble(c?.display ?: "?", c?.display ?: "?", pk, c?.avatar?.ifBlank { null }, ring = fresh, state = if (fresh) tr("nowa relacja") else tr("relacja obejrzana")) {
                 nav.go(Screen.Stories(pk))
             }
         }
@@ -140,7 +141,7 @@ private fun StoryBubble(label: String, name: String, key: String, avatar: String
             if (plus) Box(
                 Modifier.align(Alignment.BottomEnd).size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Default.Add, "Dodaj relację", Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onPrimary) }
+            ) { Icon(Icons.Default.Add, tr("Dodaj relację"), Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onPrimary) }
         }
         Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -161,7 +162,7 @@ fun NewStoryDialog(onDismiss: () -> Unit) {
         if (uri == null) { if (att == null) mode = 0; return@rememberLauncherForActivityResult }
         scope.launch {
             busy = true
-            try { att = MediaUtil.prepareImage(ctx, uri); mode = 2 } catch (e: Exception) { toast(ctx, "Nie udało się: ${e.message}") } finally { busy = false }
+            try { att = MediaUtil.prepareImage(ctx, uri); mode = 2 } catch (e: Exception) { toast(ctx, tr("Nie udało się: {0}", e.message)) } finally { busy = false }
         }
     }
     fun publish() {
@@ -169,7 +170,7 @@ fun NewStoryDialog(onDismiss: () -> Unit) {
         App.work.launch {
             try {
                 if (mode == 2) App.core.postStory(Kind.IMAGE, text, att, 0) else App.core.postStory(Kind.TEXT, text, null, bg)
-                toast(ctx, "Relacja opublikowana — zniknie po 24 h")
+                toast(ctx, tr("Relacja opublikowana — zniknie po 24 h"))
                 onDismiss()
             } catch (e: Exception) { toast(ctx, sendError(e)) } finally { busy = false }
         }
@@ -177,23 +178,23 @@ fun NewStoryDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = { att?.file?.delete(); onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Card(Modifier.fillMaxWidth(0.94f).imePadding()) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-                Text("Nowa relacja", style = MaterialTheme.typography.titleLarge)
-                Text("Widzą ją Twoje kontakty przez 24 godziny, potem znika.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Nowa relacja"), style = MaterialTheme.typography.titleLarge)
+                Text(tr("Widzą ją Twoje kontakty przez 24 godziny, potem znika."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 when (mode) {
                     0 -> {
-                        Button(onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, Modifier.fillMaxWidth()) { Text("📷 Zdjęcie z galerii") }
-                        Button(onClick = { mode = 1 }, Modifier.fillMaxWidth()) { Text("✏️ Tekst") }
+                        Button(onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, Modifier.fillMaxWidth()) { Text(tr("📷 Zdjęcie z galerii")) }
+                        Button(onClick = { mode = 1 }, Modifier.fillMaxWidth()) { Text(tr("✏️ Tekst")) }
                     }
                     1 -> {
                         Box(
                             Modifier.fillMaxWidth().heightIn(min = 160.dp).clip(RoundedCornerShape(12.dp)).background(STORY_BG[bg]).padding(16.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text.ifEmpty { "Twój tekst…" }, color = Color.White.copy(alpha = if (text.isEmpty()) 0.6f else 1f), fontSize = 22.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                            Text(text.ifEmpty { tr("Twój tekst…") }, color = Color.White.copy(alpha = if (text.isEmpty()) 0.6f else 1f), fontSize = 22.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(text, { text = it.take(700) }, Modifier.fillMaxWidth(), placeholder = { Text("Co słychać?") }, maxLines = 5)
+                        OutlinedTextField(text, { text = it.take(700) }, Modifier.fillMaxWidth(), placeholder = { Text(tr("Co słychać?")) }, maxLines = 5)
                         Spacer(Modifier.height(8.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             STORY_BG.forEachIndexed { i, c ->
@@ -211,14 +212,14 @@ fun NewStoryDialog(onDismiss: () -> Unit) {
                                 rememberImage(a.file.absolutePath, 1024)?.let { BitmapImage(it, Modifier.fillMaxSize(), crop = false) }
                             }
                         }
-                        OutlinedTextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), placeholder = { Text("Podpis (opcjonalnie)") }, maxLines = 3)
+                        OutlinedTextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), placeholder = { Text(tr("Podpis (opcjonalnie)")) }, maxLines = 3)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                     if (busy) CircularProgressIndicator(Modifier.size(24.dp))
-                    TextButton(onClick = { att?.file?.delete(); onDismiss() }) { Text("Anuluj") }
-                    if (mode != 0) Button(onClick = { publish() }, enabled = !busy && (mode == 2 || text.isNotBlank())) { Text("Opublikuj") }
+                    TextButton(onClick = { att?.file?.delete(); onDismiss() }) { Text(tr("Anuluj")) }
+                    if (mode != 0) Button(onClick = { publish() }, enabled = !busy && (mode == 2 || text.isNotBlank())) { Text(tr("Opublikuj")) }
                 }
             }
         }
@@ -287,11 +288,11 @@ fun StoryViewer(nav: Nav, pk: String) {
                     Avatar(if (mine) core.myName else c?.display ?: "", pk, 36.dp, image = if (mine) null else c?.avatar?.ifBlank { null })
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (mine) "Twoja relacja" else c?.display ?: "", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(if (mine) tr("Twoja relacja") else c?.display ?: "", color = Color.White, fontWeight = FontWeight.Bold)
                         Text(agoText(s.ts, pl.szept.nostr.Clock.now()), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
                     }
-                    if (mine) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Default.Delete, "Usuń relację", tint = Color.White) }
-                    IconButton(onClick = { nav.back() }) { Icon(Icons.Default.Close, "Zamknij", tint = Color.White) }
+                    if (mine) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Default.Delete, tr("Usuń relację"), tint = Color.White) }
+                    IconButton(onClick = { nav.back() }) { Icon(Icons.Default.Close, tr("Zamknij"), tint = Color.White) }
                 }
             }
             if (mine) {
@@ -303,15 +304,15 @@ fun StoryViewer(nav: Nav, pk: String) {
                 ) {
                     Icon(Icons.Default.Visibility, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(plural(views?.size ?: 0, "wyświetlenie", "wyświetlenia", "wyświetleń"), color = Color.White)
+                    Text(plural(views?.size ?: 0, tr("wyświetlenie"), tr("wyświetlenia"), tr("wyświetleń")), color = Color.White)
                 }
                 if (viewers) StyleAlertDialog(
                     onDismissRequest = { viewers = false },
-                    title = { Text("Kto obejrzał") },
+                    title = { Text(tr("Kto obejrzał")) },
                     text = {
                         Column(Modifier.verticalScroll(rememberScrollState())) {
                             val v = views ?: emptyList()
-                            if (v.isEmpty()) Text("Jeszcze nikt (albo oglądający wyłączyli potwierdzenia odczytu).")
+                            if (v.isEmpty()) Text(tr("Jeszcze nikt (albo oglądający wyłączyli potwierdzenia odczytu)."))
                             v.forEach { (who, ts) ->
                                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                     ContactAvatar(core.db.contact(who), 30.dp)
@@ -322,15 +323,15 @@ fun StoryViewer(nav: Nav, pk: String) {
                             }
                         }
                     },
-                    confirmButton = { TextButton(onClick = { viewers = false }) { Text("Zamknij") } },
+                    confirmButton = { TextButton(onClick = { viewers = false }) { Text(tr("Zamknij")) } },
                 )
             }
             if (confirmDelete) StyleAlertDialog(
                 onDismissRequest = { confirmDelete = false },
-                title = { Text("Usunąć relację?") },
-                text = { Text("Zniknie też u znajomych.") },
-                confirmButton = { TextButton(onClick = { confirmDelete = false; core.deleteStory(s.id) }) { Text("Usuń") } },
-                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Anuluj") } },
+                title = { Text(tr("Usunąć relację?")) },
+                text = { Text(tr("Zniknie też u znajomych.")) },
+                confirmButton = { TextButton(onClick = { confirmDelete = false; core.deleteStory(s.id) }) { Text(tr("Usuń")) } },
+                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Anuluj")) } },
             )
         }
     }

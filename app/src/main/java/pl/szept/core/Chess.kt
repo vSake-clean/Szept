@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -215,11 +216,11 @@ object Chess : Duel<Chess.S> {
         val inCheckNow = inCheck(ns.b, ns.turn == 0)
         val k = key(ns)
         return when {
-            replies.isEmpty() && inCheckNow -> ns.copy(result = side, reason = "Szach mat")
+            replies.isEmpty() && inCheckNow -> ns.copy(result = side, reason = tr("Szach mat"))
             replies.isEmpty() -> ns.copy(result = 2, reason = "Pat")
-            ns.half >= 100 -> ns.copy(result = 2, reason = "50 ruchów bez bicia")
-            insufficient(ns.b) -> ns.copy(result = 2, reason = "Za mało figur")
-            ns.history.count { it == k } >= 3 -> ns.copy(result = 2, reason = "Trzykrotne powtórzenie")
+            ns.half >= 100 -> ns.copy(result = 2, reason = tr("50 ruchów bez bicia"))
+            insufficient(ns.b) -> ns.copy(result = 2, reason = tr("Za mało figur"))
+            ns.history.count { it == k } >= 3 -> ns.copy(result = 2, reason = tr("Trzykrotne powtórzenie"))
             else -> ns
         }
     }

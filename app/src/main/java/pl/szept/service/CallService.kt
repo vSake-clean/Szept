@@ -1,5 +1,6 @@
 package pl.szept.service
 
+import pl.szept.tr
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -48,13 +49,13 @@ object CallNotifications {
 
     fun channels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CH_RING, "Połączenia przychodzące", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Dzwonek przy połączeniu głosowym lub wideo"
+        nm.createNotificationChannel(NotificationChannel(CH_RING, tr("Połączenia przychodzące"), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = tr("Dzwonek przy połączeniu głosowym lub wideo")
             setSound(null, null)       // dzwonek odtwarza aplikacja (w pętli)
             enableVibration(false)
         })
-        nm.createNotificationChannel(NotificationChannel(CH_ONGOING, "Trwająca rozmowa", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Powiadomienie w trakcie rozmowy"
+        nm.createNotificationChannel(NotificationChannel(CH_ONGOING, tr("Trwająca rozmowa"), NotificationManager.IMPORTANCE_LOW).apply {
+            description = tr("Powiadomienie w trakcie rozmowy")
             setShowBadge(false)
         })
     }
@@ -71,14 +72,14 @@ object CallNotifications {
     /** Dzwonek: powiadomienie pełnoekranowe + dźwięk i wibracje. */
     fun ring(ctx: Context, call: CallManager.Call?, name: String) {
         if (call == null) { stopRing(ctx); return }
-        ringNotify(ctx, name, if (call.video) "Rozmowa wideo w Szepcie" else "Połączenie głosowe w Szepcie", "call", "call_answer")
+        ringNotify(ctx, name, if (call.video) tr("Rozmowa wideo w Szepcie") else tr("Połączenie głosowe w Szepcie"), "call", "call_answer")
     }
 
     /** Dzwoni rozmowa grupowa. */
     fun ringGroup(ctx: Context, ring: pl.szept.call.GroupCallManager.Ring?, caller: String) {
         if (ring == null) { stopRing(ctx); return }
-        if (ring.isRoom) ringNotify(ctx, caller, if (ring.video) "Rozmowa wideo przychodząca" else "Połączenie przychodzące", "gcall", "gcall_join")
-        else ringNotify(ctx, ring.groupName, "$caller zaprasza do rozmowy grupowej" + if (ring.video) " (wideo)" else "", "gcall", "gcall_join")
+        if (ring.isRoom) ringNotify(ctx, caller, if (ring.video) tr("Rozmowa wideo przychodząca") else tr("Połączenie przychodzące"), "gcall", "gcall_join")
+        else ringNotify(ctx, ring.groupName, tr("{0} zaprasza do rozmowy grupowej", caller) + if (ring.video) " (wideo)" else "", "gcall", "gcall_join")
     }
 
     fun stopRing(ctx: Context) {
@@ -110,7 +111,7 @@ object CallNotifications {
             // starsze/nietypowe systemy: zwykłe powiadomienie z przyciskami
             Log.w("Szept", "dzwonek (styl połączenia)", e)
             runCatching {
-                nm.notify(RING_ID, base().addAction(0, "Odrzuć", decline).addAction(0, "Odbierz", answer).build())
+                nm.notify(RING_ID, base().addAction(0, tr("Odrzuć"), decline).addAction(0, tr("Odbierz"), answer).build())
             }
         }
         Ringer.start(ctx)
@@ -119,12 +120,12 @@ object CallNotifications {
     fun ongoing(ctx: Context, name: String, video: Boolean) = NotificationCompat.Builder(ctx, CH_ONGOING)
         .setSmallIcon(R.drawable.ic_stat_msg)
         .setContentTitle(name)
-        .setContentText(if (video) "Rozmowa wideo" else "Rozmowa")
+        .setContentText(if (video) tr("Rozmowa wideo") else tr("Rozmowa"))
         .setCategory(NotificationCompat.CATEGORY_CALL)
         .setOngoing(true)
         .setUsesChronometer(true)
         .setContentIntent(activity(ctx, 33, "call"))
-        .addAction(0, "Rozłącz", broadcast(ctx, 34, ACTION_HANGUP))
+        .addAction(0, tr("Rozłącz"), broadcast(ctx, 34, ACTION_HANGUP))
         .build()
 }
 
@@ -223,7 +224,7 @@ class CallService : Service() {
         val group = core.groupCalls.state.value?.takeIf { it.phase == pl.szept.call.GroupCallManager.Phase.ACTIVE }
         // startForegroundService wymaga startForeground — także gdy rozmowa zdążyła się skończyć (inaczej system wywraca aplikację)
         if (call == null && group == null) {
-            try { ServiceCompat.startForeground(this, CallNotifications.ONGOING_ID, CallNotifications.ongoing(this, "Rozmowa", false), if (Build.VERSION.SDK_INT >= 30) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0) } catch (_: Exception) {}
+            try { ServiceCompat.startForeground(this, CallNotifications.ONGOING_ID, CallNotifications.ongoing(this, tr("Rozmowa"), false), if (Build.VERSION.SDK_INT >= 30) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0) } catch (_: Exception) {}
             stopSelf(); return
         }
         val video = call?.video ?: group!!.video

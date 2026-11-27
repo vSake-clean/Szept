@@ -1,5 +1,6 @@
 package pl.szept.ui.style
 
+import pl.szept.tr
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -26,8 +27,8 @@ import kotlin.math.sin
  */
 object ScreenFx {
     enum class Kind(val label: String, val emoji: String) {
-        CONFETTI("Konfetti", "🎉"), HEARTS("Serca", "❤️"), BALLOONS("Balony", "🎈"),
-        SNOW("Śnieg", "❄️"), FIREWORKS("Fajerwerki", "🎆"), STARS("Gwiazdy", "⭐"),
+        CONFETTI(tr("Konfetti"), "🎉"), HEARTS(tr("Serca"), "❤️"), BALLOONS(tr("Balony"), "🎈"),
+        SNOW(tr("Śnieg"), "❄️"), FIREWORKS(tr("Fajerwerki"), "🎆"), STARS(tr("Gwiazdy"), "⭐"),
     }
 
     internal class Burst(val kind: Kind, val seed: Long) {

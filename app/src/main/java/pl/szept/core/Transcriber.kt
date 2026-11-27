@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
@@ -38,7 +39,7 @@ object Transcriber {
         val ex = MediaExtractor()
         ex.setDataSource(file.absolutePath)
         val track = (0 until ex.trackCount).firstOrNull { ex.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
-            ?: throw TranscribeException("Nagranie nie zawiera dźwięku")
+            ?: throw TranscribeException(tr("Nagranie nie zawiera dźwięku"))
         ex.selectTrack(track)
         val fmt = ex.getTrackFormat(track)
         var rate = fmt.getInteger(MediaFormat.KEY_SAMPLE_RATE)
@@ -108,12 +109,12 @@ object Transcriber {
     }
 
     private fun message(error: Int): String = when (error) {
-        SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Nie rozpoznano mowy w nagraniu"
+        SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> tr("Nie rozpoznano mowy w nagraniu")
         SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
-            "Język polski nie jest jeszcze pobrany do rozpoznawania offline. Rozpoczęto pobieranie — spróbuj za kilka minut."
-        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Brak zgody na mikrofon — zezwól i spróbuj ponownie"
-        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Rozpoznawanie mowy jest zajęte — spróbuj za chwilę"
-        else -> "Rozpoznawanie mowy w telefonie jest niedostępne (błąd $error)"
+            tr("Język polski nie jest jeszcze pobrany do rozpoznawania offline. Rozpoczęto pobieranie — spróbuj za kilka minut.")
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> tr("Brak zgody na mikrofon — zezwól i spróbuj ponownie")
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> tr("Rozpoznawanie mowy jest zajęte — spróbuj za chwilę")
+        else -> tr("Rozpoznawanie mowy w telefonie jest niedostępne (błąd {0})", error)
     }
 
     private fun intent(lang: String) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -124,9 +125,9 @@ object Transcriber {
 
     /** Zamienia nagranie na tekst. Rzuca TranscribeException z opisem po polsku. */
     @RequiresApi(33)
-    suspend fun transcribe(ctx: Context, file: File, durationMs: Long, lang: String = "pl-PL"): String {
+    suspend fun transcribe(ctx: Context, file: File, durationMs: Long, lang: String = if (pl.szept.I18n.lang == "en") "en-US" else "pl-PL"): String {
         val pcm = withContext(Dispatchers.IO) { decodeToPcm16k(file) }
-        if (pcm.size < 16_000) throw TranscribeException("Nagranie jest za krótkie")
+        if (pcm.size < 16_000) throw TranscribeException(tr("Nagranie jest za krótkie"))
         return withTimeout(durationMs * 2 + 45_000) {
             withContext(Dispatchers.Main) {
                 suspendCancellableCoroutine { cont ->
@@ -142,7 +143,7 @@ object Transcriber {
                         if (!cont.isActive) return
                         when {
                             err != null -> cont.resumeWithException(err)
-                            text.isBlank() -> cont.resumeWithException(TranscribeException("Nie rozpoznano mowy w nagraniu"))
+                            text.isBlank() -> cont.resumeWithException(TranscribeException(tr("Nie rozpoznano mowy w nagraniu")))
                             else -> cont.resume(text.toString().trim())
                         }
                     }

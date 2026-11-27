@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -75,7 +76,7 @@ class PyGameActivity : ComponentActivity() {
         gameId = intent.getStringExtra(EXTRA_ID) ?: run { finish(); return }
         chatMsg = intent.getStringExtra(EXTRA_MSG)
         chatId = intent.getStringExtra(EXTRA_CHAT)
-        val game = PyGames.game(gameId) ?: run { toast(this, "Tej gry nie ma już w telefonie"); finish(); return }
+        val game = PyGames.game(gameId) ?: run { toast(this, tr("Tej gry nie ma już w telefonie")); finish(); return }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideBars()
         setContent { SzeptTheme(decorate = false) { Screen(game) } }
@@ -102,7 +103,7 @@ class PyGameActivity : ComponentActivity() {
                     try { createWebView(c, game) } catch (e: Exception) {
                         // brak albo wyłączony Android System WebView
                         pl.szept.core.CrashLog.record("Gra Python: WebView", e)
-                        toast(c, "Gry w Pythonie potrzebują Android System WebView — włącz lub zaktualizuj go w Sklepie Play")
+                        toast(c, tr("Gry w Pythonie potrzebują Android System WebView — włącz lub zaktualizuj go w Sklepie Play"))
                         finish()
                         android.widget.FrameLayout(c)
                     }
@@ -117,7 +118,7 @@ class PyGameActivity : ComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (ls.second) { Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)) }
-                        Text((if (ls.second) "Rekord! " else "Wynik: ") + info.score.fmt(ls.first), color = Color.White, style = MaterialTheme.typography.labelLarge)
+                        Text((if (ls.second) tr("Rekord! ") else tr("Wynik: ")) + info.score.fmt(ls.first), color = Color.White, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -126,12 +127,12 @@ class PyGameActivity : ComponentActivity() {
             onDismissRequest = { menu = false },
             icon = { GameBadge(info) },
             title = { Text(game.name) },
-            text = { Text("Gra jest wstrzymana tylko na czas tego okna.") },
-            confirmButton = { TextButton(onClick = { menu = false }) { Text("Wróć do gry") } },
+            text = { Text(tr("Gra jest wstrzymana tylko na czas tego okna.")) },
+            confirmButton = { TextButton(onClick = { menu = false }) { Text(tr("Wróć do gry")) } },
             dismissButton = {
                 Row {
-                    if (info.score.has) TextButton(onClick = { menu = false; totals = true }) { Text("Łącznie") }
-                    TextButton(onClick = { menu = false; finish() }) { Text("Zakończ") }
+                    if (info.score.has) TextButton(onClick = { menu = false; totals = true }) { Text(tr("Łącznie")) }
+                    TextButton(onClick = { menu = false; finish() }) { Text(tr("Zakończ")) }
                 }
             },
         )
@@ -151,7 +152,7 @@ class PyGameActivity : ComponentActivity() {
                     onReady()
                 } catch (e: Exception) {
                     progress = -1f
-                    error = "Nie udało się pobrać: ${e.message ?: e.javaClass.simpleName}. Sprawdź internet i spróbuj ponownie."
+                    error = tr("Nie udało się pobrać: {0}. Sprawdź internet i spróbuj ponownie.", e.message ?: e.javaClass.simpleName)
                 }
             }
         }
@@ -163,8 +164,8 @@ class PyGameActivity : ComponentActivity() {
                     Text(game.name, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Gry w Pythonie potrzebują środowiska Pythona (ok. ${PyGames.RUNTIME_BYTES / 1_000_000} MB). Pobierzemy je jeden raz z cdn.jsdelivr.net " +
-                            "i sprawdzimy sumy kontrolne — potem wszystkie gry w Pythonie działają bez internetu.",
+                        tr("Gry w Pythonie potrzebują środowiska Pythona (ok. {0} MB). Pobierzemy je jeden raz z cdn.jsdelivr.net ", PyGames.RUNTIME_BYTES / 1_000_000) +
+                            tr("i sprawdzimy sumy kontrolne — potem wszystkie gry w Pythonie działają bez internetu."),
                         textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(16.dp))
@@ -173,8 +174,8 @@ class PyGameActivity : ComponentActivity() {
                         Text("${(progress * 100).toInt()}%", Modifier.padding(top = 6.dp))
                     } else {
                         error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center); Spacer(Modifier.height(8.dp)) }
-                        Button(onClick = { start() }, Modifier.fillMaxWidth()) { Text("Pobierz i zagraj") }
-                        TextButton(onClick = onCancel, Modifier.fillMaxWidth()) { Text("Anuluj") }
+                        Button(onClick = { start() }, Modifier.fillMaxWidth()) { Text(tr("Pobierz i zagraj")) }
+                        TextButton(onClick = onCancel, Modifier.fillMaxWidth()) { Text(tr("Anuluj")) }
                     }
                 }
             }

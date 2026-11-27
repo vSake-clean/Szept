@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -22,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Backup
@@ -75,141 +78,147 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.4" to listOf(
+        tr("Wybór języka: polski 🇵🇱 albo English (flaga Anglii) — cały Szept, łącznie z grami i powiadomieniami. Po instalacji kreator startuje w języku telefonu."),
+        tr("Kreator pierwszego uruchomienia zaczyna się od języka, a potem prowadzi przez wygląd. Po tej aktualizacji każdy zobaczy go jeszcze raz — konto, nazwa, ID, rozmowy i grupy zostają bez zmian."),
+        tr("Ustawienia → „Kreator: język i wygląd” otwiera ten sam ekran co przy pierwszym uruchomieniu, a „Język / Language” zmienia język od razu."),
+        tr("Przy nowej instalacji najpierw wybierasz język i wygląd, a dopiero potem zakładasz konto."),
+    ),
     "3.3.5" to listOf(
-        "Aktualizacje i duże pliki pobierają się do końca. Wcześniej przekaźnik oddawał najwyżej 500 kawałków pliku naraz, więc aktualizacja 3.3.4 (ponad 1100 kawałków) stawała w połowie i nie dało się jej zainstalować.",
-        "Plik jest teraz rozkładany na kilka przekaźników tak, żeby każdy oddał swoją część w całości — działa to także u osób, które mają jeszcze starszą wersję Szepta.",
-        "Pobieranie pyta o konkretne kawałki pliku i każdy bierze tylko z jednego przekaźnika: szybciej i bez ściągania tego samego kilka razy.",
-        "Szybka wysyłka ⚡ (Ustawienia → Połączenie i bateria, albo „⚡ Szybko” przy wysyłaniu zdjęcia, filmu, GIF-a i aktualizacji): pliki idą naraz na wszystkie przekaźniki i więcej kawałków jednocześnie. Domyślnie włączona na Wi-Fi, a wyłączona na danych komórkowych; gdy raz ją włączysz, zostaje włączona.",
-        "Mniejszy plik aplikacji (ok. 33 MB zamiast 51 MB) — bez niepotrzebnych bibliotek dla procesorów x86.",
-        "Wymuszona aktualizacja pobiera się także przy ustawieniu „Tylko przez Wi-Fi”, a gdy coś nie idzie, przycisk „Pobierz ze strony” otwiera plik nowej wersji w internecie.",
-        "Kod bezpieczeństwa rozmowy (profil osoby): 60 cyfr, takich samych u was obojga. Porównajcie je na żywo albo zeskanujcie nawzajem kody QR — zgodny kod oznacza, że nikt nie podmienił klucza.",
-        "Przekaźniki, które nie przechowują plików, są pomijane przy wysyłce zdjęć i filmów.",
+        tr("Aktualizacje i duże pliki pobierają się do końca. Wcześniej przekaźnik oddawał najwyżej 500 kawałków pliku naraz, więc aktualizacja 3.3.4 (ponad 1100 kawałków) stawała w połowie i nie dało się jej zainstalować."),
+        tr("Plik jest teraz rozkładany na kilka przekaźników tak, żeby każdy oddał swoją część w całości — działa to także u osób, które mają jeszcze starszą wersję Szepta."),
+        tr("Pobieranie pyta o konkretne kawałki pliku i każdy bierze tylko z jednego przekaźnika: szybciej i bez ściągania tego samego kilka razy."),
+        tr("Szybka wysyłka ⚡ (Ustawienia → Połączenie i bateria, albo „⚡ Szybko” przy wysyłaniu zdjęcia, filmu, GIF-a i aktualizacji): pliki idą naraz na wszystkie przekaźniki i więcej kawałków jednocześnie. Domyślnie włączona na Wi-Fi, a wyłączona na danych komórkowych; gdy raz ją włączysz, zostaje włączona."),
+        tr("Mniejszy plik aplikacji (ok. 33 MB zamiast 51 MB) — bez niepotrzebnych bibliotek dla procesorów x86."),
+        tr("Wymuszona aktualizacja pobiera się także przy ustawieniu „Tylko przez Wi-Fi”, a gdy coś nie idzie, przycisk „Pobierz ze strony” otwiera plik nowej wersji w internecie."),
+        tr("Kod bezpieczeństwa rozmowy (profil osoby): 60 cyfr, takich samych u was obojga. Porównajcie je na żywo albo zeskanujcie nawzajem kody QR — zgodny kod oznacza, że nikt nie podmienił klucza."),
+        tr("Przekaźniki, które nie przechowują plików, są pomijane przy wysyłce zdjęć i filmów."),
     ),
     "3.3.4" to listOf(
-        "Mniej zużytego internetu: w Ustawieniach → Połączenie i bateria możesz wybrać, kiedy pobierać zdjęcia, filmy i pliki — zawsze, tylko przez Wi-Fi albo dopiero po dotknięciu.",
-        "Oszczędniejsza wysyłka mediów (na mniej przekaźników) i pobieranie, które nie ściąga tego samego pliku po kilka razy z różnych serwerów.",
-        "Status „aktywny” wysyłany rzadziej i tylko do osób, z którymi ostatnio rozmawiałeś — mniej ruchu w tle.",
-        "Liquid Glass bliżej oryginału: łagodne „ciągłe” rogi szkła, naturalniejszy błysk światła w narożniku i delikatniejszy, większy cień.",
+        tr("Mniej zużytego internetu: w Ustawieniach → Połączenie i bateria możesz wybrać, kiedy pobierać zdjęcia, filmy i pliki — zawsze, tylko przez Wi-Fi albo dopiero po dotknięciu."),
+        tr("Oszczędniejsza wysyłka mediów (na mniej przekaźników) i pobieranie, które nie ściąga tego samego pliku po kilka razy z różnych serwerów."),
+        tr("Status „aktywny” wysyłany rzadziej i tylko do osób, z którymi ostatnio rozmawiałeś — mniej ruchu w tle."),
+        tr("Liquid Glass bliżej oryginału: łagodne „ciągłe” rogi szkła, naturalniejszy błysk światła w narożniku i delikatniejszy, większy cień."),
     ),
     "3.3.3" to listOf(
-        "Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery.",
-        "Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu.",
-        "Liquid Glass Niebo: niebo na każdym ekranie, białe napisy i przydymione szkło, przez które prześwituje niebo.",
-        "Mocniejsze załamanie światła przy krawędziach szkła, jaśniejsze odblaski w ciemnym motywie i półprzezroczyste okna nad rozmytym tłem.",
+        tr("Liquid Glass i Liquid Glass Niebo są dużo bardziej szklane: kolorowa poświata (albo niebo) pod całą aplikacją, rozmowy na liście jako szklane karty ze świetlistymi krawędziami, szklane dymki rozmówcy, chipy i banery."),
+        tr("Pływający szklany pasek na dole listy rozmów: pole „Szukaj” i przycisk nowej rozmowy; u góry szklane menu i kapsułka z kodem i dodawaniem kontaktu."),
+        tr("Liquid Glass Niebo: niebo na każdym ekranie, białe napisy i przydymione szkło, przez które prześwituje niebo."),
+        tr("Mocniejsze załamanie światła przy krawędziach szkła, jaśniejsze odblaski w ciemnym motywie i półprzezroczyste okna nad rozmytym tłem."),
     ),
     "3.3.2" to listOf(
-        "Usunięte „Iskry przy dotknięciu” — w miejscu dotknięcia nic już się nie pojawia, w żadnym stylu.",
-        "Liquid Glass w ciemnym motywie: na liście rozmów znów widać nazwy osób i podpis „Twoja relacja” (wcześniej były czarne na czarnym tle). Ta sama poprawka obejmuje inne ekrany bez własnego tła.",
+        tr("Usunięte „Iskry przy dotknięciu” — w miejscu dotknięcia nic już się nie pojawia, w żadnym stylu."),
+        tr("Liquid Glass w ciemnym motywie: na liście rozmów znów widać nazwy osób i podpis „Twoja relacja” (wcześniej były czarne na czarnym tle). Ta sama poprawka obejmuje inne ekrany bez własnego tła."),
     ),
     "3.3.1" to listOf(
-        "Animacje działają także wtedy, gdy telefon ma je wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii) — o ruchu w Szepcie decyduje przełącznik w aplikacji. Kto woli jak w telefonie, włączy „Wyłączaj razem z telefonem” w Animacjach.",
-        "Żywy podgląd ruchu w kreatorze i w Animacjach: przejście między ekranami, wjazd wiadomości i dotknięcie przycisku odtwarzają się same, w charakterze wybranego stylu.",
-        "Wyraźna sprężystość: przejścia między ekranami w stylach sprężystych (m.in. Liquid Glass, Expressive Pop, „Zabawny”) odbijają się na końcu ruchu.",
-        "Liquid Glass: szewron „wstecz” jest wyśrodkowany w szklanym kółku, przyciski stoją na wysokości awatara, tytuł nie wchodzi pod przyciski, a na liście rozmów menu jest po lewej, szukanie i nowa rozmowa po prawej.",
-        "Liquid Glass: odblask na krawędzi szkła przesuwa się, gdy przechylasz telefon.",
-        "Wiadomość do wielu: po wysłaniu Szept wraca tylko z ekranu wysyłki — nie zamyka ekranu, który zdążyłeś otworzyć w międzyczasie.",
+        tr("Animacje działają także wtedy, gdy telefon ma je wyłączone (opcje programisty, „Usuń animacje”, oszczędzanie energii) — o ruchu w Szepcie decyduje przełącznik w aplikacji. Kto woli jak w telefonie, włączy „Wyłączaj razem z telefonem” w Animacjach."),
+        tr("Żywy podgląd ruchu w kreatorze i w Animacjach: przejście między ekranami, wjazd wiadomości i dotknięcie przycisku odtwarzają się same, w charakterze wybranego stylu."),
+        tr("Wyraźna sprężystość: przejścia między ekranami w stylach sprężystych (m.in. Liquid Glass, Expressive Pop, „Zabawny”) odbijają się na końcu ruchu."),
+        tr("Liquid Glass: szewron „wstecz” jest wyśrodkowany w szklanym kółku, przyciski stoją na wysokości awatara, tytuł nie wchodzi pod przyciski, a na liście rozmów menu jest po lewej, szukanie i nowa rozmowa po prawej."),
+        tr("Liquid Glass: odblask na krawędzi szkła przesuwa się, gdy przechylasz telefon."),
+        tr("Wiadomość do wielu: po wysłaniu Szept wraca tylko z ekranu wysyłki — nie zamyka ekranu, który zdążyłeś otworzyć w międzyczasie."),
     ),
     "3.3" to listOf(
-        "23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”.",
-        "Każdy styl ma własny układ jak w oryginale: pasek rozmowy, pole wiadomości (szklana kapsułka, rząd ikon z „Aa” i kciukiem, płaski pasek ze spinaczem, okno z przyciskiem „Wyślij”…), listę rozmów (duży tytuł, wspólna karta, wielki nagłówek, napis-logo) i przycisk nowej rozmowy.",
-        "Liquid Glass: prawdziwe szkło — przyciski i pole wiadomości rozmywają i załamują treść pod spodem (Android 12+), a rozmowa przewija się pod pływającymi paskami.",
-        "Dymki w seriach: ogonek tylko przy ostatniej wiadomości (albo „uszko” przy pierwszej), mniejsze odstępy w serii, gradient zależny od miejsca na ekranie, awatar przy dymkach rozmówcy i czat bez dymków w stylu serwerowym.",
-        "Animacje: każdy styl porusza się po swojemu (przejścia, menu, okna, kliknięcia, wjazd wiadomości). Główny przełącznik, charakter ruchu i tempo, a w „Animacjach zaawansowanych” 21 animacji do osobnego wyłączania.",
-        "Menu i okna dialogowe w stylu: wyrastają z przycisku, wysuwają się albo wjeżdżają od dołu; okna mają rozmyte tło.",
-        "Kreator wyglądu po instalacji i aktualizacji: tryb jasny/ciemny, styl, animacje (pełne, delikatne, wyłączone), charakter ruchu, tempo, kolor i wielkość tekstu — z podglądem na żywo. Uruchomisz go ponownie w „Wyglądzie”.",
-        "Material You bierze kolory z tapety telefonu (Android 12+). Klasyczny wygląd Szepta zostaje bez zmian — w kreatorze wystarczy „Zostaw klasyczny”.",
+        tr("23 style wyglądu wzorowane na prawdziwych telefonach, komunikatorach i komputerach — w grupach: klasyczny, telefony i nakładki, komunikatory i aplikacje, komputery i inne (Ustawienia → Styl i animacje). Nazwy opisują wygląd, np. „Liquid Glass”, „Hyper Minimal”, „One Flow”, „Material You”, „Nothing Dot”, „Clean Messaging”."),
+        tr("Każdy styl ma własny układ jak w oryginale: pasek rozmowy, pole wiadomości (szklana kapsułka, rząd ikon z „Aa” i kciukiem, płaski pasek ze spinaczem, okno z przyciskiem „Wyślij”…), listę rozmów (duży tytuł, wspólna karta, wielki nagłówek, napis-logo) i przycisk nowej rozmowy."),
+        tr("Liquid Glass: prawdziwe szkło — przyciski i pole wiadomości rozmywają i załamują treść pod spodem (Android 12+), a rozmowa przewija się pod pływającymi paskami."),
+        tr("Dymki w seriach: ogonek tylko przy ostatniej wiadomości (albo „uszko” przy pierwszej), mniejsze odstępy w serii, gradient zależny od miejsca na ekranie, awatar przy dymkach rozmówcy i czat bez dymków w stylu serwerowym."),
+        tr("Animacje: każdy styl porusza się po swojemu (przejścia, menu, okna, kliknięcia, wjazd wiadomości). Główny przełącznik, charakter ruchu i tempo, a w „Animacjach zaawansowanych” 21 animacji do osobnego wyłączania."),
+        tr("Menu i okna dialogowe w stylu: wyrastają z przycisku, wysuwają się albo wjeżdżają od dołu; okna mają rozmyte tło."),
+        tr("Kreator wyglądu po instalacji i aktualizacji: tryb jasny/ciemny, styl, animacje (pełne, delikatne, wyłączone), charakter ruchu, tempo, kolor i wielkość tekstu — z podglądem na żywo. Uruchomisz go ponownie w „Wyglądzie”."),
+        tr("Material You bierze kolory z tapety telefonu (Android 12+). Klasyczny wygląd Szepta zostaje bez zmian — w kreatorze wystarczy „Zostaw klasyczny”."),
     ),
     "3.2" to listOf(
-        "Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE).",
-        "Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria).",
-        "Tryb „Oszczędzanie baterii” działa bez stałego powiadomienia: nowe wiadomości co ok. 15 minut.",
-        "Lokalizacja na żywo ma osobne powiadomienie — ukrycie „Działania w tle” go nie chowa.",
-        "Gry w rozmowie: powiadomienie „Twój ruch”, gdy przeciwnik wykona ruch (szachy, warcaby, statki…), oraz gdy ktoś pobije Twój wynik w wyzwaniu.",
-        "Gry: przesunięcie palcem od krawędzi ekranu nie zamyka już gry (najpierw pytanie „Zakończyć grę?”), a ekran nie gaśnie w trakcie gry.",
-        "Po awarii Szept proponuje wysłanie dziennika błędów twórcy (bez treści wiadomości); dziennik zawiera też model telefonu.",
+        tr("Naprawiona awaria: Szept nie zamyka się już, gdy połączenie z przekaźnikiem zerwie się w trakcie wysyłania (np. przy przejściu z Wi-Fi na LTE)."),
+        tr("Stałe powiadomienie nie odświeża się już co chwilę i ma przycisk „Ukryj” — po wyłączeniu kanału „Działanie w tle” Szept dalej odbiera wiadomości i rozmowy od razu (Ustawienia → Połączenie i bateria)."),
+        tr("Tryb „Oszczędzanie baterii” działa bez stałego powiadomienia: nowe wiadomości co ok. 15 minut."),
+        tr("Lokalizacja na żywo ma osobne powiadomienie — ukrycie „Działania w tle” go nie chowa."),
+        tr("Gry w rozmowie: powiadomienie „Twój ruch”, gdy przeciwnik wykona ruch (szachy, warcaby, statki…), oraz gdy ktoś pobije Twój wynik w wyzwaniu."),
+        tr("Gry: przesunięcie palcem od krawędzi ekranu nie zamyka już gry (najpierw pytanie „Zakończyć grę?”), a ekran nie gaśnie w trakcie gry."),
+        tr("Po awarii Szept proponuje wysłanie dziennika błędów twórcy (bez treści wiadomości); dziennik zawiera też model telefonu."),
     ),
     "3.1" to listOf(
-        "Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python.",
-        "Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”.",
-        "Gry dla jednej osoby: 2048, Wąż, Klocki, Arkanoid, Saper, Sudoku, Literaki, Generał, Oczko, Łap jajka i wiele innych — z menu ⋮ → Gry albo z rozmowy.",
-        "Wyzwania w rozmowie: wyślij grę z wynikiem — każdy gra ten sam układ, a w dymku widać ranking.",
-        "Gry we dwoje ruch po ruchu: szachy, warcaby, czwórki, reversi, pięć w rzędzie, statki, młynek, kalaha, kropki i kreski, zapałki, kamień-papier-nożyce — także z komputerem.",
-        "Gry w grupie: wisielec, emoji-zagadki, pytanie na czas, kto pierwszy napisze, co wolisz, nigdy przenigdy, prawda czy wyzwanie, kto z nas…, ruletka, oczko, karty i więcej.",
-        "Wynik i „Łącznie”: po każdej grze najpierw widać bieżący wynik, a przycisk „Łącznie” pokazuje tabelę wszystkich wyników, rekord, średnią i ranking osób w rozmowie.",
-        "Gry w Pythonie (pygame) działają w telefonie: wbudowany „Wheelie Simulator 2D”, a administrator może rozsyłać kolejne gry (panel administratora → Gry).",
+        tr("Ponad 75 nowych gier — razem prawie 80, w 8 kategoriach: zręcznościowe, logiczne, pamięć i refleks, słowa i quizy, karty i kości, planszowe, imprezowe i Python."),
+        tr("Nowy wybór gry (spinacz → Gra): ikony w tym samym stylu co reszta menu, wyszukiwarka i filtry „W grupie”, „We dwoje”, „Wyzwania”, „Sam”."),
+        tr("Gry dla jednej osoby: 2048, Wąż, Klocki, Arkanoid, Saper, Sudoku, Literaki, Generał, Oczko, Łap jajka i wiele innych — z menu ⋮ → Gry albo z rozmowy."),
+        tr("Wyzwania w rozmowie: wyślij grę z wynikiem — każdy gra ten sam układ, a w dymku widać ranking."),
+        tr("Gry we dwoje ruch po ruchu: szachy, warcaby, czwórki, reversi, pięć w rzędzie, statki, młynek, kalaha, kropki i kreski, zapałki, kamień-papier-nożyce — także z komputerem."),
+        tr("Gry w grupie: wisielec, emoji-zagadki, pytanie na czas, kto pierwszy napisze, co wolisz, nigdy przenigdy, prawda czy wyzwanie, kto z nas…, ruletka, oczko, karty i więcej."),
+        tr("Wynik i „Łącznie”: po każdej grze najpierw widać bieżący wynik, a przycisk „Łącznie” pokazuje tabelę wszystkich wyników, rekord, średnią i ranking osób w rozmowie."),
+        tr("Gry w Pythonie (pygame) działają w telefonie: wbudowany „Wheelie Simulator 2D”, a administrator może rozsyłać kolejne gry (panel administratora → Gry)."),
     ),
     "3.0" to listOf(
-        "Wyślij, gdy będzie online: przytrzymaj przycisk wysyłania → „🟢 Wyślij, gdy będzie online” — wiadomość czeka i wychodzi sama, gdy rozmówca otworzy Szept.",
-        "Tłumaczenie w telefonie: przytrzymaj wiadomość → „🌐 Przetłumacz”. Treść nie opuszcza telefonu — internet potrzebny tylko raz, do pobrania pakietu języka.",
-        "Formatowanie tekstu: *pogrubienie*, _kursywa_, ~przekreślenie~, `kod` i ||spoiler|| (ukryty tekst — odkrywa się po dotknięciu, w powiadomieniach jest zakryty).",
-        "Fałszywy PIN (Prywatność i blokada): drugi PIN otwiera „pusty” Szept bez Twoich rozmów i kontaktów. Prawdziwe wiadomości przychodzą dalej, ale bez powiadomień, dopóki nie wpiszesz prawdziwego PIN-u.",
-        "Zamaskowana ikona: Szept może udawać działający „Kalkulator” — otwiera się dopiero po wpisaniu Twojego kodu i „=”.",
-        "Automatyczne czyszczenie: w profilu osoby lub informacjach o grupie ustawisz, żeby wiadomości starsze niż 7, 30 albo 90 dni same znikały z tego telefonu.",
-        "Podgląd Szeptu na liście ostatnich aplikacji jest zasłonięty (można wyłączyć w Prywatność i blokada → Zrzuty ekranu).",
-        "Gry w czacie (📎 → 🎮 Gra): kółko i krzyżyk, rzut kośćmi i „Kto szybciej?” — grane wiadomościami, bez żadnego serwera.",
+        tr("Wyślij, gdy będzie online: przytrzymaj przycisk wysyłania → „🟢 Wyślij, gdy będzie online” — wiadomość czeka i wychodzi sama, gdy rozmówca otworzy Szept."),
+        tr("Tłumaczenie w telefonie: przytrzymaj wiadomość → „🌐 Przetłumacz”. Treść nie opuszcza telefonu — internet potrzebny tylko raz, do pobrania pakietu języka."),
+        tr("Formatowanie tekstu: *pogrubienie*, _kursywa_, ~przekreślenie~, `kod` i ||spoiler|| (ukryty tekst — odkrywa się po dotknięciu, w powiadomieniach jest zakryty)."),
+        tr("Fałszywy PIN (Prywatność i blokada): drugi PIN otwiera „pusty” Szept bez Twoich rozmów i kontaktów. Prawdziwe wiadomości przychodzą dalej, ale bez powiadomień, dopóki nie wpiszesz prawdziwego PIN-u."),
+        tr("Zamaskowana ikona: Szept może udawać działający „Kalkulator” — otwiera się dopiero po wpisaniu Twojego kodu i „=”."),
+        tr("Automatyczne czyszczenie: w profilu osoby lub informacjach o grupie ustawisz, żeby wiadomości starsze niż 7, 30 albo 90 dni same znikały z tego telefonu."),
+        tr("Podgląd Szeptu na liście ostatnich aplikacji jest zasłonięty (można wyłączyć w Prywatność i blokada → Zrzuty ekranu)."),
+        tr("Gry w czacie (📎 → 🎮 Gra): kółko i krzyżyk, rzut kośćmi i „Kto szybciej?” — grane wiadomościami, bez żadnego serwera."),
     ),
     "2.9" to listOf(
-        "Rozmowy działają od razu także przez internet komórkowy — serwery pośredniczące (Metered i ExpressTURN) są wbudowane w aplikację, nic nie trzeba ustawiać.",
-        "Rozmowy: kilka serwerów TURN naraz (np. Metered i ExpressTURN), każdy z własnym użytkownikiem i hasłem — telefon używa tego, który działa.",
-        "Adres serwera TURN można wkleić tak, jak pokazuje go dostawca (np. „free.expressturn.com:3478”) — Szept sam dopisze „turn:”.",
+        tr("Rozmowy działają od razu także przez internet komórkowy — serwery pośredniczące (Metered i ExpressTURN) są wbudowane w aplikację, nic nie trzeba ustawiać."),
+        tr("Rozmowy: kilka serwerów TURN naraz (np. Metered i ExpressTURN), każdy z własnym użytkownikiem i hasłem — telefon używa tego, który działa."),
+        tr("Adres serwera TURN można wkleić tak, jak pokazuje go dostawca (np. „free.expressturn.com:3478”) — Szept sam dopisze „turn:”."),
     ),
     "2.8" to listOf(
-        "Rozmowy: naprawione wieczne „Łączenie…” — gdy połączenia nie da się zestawić, po 30 s pojawia się jasny komunikat (i wpis w czacie), zamiast wisieć bez końca.",
-        "Rozmowy: panel administratora → „Wymuszanie” → „Serwer TURN dla wszystkich” — po rozesłaniu rozmowy działają także przez sieć komórkową, gdzie połączenie bezpośrednie jest blokowane.",
-        "Rozmowy: pewniejsze wykrywanie nawiązania połączenia i więcej serwerów STUN.",
-        "Dziennik błędów (Ustawienia → Pomoc) zapisuje przebieg łączenia rozmowy — łatwiej znaleźć przyczynę, gdy coś nie działa.",
+        tr("Rozmowy: naprawione wieczne „Łączenie…” — gdy połączenia nie da się zestawić, po 30 s pojawia się jasny komunikat (i wpis w czacie), zamiast wisieć bez końca."),
+        tr("Rozmowy: panel administratora → „Wymuszanie” → „Serwer TURN dla wszystkich” — po rozesłaniu rozmowy działają także przez sieć komórkową, gdzie połączenie bezpośrednie jest blokowane."),
+        tr("Rozmowy: pewniejsze wykrywanie nawiązania połączenia i więcej serwerów STUN."),
+        tr("Dziennik błędów (Ustawienia → Pomoc) zapisuje przebieg łączenia rozmowy — łatwiej znaleźć przyczynę, gdy coś nie działa."),
     ),
     "2.7" to listOf(
-        "Panel administratora → „Konta”: wyciszenie osoby (1 h – 30 dni albo na zawsze), blokada pisania (ban) i usunięcie konta — z powodem, który zobaczy ta osoba. Każdą sankcję można cofnąć.",
-        "Panel administratora → „Dostęp”: podgląd hasła panelu (zapisanego zaszyfrowanie na tym telefonie) i kody jednorazowe — wejście do panelu bez hasła, działają tylko raz.",
-        "Grupy: administrator grupy może wyciszyć osobę (1 h, 8 h, 1 dzień, 7 dni, do odwołania) albo ją zbanować — zbanowana nie wróci z linku zaproszenia. Lista zbanowanych z przyciskiem „Odbanuj”.",
-        "Wyciszona osoba widzi w czacie, do kiedy nie może pisać.",
+        tr("Panel administratora → „Konta”: wyciszenie osoby (1 h – 30 dni albo na zawsze), blokada pisania (ban) i usunięcie konta — z powodem, który zobaczy ta osoba. Każdą sankcję można cofnąć."),
+        tr("Panel administratora → „Dostęp”: podgląd hasła panelu (zapisanego zaszyfrowanie na tym telefonie) i kody jednorazowe — wejście do panelu bez hasła, działają tylko raz."),
+        tr("Grupy: administrator grupy może wyciszyć osobę (1 h, 8 h, 1 dzień, 7 dni, do odwołania) albo ją zbanować — zbanowana nie wróci z linku zaproszenia. Lista zbanowanych z przyciskiem „Odbanuj”."),
+        tr("Wyciszona osoba widzi w czacie, do kiedy nie może pisać."),
     ),
     "2.6" to listOf(
-        "Naprawiona awaria aplikacji w tle (po zmianie zdjęcia profilowego lub banera aplikacja potrafiła się zamykać).",
-        "Bezpieczeństwo: pliki od innych osób są dokładnie sprawdzane — złośliwa wiadomość nie może już usunąć danych ani wywrócić aplikacji.",
-        "Błędny adres przekaźnika albo literówka w kodzie znajomego nie zamykają już aplikacji.",
-        "Wysyłanie zdjęć, wideo, GIF-ów i albumów kończy się także po wyjściu z czatu (np. gdy ktoś zadzwoni).",
-        "Nagrywanie głosówki i kamera notatki wideo wyłączają się po zamknięciu czatu/okna.",
-        "Anulowanie „Zaplanuj” nie kasuje już wybranego zdjęcia; zdjęcie z aparatu nie ginie po obróceniu telefonu.",
-        "Wiadomości w kolejce nie przepadają po 7 dniach bez internetu (czekają tak długo jak koperty — 21 dni).",
-        "Dziennik błędów: Ustawienia → Pomoc → „Dziennik błędów” — można go skopiować i przesłać, gdy coś nie działa.",
+        tr("Naprawiona awaria aplikacji w tle (po zmianie zdjęcia profilowego lub banera aplikacja potrafiła się zamykać)."),
+        tr("Bezpieczeństwo: pliki od innych osób są dokładnie sprawdzane — złośliwa wiadomość nie może już usunąć danych ani wywrócić aplikacji."),
+        tr("Błędny adres przekaźnika albo literówka w kodzie znajomego nie zamykają już aplikacji."),
+        tr("Wysyłanie zdjęć, wideo, GIF-ów i albumów kończy się także po wyjściu z czatu (np. gdy ktoś zadzwoni)."),
+        tr("Nagrywanie głosówki i kamera notatki wideo wyłączają się po zamknięciu czatu/okna."),
+        tr("Anulowanie „Zaplanuj” nie kasuje już wybranego zdjęcia; zdjęcie z aparatu nie ginie po obróceniu telefonu."),
+        tr("Wiadomości w kolejce nie przepadają po 7 dniach bez internetu (czekają tak długo jak koperty — 21 dni)."),
+        tr("Dziennik błędów: Ustawienia → Pomoc → „Dziennik błędów” — można go skopiować i przesłać, gdy coś nie działa."),
     ),
     "2.5" to listOf(
-        "GIF-y: przycisk „GIF” w polu wiadomości (albo spinacz → GIF). Każdy GIF widać animowany jeszcze przed wysłaniem.",
-        "Moje GIF-y: własna kolekcja zapisana tylko w telefonie — dodasz GIF z telefonu albo zapiszesz GIF z rozmowy (dotknij go → „Zapisz w moich”). Przytrzymaj, aby usunąć.",
-        "Wyszukiwarka GIF-ów KLIPY: popularne i wyszukiwanie po polsku. Wymaga bezpłatnego klucza z klipy.com (wpisz go w oknie GIF-ów albo administrator roześle go wszystkim).",
-        "GIF wybrany z galerii zostaje animowany (wcześniej zamieniał się w zwykłe zdjęcie).",
-        "Usunięto edytor zdjęć przy wysyłaniu i w relacjach — zostaje tylko kadrowanie zdjęcia profilowego i banera.",
+        tr("GIF-y: przycisk „GIF” w polu wiadomości (albo spinacz → GIF). Każdy GIF widać animowany jeszcze przed wysłaniem."),
+        tr("Moje GIF-y: własna kolekcja zapisana tylko w telefonie — dodasz GIF z telefonu albo zapiszesz GIF z rozmowy (dotknij go → „Zapisz w moich”). Przytrzymaj, aby usunąć."),
+        tr("Wyszukiwarka GIF-ów KLIPY: popularne i wyszukiwanie po polsku. Wymaga bezpłatnego klucza z klipy.com (wpisz go w oknie GIF-ów albo administrator roześle go wszystkim)."),
+        tr("GIF wybrany z galerii zostaje animowany (wcześniej zamieniał się w zwykłe zdjęcie)."),
+        tr("Usunięto edytor zdjęć przy wysyłaniu i w relacjach — zostaje tylko kadrowanie zdjęcia profilowego i banera."),
     ),
     "2.4" to listOf(
-        "Naprawione rozmowy prywatne — wcześniej dzwonek nie docierał do rozmówcy.",
-        "Do trwającej rozmowy można dodawać osoby (ikona osoby z plusem) — dostają dzwonek; w grupie można też zadzwonić ponownie do tych, którzy nie odebrali.",
-        "Nowy wygląd rozmów głosowych: duże zdjęcie rozmówcy, pulsowanie przy dzwonieniu, kolorowe tło. Rozmowa wideo we dwoje: obraz rozmówcy na cały ekran.",
-        "Nie ma już okna „Nikt nie odebrał” — ekran rozmowy po prostu się zamyka, a w czacie zostaje wpis. Odrzucenie połączenia dzwoniący widzi od razu.",
-        "Edytor zdjęć: przyciski nie chowają się pod paskami telefonu, wyraźny przycisk „Przytnij”, a ustawiony kadr zapisuje się też po „Gotowe” (wcześniej ginął — także przy zdjęciu profilowym i banerze).",
-        "Na podglądzie zdjęcia przed wysłaniem jest przycisk „Edytuj / przytnij” (albo dotknij zdjęcia).",
-        "Usuwanie ze znajomych: w profilu osoby „Usuń ze znajomych” (z opcją usunięcia rozmowy).",
+        tr("Naprawione rozmowy prywatne — wcześniej dzwonek nie docierał do rozmówcy."),
+        tr("Do trwającej rozmowy można dodawać osoby (ikona osoby z plusem) — dostają dzwonek; w grupie można też zadzwonić ponownie do tych, którzy nie odebrali."),
+        tr("Nowy wygląd rozmów głosowych: duże zdjęcie rozmówcy, pulsowanie przy dzwonieniu, kolorowe tło. Rozmowa wideo we dwoje: obraz rozmówcy na cały ekran."),
+        tr("Nie ma już okna „Nikt nie odebrał” — ekran rozmowy po prostu się zamyka, a w czacie zostaje wpis. Odrzucenie połączenia dzwoniący widzi od razu."),
+        tr("Edytor zdjęć: przyciski nie chowają się pod paskami telefonu, wyraźny przycisk „Przytnij”, a ustawiony kadr zapisuje się też po „Gotowe” (wcześniej ginął — także przy zdjęciu profilowym i banerze)."),
+        tr("Na podglądzie zdjęcia przed wysłaniem jest przycisk „Edytuj / przytnij” (albo dotknij zdjęcia)."),
+        tr("Usuwanie ze znajomych: w profilu osoby „Usuń ze znajomych” (z opcją usunięcia rozmowy)."),
     ),
     "2.3" to listOf(
-        "Statusy znajomych: zielony — jest w aplikacji, żółty — aplikacja działa w tle, pomarańczowy — „zaraz wracam”, szary — nieaktywny (aplikacja wyłączona).",
-        "Status widać jako kropkę przy awatarze na liście rozmów, pod nazwą w czacie i w profilu.",
-        "Mój profil → „Mój status”: automatycznie albo „Zaraz wracam”; można też ukryć swój status przed innymi.",
-        "Odpowiedź gestem: przesuń wiadomość w prawo, aby na nią odpowiedzieć; przytrzymaj, aby dodać reakcję.",
-        "„Mój kod” ma teraz przycisk „Skanuj kod QR” — dodasz znajomego bez szukania innego ekranu.",
+        tr("Statusy znajomych: zielony — jest w aplikacji, żółty — aplikacja działa w tle, pomarańczowy — „zaraz wracam”, szary — nieaktywny (aplikacja wyłączona)."),
+        tr("Status widać jako kropkę przy awatarze na liście rozmów, pod nazwą w czacie i w profilu."),
+        tr("Mój profil → „Mój status”: automatycznie albo „Zaraz wracam”; można też ukryć swój status przed innymi."),
+        tr("Odpowiedź gestem: przesuń wiadomość w prawo, aby na nią odpowiedzieć; przytrzymaj, aby dodać reakcję."),
+        tr("„Mój kod” ma teraz przycisk „Skanuj kod QR” — dodasz znajomego bez szukania innego ekranu."),
     ),
     "2.2" to listOf(
-        "Prostsze ustawienia: kilka czytelnych kategorii zamiast długiej listy.",
-        "PIN i kod awaryjny: ikonka kosza (usuwanie po wpisaniu PIN-u) — wcześniej nie dało się ich wyłączyć.",
-        "Wiadomość „usunięta u rozmówcy” ma u Ciebie oznaczenie (czerwona kropka, napis albo nic — do wyboru).",
-        "Zrzuty ekranu: informacja w czacie, gdy ktoś zrobi zrzut; można też całkowicie zablokować zrzuty w Szepcie.",
-        "Wiadomości czasowych nie da się sfotografować zrzutem ekranu.",
-        "Lokalizacja: tylko teraz albo na żywo przez wybrany czas (15 min – 8 h).",
-        "W czacie u góry: przycisk dzwonienia; wiadomości czasowe przeniesione do menu ⋮.",
-        "Oficjalne konto „Szept” ✔ z aktualizacjami — na jego wiadomości nie da się odpowiadać.",
-        "Znaczek weryfikacji ✔ przy nazwie — nie do podrobienia.",
-        "Panel administratora (tylko z hasłem): aktualizacje do wybranych osób, wymuszanie aktualizacji starych wersji.",
-        "Ekran „Co nowego” po każdej aktualizacji.",
+        tr("Prostsze ustawienia: kilka czytelnych kategorii zamiast długiej listy."),
+        tr("PIN i kod awaryjny: ikonka kosza (usuwanie po wpisaniu PIN-u) — wcześniej nie dało się ich wyłączyć."),
+        tr("Wiadomość „usunięta u rozmówcy” ma u Ciebie oznaczenie (czerwona kropka, napis albo nic — do wyboru)."),
+        tr("Zrzuty ekranu: informacja w czacie, gdy ktoś zrobi zrzut; można też całkowicie zablokować zrzuty w Szepcie."),
+        tr("Wiadomości czasowych nie da się sfotografować zrzutem ekranu."),
+        tr("Lokalizacja: tylko teraz albo na żywo przez wybrany czas (15 min – 8 h)."),
+        tr("W czacie u góry: przycisk dzwonienia; wiadomości czasowe przeniesione do menu ⋮."),
+        tr("Oficjalne konto „Szept” ✔ z aktualizacjami — na jego wiadomości nie da się odpowiadać."),
+        tr("Znaczek weryfikacji ✔ przy nazwie — nie do podrobienia."),
+        tr("Panel administratora (tylko z hasłem): aktualizacje do wybranych osób, wymuszanie aktualizacji starych wersji."),
+        tr("Ekran „Co nowego” po każdej aktualizacji."),
     ),
 )
 
@@ -251,7 +260,7 @@ fun SettingsScreen(nav: Nav) {
     }
     val connected = states.values.count { it == Relay.State.CONNECTED }
 
-    Scaffold(topBar = { BackBar("Ustawienia", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Ustawienia"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState())) {
             val avatar = remember { if (core.avatarFile.exists()) pl.szept.crypto.B64.enc(core.avatarFile.readBytes()) else null }
             Card(Modifier.fillMaxWidth().padding(12.dp).clickable { nav.go(Screen.MyProfile) }) {
@@ -263,7 +272,7 @@ fun SettingsScreen(nav: Nav) {
                             Text(core.myName, style = MaterialTheme.typography.titleLarge)
                             if (core.myBadge) VerifiedBadge(20.dp)
                         }
-                        Text("Dotknij, aby zmienić zdjęcie, nazwę i opis", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Dotknij, aby zmienić zdjęcie, nazwę i opis"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 }
@@ -276,33 +285,35 @@ fun SettingsScreen(nav: Nav) {
                 Column(Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Warning, null); Spacer(Modifier.width(8.dp))
-                        Text("Wiadomości mogą przychodzić z opóźnieniem", fontWeight = FontWeight.Bold)
+                        Text(tr("Wiadomości mogą przychodzić z opóźnieniem"), fontWeight = FontWeight.Bold)
                     }
-                    if (!notif) TextButton(onClick = { act?.askNotifications() }) { Text("Włącz powiadomienia") }
-                    if (!battery) TextButton(onClick = { MainActivity.askBattery(ctx) }) { Text("Zezwól na działanie w tle") }
+                    if (!notif) TextButton(onClick = { act?.askNotifications() }) { Text(tr("Włącz powiadomienia")) }
+                    if (!battery) TextButton(onClick = { MainActivity.askBattery(ctx) }) { Text(tr("Zezwól na działanie w tle")) }
                 }
             }
-            Heading("Najczęściej używane")
-            Category(Icons.Default.Lock, "Prywatność i bezpieczeństwo", "PIN, kod awaryjny, zrzuty ekranu, potwierdzenia odczytu") { nav.go(Screen.Security) }
-            Category(Icons.Default.Palette, "Wygląd i dźwięki", "Motyw, kolory, tapeta, wielkość tekstu, dźwięk powiadomień") { nav.go(Screen.Appearance) }
-            Category(Icons.Default.AutoAwesome, "Style i animacje", "${pl.szept.ui.style.STYLES.size} stylów wzorowanych na telefonach, komunikatorach i komputerach oraz animacje zaawansowane") { nav.go(Screen.Styles) }
-            Category(Icons.Default.People, "Osoby", "Twoje kontakty, blokowanie") { nav.go(Screen.People) }
-            Category(Icons.Default.PersonAdd, "Zaproś znajomych", "Wyślij im aplikację i swój kod") { shareApp(ctx) }
-            Heading("Konto i telefon")
-            Category(Icons.Default.Backup, "Kopia zapasowa", "Przenieś całą historię na nowy telefon") { nav.go(Screen.Backup) }
-            Category(Icons.Default.Key, "Kod dostępu do konta", "Zaloguj się na innym telefonie") { nav.go(Screen.AccessCode) }
-            Category(Icons.Default.Devices, "Moje urządzenia", "Jedno konto na kilku telefonach") { nav.go(Screen.Devices) }
-            Heading("Połączenie")
-            Category(Icons.Default.Wifi, "Połączenie i bateria", if (connected > 0) "Połączono ($connected) ✓" else "Brak połączenia — dotknij, aby sprawdzić") { nav.go(Screen.Connection) }
-            Category(Icons.Default.WifiTethering, "Bez internetu", "Pisanie przez Wi-Fi lub hotspot, gdy nie ma internetu") { nav.go(Screen.Lan) }
-            Category(Icons.Default.Call, "Rozmowy", "Połączenia głosowe i wideo") { nav.go(Screen.CallSettings) }
-            Heading("Pomoc")
-            Category(Icons.Default.NewReleases, "Co nowego", "Zmiany w wersji ${BuildConfig.VERSION_NAME}") { nav.go(Screen.WhatsNew) }
-            Category(Icons.Default.HelpOutline, "Jak działa Szept", "Prosto o tym, jak to działa bez serwera") { nav.go(Screen.Help) }
+            Heading(tr("Najczęściej używane"))
+            Category(Icons.Default.Language, tr("Język") + " / Language", pl.szept.I18n.LANGS.firstOrNull { it.code == pl.szept.I18n.lang }?.name ?: "") { nav.go(Screen.Language) }
+            Category(Icons.Default.AutoFixHigh, tr("Kreator: język i wygląd"), tr("Ekran z pierwszego uruchomienia — język, styl, animacje i kolory krok po kroku")) { nav.go(Screen.Wizard) }
+            Category(Icons.Default.Lock, tr("Prywatność i bezpieczeństwo"), tr("PIN, kod awaryjny, zrzuty ekranu, potwierdzenia odczytu")) { nav.go(Screen.Security) }
+            Category(Icons.Default.Palette, tr("Wygląd i dźwięki"), tr("Motyw, kolory, tapeta, wielkość tekstu, dźwięk powiadomień")) { nav.go(Screen.Appearance) }
+            Category(Icons.Default.AutoAwesome, tr("Style i animacje"), tr("{0} stylów wzorowanych na telefonach, komunikatorach i komputerach oraz animacje zaawansowane", pl.szept.ui.style.STYLES.size)) { nav.go(Screen.Styles) }
+            Category(Icons.Default.People, tr("Osoby"), tr("Twoje kontakty, blokowanie")) { nav.go(Screen.People) }
+            Category(Icons.Default.PersonAdd, tr("Zaproś znajomych"), tr("Wyślij im aplikację i swój kod")) { shareApp(ctx) }
+            Heading(tr("Konto i telefon"))
+            Category(Icons.Default.Backup, tr("Kopia zapasowa"), tr("Przenieś całą historię na nowy telefon")) { nav.go(Screen.Backup) }
+            Category(Icons.Default.Key, tr("Kod dostępu do konta"), tr("Zaloguj się na innym telefonie")) { nav.go(Screen.AccessCode) }
+            Category(Icons.Default.Devices, tr("Moje urządzenia"), tr("Jedno konto na kilku telefonach")) { nav.go(Screen.Devices) }
+            Heading(tr("Połączenie"))
+            Category(Icons.Default.Wifi, tr("Połączenie i bateria"), if (connected > 0) tr("Połączono ({0}) ✓", connected) else tr("Brak połączenia — dotknij, aby sprawdzić")) { nav.go(Screen.Connection) }
+            Category(Icons.Default.WifiTethering, tr("Bez internetu"), tr("Pisanie przez Wi-Fi lub hotspot, gdy nie ma internetu")) { nav.go(Screen.Lan) }
+            Category(Icons.Default.Call, tr("Rozmowy"), tr("Połączenia głosowe i wideo")) { nav.go(Screen.CallSettings) }
+            Heading(tr("Pomoc"))
+            Category(Icons.Default.NewReleases, tr("Co nowego"), tr("Zmiany w wersji {0}", BuildConfig.VERSION_NAME)) { nav.go(Screen.WhatsNew) }
+            Category(Icons.Default.HelpOutline, tr("Jak działa Szept"), tr("Prosto o tym, jak to działa bez serwera")) { nav.go(Screen.Help) }
             HorizontalDivider(Modifier.padding(top = 12.dp))
-            Text("Szept ${BuildConfig.VERSION_NAME}", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Szept {0}", BuildConfig.VERSION_NAME), Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = { nav.go(Screen.Admin) }, Modifier.padding(horizontal = 8.dp)) {
-                Icon(Icons.Default.AdminPanelSettings, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Panel administratora")
+                Icon(Icons.Default.AdminPanelSettings, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Panel administratora"))
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -336,33 +347,33 @@ fun ConnectionScreen(nav: Nav) {
     }
     val info = remember(states, relays) { core.relayInfo() }
     val connected = states.values.count { it == Relay.State.CONNECTED }
-    Scaffold(topBar = { BackBar("Połączenie i bateria", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Połączenie i bateria"), nav) }) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize()) {
             item {
                 Card(Modifier.fillMaxWidth().padding(12.dp)) {
                     Text(
-                        if (connected > 0) "✓ Szept działa — połączono z $connected " + plural(connected, "przekaźnikiem", "przekaźnikami", "przekaźnikami")
-                        else "Brak połączenia. Sprawdź internet.",
+                        if (connected > 0) tr("✓ Szept działa — połączono z {0} ", connected) + plural(connected, tr("przekaźnikiem"), tr("przekaźnikami"), tr("przekaźnikami"))
+                        else tr("Brak połączenia. Sprawdź internet."),
                         Modifier.padding(14.dp), style = MaterialTheme.typography.titleSmall,
                     )
                 }
                 ListItem(
-                    headlineContent = { Text("Działanie w tle") },
-                    supportingContent = { Text(if (battery) "Dozwolone ✓ — wiadomości przychodzą na bieżąco" else "Android może usypiać Szepta i wiadomości się spóźnią") },
-                    trailingContent = { if (!battery) TextButton(onClick = { MainActivity.askBattery(ctx) }) { Text("Zezwól") } },
+                    headlineContent = { Text(tr("Działanie w tle")) },
+                    supportingContent = { Text(if (battery) tr("Dozwolone ✓ — wiadomości przychodzą na bieżąco") else tr("Android może usypiać Szepta i wiadomości się spóźnią")) },
+                    trailingContent = { if (!battery) TextButton(onClick = { MainActivity.askBattery(ctx) }) { Text(tr("Zezwól")) } },
                 )
                 Text(
-                    "Xiaomi, Huawei, Oppo, Vivo, Samsung: włącz też „Autostart” dla Szepta (dotknij tutaj).",
+                    tr("Xiaomi, Huawei, Oppo, Vivo, Samsung: włącz też „Autostart” dla Szepta (dotknij tutaj)."),
                     Modifier.padding(horizontal = 16.dp).clickable {
                         try { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName))) } catch (_: Exception) {}
                     },
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
                 )
-                Heading("Bateria")
+                Heading(tr("Bateria"))
                 listOf(
-                    Triple(pl.szept.core.Core.BG_BALANCED, "Normalnie (zalecane)", "Wiadomości i rozmowy od razu, rozsądne zużycie baterii."),
-                    Triple(pl.szept.core.Core.BG_FULL, "Zawsze na bieżąco", "Najszybciej i najpewniej, ale bateria schodzi szybciej."),
-                    Triple(pl.szept.core.Core.BG_SAVER, "Oszczędzanie baterii", "Bez stałego powiadomienia. Nowe wiadomości co ok. 15 minut, a rozmowy nie dzwonią, gdy Szept jest zamknięty."),
+                    Triple(pl.szept.core.Core.BG_BALANCED, tr("Normalnie (zalecane)"), tr("Wiadomości i rozmowy od razu, rozsądne zużycie baterii.")),
+                    Triple(pl.szept.core.Core.BG_FULL, tr("Zawsze na bieżąco"), tr("Najszybciej i najpewniej, ale bateria schodzi szybciej.")),
+                    Triple(pl.szept.core.Core.BG_SAVER, tr("Oszczędzanie baterii"), tr("Bez stałego powiadomienia. Nowe wiadomości co ok. 15 minut, a rozmowy nie dzwonią, gdy Szept jest zamknięty.")),
                 ).forEach { (mode, title, sub) ->
                     Row(
                         Modifier.fillMaxWidth().clickable { chooseMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -375,16 +386,16 @@ fun ConnectionScreen(nav: Nav) {
                         }
                     }
                 }
-                Heading("Dane i internet")
+                Heading(tr("Dane i internet"))
                 Text(
-                    "Zdjęcia, filmy i pliki w rozmowach. Mniej pobierania = mniej zużytego internetu.",
+                    tr("Zdjęcia, filmy i pliki w rozmowach. Mniej pobierania = mniej zużytego internetu."),
                     Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 listOf(
-                    Triple(0, "Pobieraj zawsze", "Jak dotąd — media schodzą od razu."),
-                    Triple(1, "Tylko przez Wi-Fi", "Na danych komórkowych dotknij zdjęcia, aby je pobrać."),
-                    Triple(2, "Zawsze po dotknięciu", "Nic nie pobiera się samo — otwierasz, co chcesz."),
+                    Triple(0, tr("Pobieraj zawsze"), tr("Jak dotąd — media schodzą od razu.")),
+                    Triple(1, tr("Tylko przez Wi-Fi"), tr("Na danych komórkowych dotknij zdjęcia, aby je pobrać.")),
+                    Triple(2, tr("Zawsze po dotknięciu"), tr("Nic nie pobiera się samo — otwierasz, co chcesz.")),
                 ).forEach { (mode, title, sub) ->
                     Row(
                         Modifier.fillMaxWidth().clickable { mediaDl = mode; core.setMediaDlMode(mode) }.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -397,17 +408,17 @@ fun ConnectionScreen(nav: Nav) {
                         }
                     }
                 }
-                Heading("⚡ Szybka wysyłka")
+                Heading(tr("⚡ Szybka wysyłka"))
                 Text(
-                    "Zdjęcia, filmy, GIF-y i pliki idą najszybciej, jak się da: naraz na wszystkie przekaźniki " +
-                        "i więcej kawałków jednocześnie. Zużywa więcej internetu. Teraz: " + fastSendLabel(fast) + ".",
+                    tr("Zdjęcia, filmy, GIF-y i pliki idą najszybciej, jak się da: naraz na wszystkie przekaźniki ") +
+                        tr("i więcej kawałków jednocześnie. Zużywa więcej internetu. Teraz: ") + fastSendLabel(fast) + ".",
                     Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 listOf(
-                    Triple(0, "Automatycznie (zalecane)", "Na Wi-Fi włączona, na danych komórkowych wyłączona."),
-                    Triple(1, "Zawsze włączona", "Najszybciej także na danych komórkowych."),
-                    Triple(2, "Zawsze wyłączona", "Mniej internetu, wysyłanie trwa trochę dłużej."),
+                    Triple(0, tr("Automatycznie (zalecane)"), tr("Na Wi-Fi włączona, na danych komórkowych wyłączona.")),
+                    Triple(1, tr("Zawsze włączona"), tr("Najszybciej także na danych komórkowych.")),
+                    Triple(2, tr("Zawsze wyłączona"), tr("Mniej internetu, wysyłanie trwa trochę dłużej.")),
                 ).forEach { (mode, title, sub) ->
                     fun pick() { core.setFastSendMode(mode); fast = FastSendState(core.fastSendMode, core.fastSendActive(), core.onWifi()) }
                     Row(
@@ -421,30 +432,30 @@ fun ConnectionScreen(nav: Nav) {
                         }
                     }
                 }
-                Heading("Stałe powiadomienie")
+                Heading(tr("Stałe powiadomienie"))
                 ListItem(
-                    headlineContent = { Text("„Szept działa w tle”") },
+                    headlineContent = { Text(tr("„Szept działa w tle”")) },
                     supportingContent = {
                         Text(
                             when {
-                                bgMode == pl.szept.core.Core.BG_SAVER -> "Nie ma go — w trybie oszczędzania Szept nie działa stale w tle."
-                                notifHidden -> "Ukryte ✓ — Szept dalej odbiera wiadomości i rozmowy od razu."
-                                else -> "Android wymaga go dla aplikacji, która odbiera wiadomości w tle. Możesz je ukryć: wyłącz kanał „Działanie w tle” — Szept będzie działał dalej."
+                                bgMode == pl.szept.core.Core.BG_SAVER -> tr("Nie ma go — w trybie oszczędzania Szept nie działa stale w tle.")
+                                notifHidden -> tr("Ukryte ✓ — Szept dalej odbiera wiadomości i rozmowy od razu.")
+                                else -> tr("Android wymaga go dla aplikacji, która odbiera wiadomości w tle. Możesz je ukryć: wyłącz kanał „Działanie w tle” — Szept będzie działał dalej.")
                             },
                         )
                     },
                     trailingContent = {
                         if (bgMode != pl.szept.core.Core.BG_SAVER) TextButton(onClick = {
                             try { ctx.startActivity(pl.szept.service.MessengerService.hideIntent(ctx)) } catch (_: Exception) { toast(ctx, "Nie udało się otworzyć ustawień powiadomień") }
-                        }) { Text(if (notifHidden) "Pokaż" else "Ukryj") }
+                        }) { Text(if (notifHidden) tr("Pokaż") else tr("Ukryj")) }
                     },
                 )
                 HorizontalDivider(Modifier.padding(top = 8.dp))
                 ListItem(
-                    headlineContent = { Text("Dla zaawansowanych: przekaźniki") },
-                    supportingContent = { Text("Lista serwerów pośredniczących. Zwykle nie trzeba nic zmieniać.") },
+                    headlineContent = { Text(tr("Dla zaawansowanych: przekaźniki")) },
+                    supportingContent = { Text(tr("Lista serwerów pośredniczących. Zwykle nie trzeba nic zmieniać.")) },
                     modifier = Modifier.clickable { advanced = !advanced },
-                    trailingContent = { Text(if (advanced) "Ukryj" else "Pokaż", color = MaterialTheme.colorScheme.primary) },
+                    trailingContent = { Text(if (advanced) tr("Ukryj") else tr("Pokaż"), color = MaterialTheme.colorScheme.primary) },
                 )
             }
             if (advanced) {
@@ -459,8 +470,8 @@ fun ConnectionScreen(nav: Nav) {
                             if (st != Relay.State.CONNECTED && err != null) Text(err, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
                         IconButton(onClick = {
-                            if (relays.size > 1) { relays = relays - url; core.setRelays(relays) } else toast(ctx, "Musi zostać co najmniej jeden przekaźnik")
-                        }) { Icon(Icons.Default.Close, "Usuń") }
+                            if (relays.size > 1) { relays = relays - url; core.setRelays(relays) } else toast(ctx, tr("Musi zostać co najmniej jeden przekaźnik"))
+                        }) { Icon(Icons.Default.Close, tr("Usuń")) }
                     }
                 }
                 item {
@@ -470,15 +481,15 @@ fun ConnectionScreen(nav: Nav) {
                             val u = if (newRelay.startsWith("ws")) newRelay else "wss://$newRelay"
                             if (!pl.szept.nostr.isValidRelayUrl(u)) toast(ctx, "To nie jest poprawny adres przekaźnika (np. wss://nazwa.pl)")
                             else if (u !in relays) { relays = relays + u; core.setRelays(relays); newRelay = "" }
-                        }) { Text("Dodaj") }
+                        }) { Text(tr("Dodaj")) }
                     }
                     TextButton(onClick = { relays = pl.szept.core.Core.DEFAULT_RELAYS; core.setRelays(relays) }, Modifier.padding(horizontal = 8.dp)) {
-                        Text("Przywróć domyślne")
+                        Text(tr("Przywróć domyślne"))
                     }
                     ListItem(
                         leadingContent = { Icon(Icons.Default.Router, null) },
-                        headlineContent = { Text("Własny przekaźnik") },
-                        supportingContent = { Text("Instrukcja dla Raspberry Pi / komputera") },
+                        headlineContent = { Text(tr("Własny przekaźnik")) },
+                        supportingContent = { Text(tr("Instrukcja dla Raspberry Pi / komputera")) },
                         modifier = Modifier.clickable { nav.go(Screen.OwnRelay) },
                     )
                 }
@@ -491,10 +502,10 @@ fun ConnectionScreen(nav: Nav) {
 /** Co nowego — zmiany w kolejnych wersjach. */
 @Composable
 fun WhatsNewScreen(nav: Nav) {
-    Scaffold(topBar = { BackBar("Co nowego", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Co nowego"), nav) }) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize().padding(horizontal = 16.dp)) {
             items(CHANGELOG) { (v, items) ->
-                Text("Wersja $v", Modifier.padding(top = 16.dp, bottom = 6.dp), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(tr("Wersja {0}", v), Modifier.padding(top = 16.dp, bottom = 6.dp), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 items.forEach { Text("• $it", Modifier.padding(vertical = 3.dp), style = MaterialTheme.typography.bodyMedium) }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -505,15 +516,15 @@ fun WhatsNewScreen(nav: Nav) {
 /** Jak działa Szept — prostym językiem. */
 @Composable
 fun HelpScreen(nav: Nav) {
-    Scaffold(topBar = { BackBar("Jak działa Szept", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Jak działa Szept"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
             listOf(
-                "📮 Szept nie ma własnego serwera ani firmy, która czyta wiadomości. Twoje konto powstało w Twoim telefonie.",
-                "🔒 Każda wiadomość jest zamykana w „kopercie”, którą otworzy tylko telefon odbiorcy.",
-                "📬 Koperty czekają w kilku niezależnych „skrzynkach pocztowych” w internecie (do 21 dni), aż odbiorca włączy telefon.",
-                "📵 Bez internetu? Telefony w tej samej sieci Wi-Fi mogą pisać do siebie bezpośrednio (Ustawienia → Bez internetu).",
-                "📱 Zmieniasz telefon? Zrób kopię zapasową (Ustawienia → Kopia zapasowa) i przywróć ją na nowym.",
-                "✔ Niebieski znaczek przy nazwie oznacza konto potwierdzone przez Szept. Nie da się go podrobić.",
+                tr("📮 Szept nie ma własnego serwera ani firmy, która czyta wiadomości. Twoje konto powstało w Twoim telefonie."),
+                tr("🔒 Każda wiadomość jest zamykana w „kopercie”, którą otworzy tylko telefon odbiorcy."),
+                tr("📬 Koperty czekają w kilku niezależnych „skrzynkach pocztowych” w internecie (do 21 dni), aż odbiorca włączy telefon."),
+                tr("📵 Bez internetu? Telefony w tej samej sieci Wi-Fi mogą pisać do siebie bezpośrednio (Ustawienia → Bez internetu)."),
+                tr("📱 Zmieniasz telefon? Zrób kopię zapasową (Ustawienia → Kopia zapasowa) i przywróć ją na nowym."),
+                tr("✔ Niebieski znaczek przy nazwie oznacza konto potwierdzone przez Szept. Nie da się go podrobić."),
             ).forEach { Text(it, Modifier.padding(vertical = 6.dp), style = MaterialTheme.typography.bodyLarge) }
             CrashLogSection()
         }
@@ -526,15 +537,15 @@ private fun CrashLogSection() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var log by remember { mutableStateOf(pl.szept.core.CrashLog.read()) }
     androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 12.dp))
-    Text("Dziennik błędów", style = MaterialTheme.typography.titleMedium)
-    if (log.isBlank()) Text("Brak zapisanych błędów. 👍", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(tr("Dziennik błędów"), style = MaterialTheme.typography.titleMedium)
+    if (log.isBlank()) Text(tr("Brak zapisanych błędów. 👍"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     else {
         Text(
-            "Jeśli coś nie działa, skopiuj dziennik i wyślij go twórcy aplikacji. Nie zawiera treści wiadomości.",
+            tr("Jeśli coś nie działa, skopiuj dziennik i wyślij go twórcy aplikacji. Nie zawiera treści wiadomości."),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         androidx.compose.foundation.layout.Row {
-            androidx.compose.material3.TextButton(onClick = { copyText(ctx, log) }) { Text("Kopiuj dziennik") }
+            androidx.compose.material3.TextButton(onClick = { copyText(ctx, log) }) { Text(tr("Kopiuj dziennik")) }
             androidx.compose.material3.TextButton(onClick = { pl.szept.core.CrashLog.clear(); log = "" }) { Text("Wyczyść") }
         }
         Text(log.takeLast(4000), style = MaterialTheme.typography.labelSmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)

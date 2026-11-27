@@ -1,5 +1,6 @@
 package pl.szept.ui.games
 
+import pl.szept.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -85,7 +86,7 @@ fun BlackjackGame(env: GameEnv) {
             else -> -bet
         }
         chips += delta
-        msg = when { delta > 0 -> if (bj) "Oczko! +$delta" else "Wygrana +$delta"; delta == 0 -> "Remis"; else -> "Przegrana $delta" }
+        msg = when { delta > 0 -> if (bj) tr("Oczko! +{0}", delta) else tr("Wygrana +{0}", delta); delta == 0 -> tr("Remis"); else -> tr("Przegrana {0}", delta) }
         phase = 3
     }
     fun deal() {
@@ -104,11 +105,11 @@ fun BlackjackGame(env: GameEnv) {
     LaunchedEffect(Unit) { deal() }
     Column(Modifier.fillMaxSize().background(Color(0xFF1B5E20)).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(Modifier.fillMaxWidth()) {
-            Text("$chips żetonów", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.weight(1f))
-            Text("rozdanie $hand/10", color = Color.White.copy(alpha = 0.8f))
+            Text(tr("{0} żetonów", chips), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.weight(1f))
+            Text(tr("rozdanie {0}/10", hand), color = Color.White.copy(alpha = 0.8f))
         }
         Spacer(Modifier.height(16.dp))
-        Text("Krupier" + if (phase >= 2) ": ${Games.bjValue(dealer)}" else "", color = Color.White)
+        Text(tr("Krupier") + if (phase >= 2) ": ${Games.bjValue(dealer)}" else "", color = Color.White)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { dealer.forEachIndexed { i, c -> PlayingCard(c, hidden = i == 1 && phase < 2) } }
         Spacer(Modifier.weight(1f))
         Text(msg, color = Color(0xFFFFEB3B), fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -119,13 +120,13 @@ fun BlackjackGame(env: GameEnv) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             when (phase) {
                 1 -> {
-                    Button(onClick = { player.add(draw()); if (Games.bjValue(player) >= 21) phase = 2 }) { Text("Dobierz") }
+                    Button(onClick = { player.add(draw()); if (Games.bjValue(player) >= 21) phase = 2 }) { Text(tr("Dobierz")) }
                     OutlinedButton(onClick = { phase = 2 }, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("Pas") }
                 }
                 3 -> Button(onClick = {
                     if (over) return@Button
                     if (hand >= 10 || chips <= 0) { over = true; env.finish(chips.coerceAtLeast(0).toDouble()) } else { hand++; deal() }
-                }) { Text(if (hand >= 10 || chips <= 0) "Koniec gry" else "Następne rozdanie") }
+                }) { Text(if (hand >= 10 || chips <= 0) tr("Koniec gry") else tr("Następne rozdanie")) }
                 else -> {}
             }
         }
@@ -157,19 +158,19 @@ fun HigherLowerGame(env: GameEnv) {
         }
     }
     Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameHud("$streak pkt", "z rzędu")
+        GameHud("$streak pkt", tr("z rzędu"))
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
             prev?.let { PlayingCard(it, 70.dp); Spacer(Modifier.width(16.dp)) }
             PlayingCard(cur, 120.dp)
         }
         Spacer(Modifier.weight(1f))
-        Text("Następna karta będzie…", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Następna karta będzie…"), style = MaterialTheme.typography.titleMedium)
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { guess(true) }, Modifier.weight(1f).height(60.dp)) { Icon(Icons.Default.ArrowUpward, null); Text(" Wyższa") }
-            Button(onClick = { guess(false) }, Modifier.weight(1f).height(60.dp)) { Icon(Icons.Default.ArrowDownward, null); Text(" Niższa") }
+            Button(onClick = { guess(true) }, Modifier.weight(1f).height(60.dp)) { Icon(Icons.Default.ArrowUpward, null); Text(tr(" Wyższa")) }
+            Button(onClick = { guess(false) }, Modifier.weight(1f).height(60.dp)) { Icon(Icons.Default.ArrowDownward, null); Text(tr(" Niższa")) }
         }
-        Text("As jest najwyższy. Ta sama wartość — grasz dalej.", style = MaterialTheme.typography.labelMedium)
+        Text(tr("As jest najwyższy. Ta sama wartość — grasz dalej."), style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -206,11 +207,11 @@ fun SlotsGame(env: GameEnv) {
             else -> 0
         }
         coins += win
-        msg = if (win > 0) "Wygrana: $win" else ""
+        msg = if (win > 0) tr("Wygrana: {0}", win) else ""
         if (spins >= 20 || coins < 5) { over = true; env.finish(coins.toDouble()) }
     }
     Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameHud("$coins żetonów", "zakręcenia: $spins/20")
+        GameHud(tr("{0} żetonów", coins), tr("zakręcenia: {0}/20", spins))
         Spacer(Modifier.weight(1f))
         Row(Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFF263238)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             reels.forEach { s ->
@@ -223,15 +224,15 @@ fun SlotsGame(env: GameEnv) {
         Text(msg, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFA000))
         Spacer(Modifier.weight(1f))
         Button(onClick = { if (!spinning && !over && coins >= 5) { coins -= 5; spins++; msg = ""; go++ } }, enabled = !spinning && !over,
-            modifier = Modifier.fillMaxWidth().height(60.dp)) { Text("Zakręć (5 żetonów)", fontSize = 18.sp) }
+            modifier = Modifier.fillMaxWidth().height(60.dp)) { Text(tr("Zakręć (5 żetonów)"), fontSize = 18.sp) }
         Spacer(Modifier.height(8.dp))
-        Text("3 takie same: " + SLOT_PAY.joinToString(" / ") + " · 2 takie same: 5", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+        Text(tr("3 takie same: ") + SLOT_PAY.joinToString(" / ") + tr(" · 2 takie same: 5"), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
     }
 }
 
 // ============================ generał (Yahtzee) ============================
 
-private val YAHTZEE_CATS = listOf("Jedynki", "Dwójki", "Trójki", "Czwórki", "Piątki", "Szóstki", "Trzy jednakowe", "Kareta", "Full", "Mały strit", "Duży strit", "Generał", "Szansa")
+private val YAHTZEE_CATS = listOf(tr("Jedynki"), tr("Dwójki"), tr("Trójki"), tr("Czwórki"), tr("Piątki"), tr("Szóstki"), tr("Trzy jednakowe"), tr("Kareta"), tr("Full"), tr("Mały strit"), tr("Duży strit"), tr("Generał"), tr("Szansa"))
 
 fun yahtzeeScore(cat: Int, d: List<Int>): Int {
     val counts = (1..6).map { v -> d.count { it == v } }
@@ -273,12 +274,12 @@ fun YahtzeeGame(env: GameEnv) {
         dice = List(5) { 1 + rnd.nextInt(6) }; rolls = 1
     }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
-        GameHud("$total pkt", "rzut $rolls/3")
+        GameHud("$total pkt", tr("rzut {0}/3", rolls))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             dice.forEachIndexed { i, v -> Die(v, 56.dp, held[i]) { if (rolls < 3) held[i] = !held[i] } }
         }
-        Text("Dotknij kości, aby ją zatrzymać", Modifier.fillMaxWidth().padding(4.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-        Button(onClick = { roll() }, enabled = rolls < 3 && !over, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Casino, null); Text("  Rzuć jeszcze raz") }
+        Text(tr("Dotknij kości, aby ją zatrzymać"), Modifier.fillMaxWidth().padding(4.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+        Button(onClick = { roll() }, enabled = rolls < 3 && !over, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Casino, null); Text(tr("  Rzuć jeszcze raz")) }
         Spacer(Modifier.height(6.dp))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             YAHTZEE_CATS.forEachIndexed { i, name ->
@@ -288,7 +289,7 @@ fun YahtzeeGame(env: GameEnv) {
                     Text(name, Modifier.weight(1f), fontWeight = if (done == null) FontWeight.Medium else FontWeight.Normal)
                     Text(done?.toString() ?: "+" + yahtzeeScore(i, dice), color = if (done == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                 }
-                if (i == 5) Text("Premia za górę (63+): ${if (upper >= 63) "+35" else "$upper/63"}", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium)
+                if (i == 5) Text(tr("Premia za górę (63+): {0}", if (upper >= 63) "+35" else "$upper/63"), Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -313,20 +314,20 @@ fun GuessNumGame(env: GameEnv) {
         if (h == 0) { over = true; env.finish(tries.size.toDouble()) }
     }
     Column(Modifier.fillMaxSize().padding(16.dp).imePadding(), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameHud("${tries.size} prób", "zakres $lo–$hi")
-        Text("Liczba od 1 do 1000", style = MaterialTheme.typography.titleMedium)
+        GameHud(tr("{0} prób", tries.size), tr("zakres {0}–{1}", lo, hi))
+        Text(tr("Liczba od 1 do 1000"), style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 12.dp)) {
-            OutlinedTextField(input, { input = it.filter { c -> c.isDigit() }.take(4) }, Modifier.weight(1f), singleLine = true, label = { Text("Twoja liczba") },
+            OutlinedTextField(input, { input = it.filter { c -> c.isDigit() }.take(4) }, Modifier.weight(1f), singleLine = true, label = { Text(tr("Twoja liczba")) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             Spacer(Modifier.width(8.dp))
-            Button(onClick = { submit() }, enabled = input.isNotEmpty() && !over) { Text("Sprawdź") }
+            Button(onClick = { submit() }, enabled = input.isNotEmpty() && !over) { Text(tr("Sprawdź")) }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             tries.reversed().forEach { (n, h) ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("$n", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(80.dp))
                     Icon(when { h > 0 -> Icons.Default.ArrowUpward; h < 0 -> Icons.Default.ArrowDownward; else -> Icons.Default.Check }, null)
-                    Text(when { h > 0 -> " szukana jest większa"; h < 0 -> " szukana jest mniejsza"; else -> " trafione!" })
+                    Text(when { h > 0 -> tr(" szukana jest większa"); h < 0 -> tr(" szukana jest mniejsza"); else -> " trafione!" })
                 }
             }
         }

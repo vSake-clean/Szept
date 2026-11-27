@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -178,7 +179,7 @@ fun ImageEditorDialog(src: File, onCancel: () -> Unit, startRatio: Float? = null
         bmp = withContext(Dispatchers.IO) {
             BitmapFactory.decodeFile(src.absolutePath)?.copy(Bitmap.Config.ARGB_8888, true)
         }
-        if (bmp == null) { toast(ctx, "Nie można otworzyć zdjęcia"); onCancel() }
+        if (bmp == null) { toast(ctx, tr("Nie można otworzyć zdjęcia")); onCancel() }
     }
     val b = bmp ?: run {
         Dialog(onDismissRequest = onCancel) { CircularProgressIndicator() }
@@ -243,7 +244,7 @@ fun ImageEditorDialog(src: File, onCancel: () -> Unit, startRatio: Float? = null
             // safeDrawingPadding: przyciski nie wchodzą pod pasek stanu / pasek nawigacji
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onCancel) { Icon(Icons.Default.Close, "Anuluj", tint = Color.White) }
+                    IconButton(onClick = onCancel) { Icon(Icons.Default.Close, tr("Anuluj"), tint = Color.White) }
                     Spacer(Modifier.weight(1f))
                     if (busy) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 8.dp), color = Color.White)
                     Button(enabled = !busy, onClick = {
@@ -259,12 +260,12 @@ fun ImageEditorDialog(src: File, onCancel: () -> Unit, startRatio: Float? = null
                                 }
                             } catch (e: Exception) {
                                 if (e is kotlinx.coroutines.CancellationException) throw e
-                                toast(ctx, "Nie udało się zapisać zdjęcia"); null
+                                toast(ctx, tr("Nie udało się zapisać zdjęcia")); null
                             }
                             busy = false
                             att?.let(onDone)
                         }
-                    }, modifier = Modifier.padding(end = 8.dp)) { Text("Gotowe") }
+                    }, modifier = Modifier.padding(end = 8.dp)) { Text(tr("Gotowe")) }
                 }
                 // margines wokół zdjęcia: narożniki kadru nie leżą przy krawędzi ekranu (gest „wstecz”)
                 Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp).systemGestureExclusion().onSizeChanged { box = it }) {
@@ -386,15 +387,15 @@ fun ImageEditorDialog(src: File, onCancel: () -> Unit, startRatio: Float? = null
                     Tool.CROP -> Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Przeciągnij narożniki lub ramkę.", Modifier.weight(1f).padding(start = 4.dp),
+                                tr("Przeciągnij narożniki lub ramkę."), Modifier.weight(1f).padding(start = 4.dp),
                                 color = Color.White, style = MaterialTheme.typography.bodySmall,
                             )
                             Button(onClick = { applyCrop() }) {
-                                Icon(Icons.Default.Check, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Przytnij")
+                                Icon(Icons.Default.Check, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Przytnij"))
                             }
                         }
                         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                            listOf<Pair<Float?, String>>(null to "Dowolnie", 1f to "1:1", 3f to "3:1", 4f / 3 to "4:3", 3f / 4 to "3:4", 16f / 9 to "16:9").forEach { (r, t) ->
+                            listOf<Pair<Float?, String>>(null to tr("Dowolnie"), 1f to "1:1", 3f to "3:1", 4f / 3 to "4:3", 3f / 4 to "3:4", 16f / 9 to "16:9").forEach { (r, t) ->
                                 FilterChip(
                                     cropRatio == r, { applyRatio(r) }, { Text(t, color = Color.White) }, modifier = Modifier.padding(horizontal = 2.dp),
                                 )
@@ -402,33 +403,33 @@ fun ImageEditorDialog(src: File, onCancel: () -> Unit, startRatio: Float? = null
                         }
                     }
                     Tool.BLUR -> Text(
-                        "Przeciągnij palcem po fragmencie, który chcesz zamazać.", Modifier.fillMaxWidth().padding(10.dp),
+                        tr("Przeciągnij palcem po fragmencie, który chcesz zamazać."), Modifier.fillMaxWidth().padding(10.dp),
                         color = Color.White, style = MaterialTheme.typography.bodySmall,
                     )
                     Tool.NONE -> {}
                 }
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp, top = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    EditorTool(Icons.Default.Crop, "Kadruj", tool == Tool.CROP) { setTool(Tool.CROP) }
-                    EditorTool(Icons.Default.RotateRight, "Obróć", false) {
+                    EditorTool(Icons.Default.Crop, tr("Kadruj"), tool == Tool.CROP) { setTool(Tool.CROP) }
+                    EditorTool(Icons.Default.RotateRight, tr("Obróć"), false) {
                         commitStrokes(); val cur = applyCrop(); pushHistory(); bmp = ImageOps.rotate90(cur); tool = Tool.NONE; version++
                     }
-                    EditorTool(Icons.Default.Brush, "Rysuj", tool == Tool.DRAW) { setTool(Tool.DRAW) }
-                    EditorTool(Icons.Default.BlurOn, "Zamaż", tool == Tool.BLUR) { setTool(Tool.BLUR) }
-                    EditorTool(Icons.Default.Face, "Twarze", false) {
+                    EditorTool(Icons.Default.Brush, tr("Rysuj"), tool == Tool.DRAW) { setTool(Tool.DRAW) }
+                    EditorTool(Icons.Default.BlurOn, tr("Zamaż"), tool == Tool.BLUR) { setTool(Tool.BLUR) }
+                    EditorTool(Icons.Default.Face, tr("Twarze"), false) {
                         commitStrokes(); applyCrop()
                         busy = true
                         scope.launch {
                             val faces = withContext(Dispatchers.Default) { ImageOps.findFaces(b) }
                             if (faces.isNotEmpty()) { pushHistory(); faces.forEach { ImageOps.pixelate(b, it) }; version++ }
                             busy = false
-                            toast(ctx, if (faces.isEmpty()) "Nie znaleziono twarzy — zamaż ręcznie narzędziem „Zamaż”" else "Zamazano twarze: ${faces.size}")
+                            toast(ctx, if (faces.isEmpty()) tr("Nie znaleziono twarzy — zamaż ręcznie narzędziem „Zamaż”") else tr("Zamazano twarze: {0}", faces.size))
                         }
                     }
-                    EditorTool(Icons.AutoMirrored.Filled.Undo, "Cofnij", false) {
+                    EditorTool(Icons.AutoMirrored.Filled.Undo, tr("Cofnij"), false) {
                         when {
                             strokes.isNotEmpty() -> strokes.removeAt(strokes.lastIndex)
                             history.isNotEmpty() -> { bmp = history.removeLast(); version++ }
-                            else -> toast(ctx, "Nie ma czego cofnąć")
+                            else -> toast(ctx, tr("Nie ma czego cofnąć"))
                         }
                     }
                 }

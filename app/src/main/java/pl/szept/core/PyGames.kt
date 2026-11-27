@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,9 +77,9 @@ object PyGames {
 
     val BUILTIN = listOf(
         Game(
-            "py:wheelie", "Wheelie Simulator 2D",
-            "Symulator jazdy na tylnym kole: ścigacz, Sur-Ron, pit bike i hulajnogi Kukirin. Fizyka, sprzęgło, biegi, wiatr — wheelie jest celowo trudne. " +
-                "Wynik to najdłuższe wheelie w metrach. Telefon trzymaj poziomo.",
+            "py:wheelie", tr("Wheelie Simulator 2D"),
+            tr("Symulator jazdy na tylnym kole: ścigacz, Sur-Ron, pit bike i hulajnogi Kukirin. Fizyka, sprzęgło, biegi, wiatr — wheelie jest celowo trudne. ") +
+                tr("Wynik to najdłuższe wheelie w metrach. Telefon trzymaj poziomo."),
             "m", "m", true, 1, "--telefon", false, 1, asset = "pygame/games/wheelie.py",
         ),
     )
@@ -203,20 +204,20 @@ object PyGames {
             if (f.length() == size && sha256(f) == sha) { done += size; progress(done); continue }
             val tmp = File(d, "$name.part")
             http.newCall(Request.Builder().url(CDN + name).build()).execute().use { r ->
-                if (!r.isSuccessful) throw java.io.IOException("Serwer odpowiedział ${r.code}")
-                val body = r.body ?: throw java.io.IOException("Pusta odpowiedź")
+                if (!r.isSuccessful) throw java.io.IOException(tr("Serwer odpowiedział {0}", r.code))
+                val body = r.body ?: throw java.io.IOException(tr("Pusta odpowiedź"))
                 body.byteStream().use { ins ->
                     tmp.outputStream().use { out ->
                         val buf = ByteArray(64 * 1024)
                         while (true) {
                             val n = ins.read(buf); if (n < 0) break
                             out.write(buf, 0, n); done += n; progress(done)
-                            if (tmp.length() > size) throw java.io.IOException("Plik jest za duży")
+                            if (tmp.length() > size) throw java.io.IOException(tr("Plik jest za duży"))
                         }
                     }
                 }
             }
-            if (sha256(tmp) != sha) { tmp.delete(); throw java.io.IOException("Plik $name ma złą sumę kontrolną") }
+            if (sha256(tmp) != sha) { tmp.delete(); throw java.io.IOException(tr("Plik {0} ma złą sumę kontrolną", name)) }
             if (!tmp.renameTo(f)) { tmp.copyTo(f, overwrite = true); tmp.delete() }
         }
         File(d, ".ok").writeText(PYODIDE)

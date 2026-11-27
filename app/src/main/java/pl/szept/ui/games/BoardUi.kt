@@ -1,5 +1,6 @@
 package pl.szept.ui.games
 
+import pl.szept.tr
 import pl.szept.ui.StyleAlertDialog
 
 import androidx.compose.foundation.Canvas
@@ -55,9 +56,9 @@ import kotlin.math.hypot
 /** Kolory graczy: A i B. */
 val SIDE_COLORS = listOf(Color(0xFFE53935), Color(0xFF1E88E5))
 private val SIDE_NAMES = mapOf(
-    "ttt" to listOf("✕", "◯"), "c4" to listOf("czerwone", "żółte"), "gomoku" to listOf("czarne", "białe"), "reversi" to listOf("czarne", "białe"),
-    "checkers" to listOf("jasne", "ciemne"), "chess" to listOf("białe", "czarne"), "dots" to listOf("czerwone", "niebieskie"),
-    "nim" to listOf("", ""), "mancala" to listOf("dół", "góra"), "morris" to listOf("czerwone", "niebieskie"), "battleship" to listOf("", ""),
+    "ttt" to listOf("✕", "◯"), "c4" to listOf(tr("czerwone"), tr("żółte")), "gomoku" to listOf(tr("czarne"), tr("białe")), "reversi" to listOf(tr("czarne"), tr("białe")),
+    "checkers" to listOf(tr("jasne"), tr("ciemne")), "chess" to listOf(tr("białe"), tr("czarne")), "dots" to listOf(tr("czerwone"), tr("niebieskie")),
+    "nim" to listOf("", ""), "mancala" to listOf(tr("dół"), tr("góra")), "morris" to listOf(tr("czerwone"), tr("niebieskie")), "battleship" to listOf("", ""),
 )
 
 fun sideName(id: String, side: Int) = SIDE_NAMES[id]?.getOrNull(side).orEmpty()
@@ -84,13 +85,13 @@ fun DuelBoard(id: String, state: Any, mySide: Int, enabled: Boolean, onMove: (St
 
 /** Dodatkowa informacja o stanie gry (wynik, szach, faza). */
 fun duelInfo(id: String, state: Any): String = when (state) {
-    is Reversi.S -> "● ${state.count(0)} : ${state.count(1)} ○" + if (state.passed) " · pas" else ""
+    is Reversi.S -> "● ${state.count(0)} : ${state.count(1)} ○" + if (state.passed) tr(" · pas") else ""
     is DotsBoxes.S -> "${state.score[0]} : ${state.score[1]}"
     is Mancala.S -> "${state.p[6]} : ${state.p[13]}"
-    is Nim.S -> "zostało ${state.left} " + GameCatalog.plural(state.left.toLong(), "zapałka", "zapałki", "zapałek")
-    is Chess.S -> when { state.reason.isNotEmpty() -> state.reason; state.check -> "Szach!"; else -> "" }
-    is Morris.S -> "w ręce: ${state.hand[0]} / ${state.hand[1]}"
-    is Battleship.S -> if (!state.ready) "ustawianie floty" else "trafienia ${state.hits(0).size} : ${state.hits(1).size}"
+    is Nim.S -> tr("zostało {0} ", state.left) + GameCatalog.plural(state.left.toLong(), tr("zapałka"), tr("zapałki"), tr("zapałek"))
+    is Chess.S -> when { state.reason.isNotEmpty() -> state.reason; state.check -> tr("Szach!"); else -> "" }
+    is Morris.S -> tr("w ręce: {0} / {1}", state.hand[0], state.hand[1])
+    is Battleship.S -> if (!state.ready) tr("ustawianie floty") else tr("trafienia {0} : {1}", state.hits(0).size, state.hits(1).size)
     else -> ""
 }
 
@@ -111,7 +112,7 @@ fun TttBoard(s: TttDuel.S, enabled: Boolean, onMove: (String) -> Unit) {
                     .background(if (i in s.line) line.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
                     .border(1.dp, if (can) line.copy(alpha = 0.6f) else Color.Transparent, RoundedCornerShape(10.dp))
                     .clickable(enabled = can) { onMove(i.toString()) }
-                    .semantics { contentDescription = "Pole ${i + 1}" + when (s.b[i]) { 1 -> ": krzyżyk"; 2 -> ": kółko"; else -> "" } }) {
+                    .semantics { contentDescription = tr("Pole {0}", i + 1) + when (s.b[i]) { 1 -> tr(": krzyżyk"); 2 -> tr(": kółko"); else -> "" } }) {
                     Canvas(Modifier.fillMaxSize().padding(14.dp)) {
                         when (s.b[i]) {
                             1 -> { drawLine(SIDE_COLORS[0], Offset.Zero, Offset(size.width, size.height), 10f); drawLine(SIDE_COLORS[0], Offset(size.width, 0f), Offset(0f, size.height), 10f) }
@@ -281,7 +282,7 @@ fun ChessBoard(s: Chess.S, mySide: Int, enabled: Boolean, onMove: (String) -> Un
     promo?.let { (from, to) ->
         StyleAlertDialog(
             onDismissRequest = { promo = null },
-            title = { Text("Promocja pionka") },
+            title = { Text(tr("Promocja pionka")) },
             text = {
                 Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                     listOf(Chess.Q, Chess.R, Chess.B, Chess.N).forEach { k ->
@@ -290,7 +291,7 @@ fun ChessBoard(s: Chess.S, mySide: Int, enabled: Boolean, onMove: (String) -> Un
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { promo = null }) { Text("Anuluj") } },
+            confirmButton = { TextButton(onClick = { promo = null }) { Text(tr("Anuluj")) } },
         )
     }
 }
@@ -340,7 +341,7 @@ fun NimBoard(s: Nim.S, enabled: Boolean, onMove: (String) -> Unit) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (k in 1..3) Button(onClick = { onMove(k.toString()) }, enabled = enabled && k <= s.left) { Text("Weź $k") }
+            for (k in 1..3) Button(onClick = { onMove(k.toString()) }, enabled = enabled && k <= s.left) { Text(tr("Weź {0}", k)) }
         }
     }
 }
@@ -429,7 +430,7 @@ fun MorrisBoard(s: Morris.S, mySide: Int, enabled: Boolean, onMove: (String) -> 
                 }
             }
         }
-        if (pending != null) Text("Młynek! Wybierz pionek przeciwnika do zbicia", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+        if (pending != null) Text(tr("Młynek! Wybierz pionek przeciwnika do zbicia"), Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -458,11 +459,11 @@ fun BattleshipBoard(s: Battleship.S, mySide: Int, enabled: Boolean, onMove: (Str
     if (!s.ready && mySide >= 0 && s.fleets[mySide] == null) {
         val cells = Battleship.parseFleet(fleet)?.flatten()?.toSet() ?: emptySet()
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Twoja flota (4, 3, 3, 2, 2)", style = MaterialTheme.typography.labelLarge)
+            Text(tr("Twoja flota (4, 3, 3, 2, 2)"), style = MaterialTheme.typography.labelLarge)
             Grid({ i -> (if (i in cells) Color(0xFF546E7A) else sea) to false }, null)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { fleet = Battleship.randomFleet(rnd) }) { Icon(Icons.Default.Shuffle, null); Text(" Losuj") }
-                Button(onClick = { onMove(fleet) }, enabled = enabled) { Text("Gotowe") }
+                OutlinedButton(onClick = { fleet = Battleship.randomFleet(rnd) }) { Icon(Icons.Default.Shuffle, null); Text(tr(" Losuj")) }
+                Button(onClick = { onMove(fleet) }, enabled = enabled) { Text(tr("Gotowe")) }
             }
         }
         return
@@ -470,10 +471,10 @@ fun BattleshipBoard(s: Battleship.S, mySide: Int, enabled: Boolean, onMove: (Str
     val me = mySide.coerceAtLeast(0)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         if (mySide >= 0) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(view == 0, { view = 0 }, { Text("Strzały") })
-            FilterChip(view == 1, { view = 1 }, { Text("Moja flota") })
+            FilterChip(view == 0, { view = 0 }, { Text(tr("Strzały")) })
+            FilterChip(view == 1, { view = 1 }, { Text(tr("Moja flota")) })
         }
-        if (!s.ready) Text("Czekamy, aż przeciwnik ustawi flotę…", style = MaterialTheme.typography.labelMedium)
+        if (!s.ready) Text(tr("Czekamy, aż przeciwnik ustawi flotę…"), style = MaterialTheme.typography.labelMedium)
         if (view == 0 || mySide < 0) {
             val shots = s.shots[me].toSet()
             val enemy = s.fleets[1 - me] ?: emptySet()
@@ -519,7 +520,7 @@ fun DuelBubble(m: Message, info: GameCatalog.Info, big: Boolean = false) {
     var zoom by remember { mutableStateOf(false) }
     val w = played.winner
     Column(if (big) Modifier.fillMaxWidth() else Modifier.width(272.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        val bName = played.b?.let(::whoName) ?: "czeka na gracza"
+        val bName = played.b?.let(::whoName) ?: tr("czeka na gracza")
         val sa = sideName(info.id, 0); val sb = sideName(info.id, 1)
         GameTitle(info, "${whoName(played.a)}${if (sa.isNotEmpty()) " ($sa)" else ""} vs $bName${if (sb.isNotEmpty() && played.b != null) " ($sb)" else ""}")
         Spacer(Modifier.height(6.dp))
@@ -527,28 +528,28 @@ fun DuelBubble(m: Message, info: GameCatalog.Info, big: Boolean = false) {
         Spacer(Modifier.height(6.dp))
         val extra = duelInfo(info.id, played.state)
         val status = when {
-            w == 2 -> "Remis"
-            w != null -> "Wygrywa: ${whoName(played.pkOf(w))}"
-            enabled -> "Twój ruch"
-            mySide == 1 && played.b == null && !duel.canMove(played.state, 1) -> "Czekaj na ruch: ${whoName(played.a)}"
+            w == 2 -> tr("Remis")
+            w != null -> tr("Wygrywa: {0}", whoName(played.pkOf(w)))
+            enabled -> tr("Twój ruch")
+            mySide == 1 && played.b == null && !duel.canMove(played.state, 1) -> tr("Czekaj na ruch: {0}", whoName(played.a))
             else -> {
                 val next = (0..1).firstOrNull { duel.canMove(played.state, it) }
-                if (next == null) "" else "Ruch: " + (played.pkOf(next)?.let(::whoName) ?: "drugi gracz")
+                if (next == null) "" else tr("Ruch: ") + (played.pkOf(next)?.let(::whoName) ?: tr("drugi gracz"))
             }
         }
         Text(listOf(status, extra).filter { it.isNotEmpty() }.joinToString(" · "), fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
             color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
         BubbleActions {
-            if (w != null) TextButton(onClick = { startInChat(ctx, m.chat, info.id) }) { Text("Rewanż") }
+            if (w != null) TextButton(onClick = { startInChat(ctx, m.chat, info.id) }) { Text(tr("Rewanż")) }
             TotalsButton { totals = true }
-            if (!big) IconButton(onClick = { zoom = true }) { Icon(Icons.Default.Fullscreen, "Powiększ planszę") }
+            if (!big) IconButton(onClick = { zoom = true }) { Icon(Icons.Default.Fullscreen, tr("Powiększ planszę")) }
         }
     }
     if (totals) TotalsDialog(info, m.id, m.chat) { totals = false }
     if (zoom) Dialog(onDismissRequest = { zoom = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxWidth(0.98f).wrapContentHeight(), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(12.dp)) {
-                Row { Spacer(Modifier.weight(1f)); IconButton(onClick = { zoom = false }) { Icon(Icons.Default.Close, "Zamknij") } }
+                Row { Spacer(Modifier.weight(1f)); IconButton(onClick = { zoom = false }) { Icon(Icons.Default.Close, tr("Zamknij")) } }
                 DuelBubble(m, info, big = true)
             }
         }
@@ -583,7 +584,7 @@ fun DuelVsAi(id: String, env: GameEnv) {
     }
     val w = duel.winner(state)
     Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Ty${sideName(id, 0).let { if (it.isNotEmpty()) " ($it)" else "" }} vs komputer${sideName(id, 1).let { if (it.isNotEmpty()) " ($it)" else "" }}",
+        Text(tr("Ty{0} vs komputer{1}", sideName(id, 0).let { if (it.isNotEmpty()) " ($it)" else "" }, sideName(id, 1).let { if (it.isNotEmpty()) " ($it)" else "" }),
             style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Box(Modifier.widthIn(max = 520.dp).fillMaxWidth()) {
@@ -591,21 +592,21 @@ fun DuelVsAi(id: String, env: GameEnv) {
         }
         Spacer(Modifier.height(8.dp))
         val status = when {
-            w == 2 -> "Remis"
-            w == human -> "Wygrałeś!"
-            w == ai -> "Wygrywa komputer"
-            thinking -> "Komputer myśli…"
-            duel.canMove(state, human) -> "Twój ruch"
+            w == 2 -> tr("Remis")
+            w == human -> tr("Wygrałeś!")
+            w == ai -> tr("Wygrywa komputer")
+            thinking -> tr("Komputer myśli…")
+            duel.canMove(state, human) -> tr("Twój ruch")
             else -> ""
         }
         Text(listOf(status, duelInfo(id, state)).filter { it.isNotEmpty() }.joinToString(" · "), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        if (info.id == "chess") Text("Dotknij figury, a potem pola docelowego", style = MaterialTheme.typography.labelSmall)
+        if (info.id == "chess") Text(tr("Dotknij figury, a potem pola docelowego"), style = MaterialTheme.typography.labelSmall)
     }
 }
 
 // ============================ kamień, papier, nożyce ============================
 
-private val RPS_LABELS = mapOf("r" to "Kamień", "p" to "Papier", "s" to "Nożyce")
+private val RPS_LABELS = mapOf("r" to tr("Kamień"), "p" to tr("Papier"), "s" to tr("Nożyce"))
 private val RPS_ICONS = mapOf("r" to Icons.Default.BackHand, "p" to Icons.Default.Description, "s" to Icons.Default.ContentCut)
 
 @Composable
@@ -620,10 +621,10 @@ fun RpsBubble(m: Message, info: GameCatalog.Info) {
     var totals by remember { mutableStateOf(false) }
     val reveal = mine != null && picks.size >= 2
     Column(Modifier.width(260.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameTitle(info, "zagrało: ${picks.size}")
+        GameTitle(info, tr("zagrało: {0}", picks.size))
         Spacer(Modifier.height(6.dp))
         if (mine == null) {
-            Text("Wybierz w tajemnicy:", style = MaterialTheme.typography.labelMedium)
+            Text(tr("Wybierz w tajemnicy:"), style = MaterialTheme.typography.labelMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("r", "p", "s").forEach { k ->
                     OutlinedButton(onClick = { core.gameMove(m.id, k) }, contentPadding = PaddingValues(8.dp)) {
@@ -631,7 +632,7 @@ fun RpsBubble(m: Message, info: GameCatalog.Info) {
                     }
                 }
             }
-        } else if (!reveal) Text("Wybrałeś: ${RPS_LABELS[mine]}. Czekamy na innych…", textAlign = TextAlign.Center)
+        } else if (!reveal) Text(tr("Wybrałeś: {0}. Czekamy na innych…", RPS_LABELS[mine]), textAlign = TextAlign.Center)
         if (reveal) {
             val best = points.values.maxOrNull() ?: 0
             picks.sortedByDescending { points[it.first] ?: 0 }.forEach { (pk, k) ->
@@ -643,7 +644,7 @@ fun RpsBubble(m: Message, info: GameCatalog.Info) {
             }
         }
         BubbleActions {
-            if (reveal) TextButton(onClick = { startInChat(ctx, m.chat, "rps") }) { Text("Jeszcze raz") }
+            if (reveal) TextButton(onClick = { startInChat(ctx, m.chat, "rps") }) { Text(tr("Jeszcze raz")) }
             TotalsButton { totals = true }
         }
     }
@@ -659,7 +660,7 @@ fun RpsVsAi(env: GameEnv) {
     var last by remember { mutableStateOf<Pair<String, String>?>(null) }
     var over by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameHud("Ty $me : $ai komputer", "do 3 wygranych")
+        GameHud(tr("Ty {0} : {1} komputer", me, ai), tr("do 3 wygranych"))
         Spacer(Modifier.weight(1f))
         last?.let { (a, b) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -667,7 +668,7 @@ fun RpsVsAi(env: GameEnv) {
                 Text("  vs  ", style = MaterialTheme.typography.titleLarge)
                 Icon(RPS_ICONS[b]!!, null, Modifier.size(72.dp), tint = SIDE_COLORS[1])
             }
-            Text(when { a == b -> "Remis"; pl.szept.core.Games.rpsBeats(a, b) -> "Wygrywasz rundę!"; else -> "Komputer wygrywa rundę" }, style = MaterialTheme.typography.titleMedium)
+            Text(when { a == b -> tr("Remis"); pl.szept.core.Games.rpsBeats(a, b) -> tr("Wygrywasz rundę!"); else -> tr("Komputer wygrywa rundę") }, style = MaterialTheme.typography.titleMedium)
         }
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -33,9 +33,18 @@ Z właścicielem rozmawiaj po polsku, prosto i krótko. Pytaj przed rzeczami nie
 - Starsze wersje (≤ 3.3.4) pobierają bez numerów paczek — dostaną komplet tylko, gdy żaden przekaźnik nie ma więcej
   niż ~500 paczek pliku (pilnuje tego `ChunkPlan.build`). Zapasowo: link do wydań na GitHubie (`Admin.RELEASES_URL`).
 
+## Języki (od 3.4)
+- Teksty w kodzie są po polsku i **zawsze** przez `tr("tekst {0}", wartość)` (`pl.szept.tr`, plik `I18n.kt`).
+- Tłumaczenie angielskie: `app/src/main/assets/i18n/en.json` (klucz = tekst polski). `I18nTest` pilnuje,
+  żeby każdy polski tekst miał tłumaczenie i te same `{0}` oraz spacje na brzegach.
+- Teksty liczone raz przy starcie (listy, enumy, `val` w obiektach) zmieniają się po ponownym uruchomieniu —
+  dlatego zmiana języka restartuje aplikację (`restartApp`). Nie tłumacz kodów protokołu, kluczy, SQL, nagłówków HTTP.
+- Nowy język: plik `assets/i18n/<kod>.json`, wpis w `I18n.LANGS` i flaga w `LanguageFlag` (`ui/LanguageScreens.kt`).
+- Kreator (`ui/style/Wizard.kt`): strona 1 = język. `WIZARD_VERSION` = kod wersji, od której każdy ma go zobaczyć ponownie.
+
 ## Nowa wersja
 - `app/build.gradle.kts`: podnieś `versionCode` i `versionName`.
-- Dopisz zmiany na górze `CHANGELOG.md` (ten sam tekst widać w aplikacji: Ustawienia → Co nowego) i sekcję „Nowe w …” w `README.md` oraz `README.en.md`.
+- Dopisz zmiany na górze `CHANGELOG.md` i w `CHANGELOG` w `ui/SettingsScreens.kt` (Ustawienia → Co nowego, przez `tr`, z tłumaczeniem w `en.json`) oraz sekcję „Nowe w …” w `README.md` i `README.en.md`.
 - Wydanie na GitHubie: tag `v<wersja>`, plik `Szept-<wersja>.apk` (tylko po zgodzie właściciela).
 
 ## Mapa kodu

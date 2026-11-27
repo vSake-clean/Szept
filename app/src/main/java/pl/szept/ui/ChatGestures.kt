@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -49,7 +50,7 @@ fun SwipeToReply(enabled: Boolean, onReply: () -> Unit, content: @Composable () 
     var armed by remember { mutableStateOf(false) }
     Box(
         Modifier
-            .semantics { customActions = listOf(CustomAccessibilityAction("Odpowiedz") { reply(); true }) }
+            .semantics { customActions = listOf(CustomAccessibilityAction(tr("Odpowiedz")) { reply(); true }) }
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragEnd = {

@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -80,7 +81,7 @@ fun CalculatorScreen(onCode: () -> Unit) {
             "⌫" -> expr = expr.dropLast(1)
             "=" -> {
                 if (expr.length in 4..8 && expr.all { it.isDigit() } && App.real.isCalcCode(expr)) { expr = ""; result = ""; onCode(); return }
-                result = try { Calc.eval(expr).also { expr = it.replace("-", "−") } ; "" } catch (e: Calc.CalcException) { e.message ?: "Błąd" }
+                result = try { Calc.eval(expr).also { expr = it.replace("-", "−") } ; "" } catch (e: Calc.CalcException) { e.message ?: tr("Błąd") }
             }
             else -> {
                 result = ""

@@ -1,5 +1,6 @@
 package pl.szept.call
 
+import pl.szept.tr
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -120,8 +121,8 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         if (!c.isRoom) null else c.from.takeIf { it.isNotEmpty() && it != host.myPub } ?: rooms[c.gid]?.firstOrNull { it != host.myPub }
 
     private fun kindText(c: GroupCall) =
-        if (c.isRoom) (if (c.video) "📹 Rozmowa wideo" else "📞 Połączenie głosowe")
-        else (if (c.video) "📹 Rozmowa grupowa wideo" else "📞 Rozmowa grupowa")
+        if (c.isRoom) (if (c.video) tr("📹 Rozmowa wideo") else tr("📞 Połączenie głosowe"))
+        else (if (c.video) tr("📹 Rozmowa grupowa wideo") else tr("📞 Rozmowa grupowa"))
 
     private fun toAll(op: String, c: GroupCall, extra: JSONObject.() -> Unit = {}) {
         val members = membersOf(c.gid) ?: return
@@ -158,12 +159,12 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
 
     /** Rozpoczyna rozmowę w grupie (wszyscy członkowie dostają dzwonek). */
     suspend fun start(gid: String, video: Boolean): GroupCall = lock.withLock {
-        val f = factory ?: throw IllegalStateException("Rozmowy nie działają na tym urządzeniu")
-        if (cur() != null || host.busyElsewhere()) throw IllegalStateException("Trwa już inne połączenie")
-        val members = host.groupMembers(gid) ?: throw IllegalStateException("Nie jesteś w tej grupie")
-        if (members.isEmpty()) throw IllegalStateException("W grupie nie ma nikogo poza Tobą")
+        val f = factory ?: throw IllegalStateException(tr("Rozmowy nie działają na tym urządzeniu"))
+        if (cur() != null || host.busyElsewhere()) throw IllegalStateException(tr("Trwa już inne połączenie"))
+        val members = host.groupMembers(gid) ?: throw IllegalStateException(tr("Nie jesteś w tej grupie"))
+        if (members.isEmpty()) throw IllegalStateException(tr("W grupie nie ma nikogo poza Tobą"))
         val id = pl.szept.crypto.Crypto.randomBytes(12).joinToString("") { "%02x".format(it) }
-        session = try { f.create(video, host.iceServers()) } catch (t: Throwable) { throw IllegalStateException("Nie udało się uruchomić rozmowy") }
+        session = try { f.create(video, host.iceServers()) } catch (t: Throwable) { throw IllegalStateException(tr("Nie udało się uruchomić rozmowy")) }
         val c = GroupCall(id, gid, video, Phase.ACTIVE, System.currentTimeMillis(), from = host.myPub, joinedAt = System.currentTimeMillis())
         state.value = c
         remember(gid, id, video, add = me)
@@ -175,13 +176,13 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
      * Dzwoni do wybranych osób spoza grupy (rozmowa z czatu prywatnego). Później można dodać kolejne osoby — [invite].
      */
     suspend fun startRoom(peers: List<String>, video: Boolean): GroupCall = lock.withLock {
-        val f = factory ?: throw IllegalStateException("Rozmowy nie działają na tym urządzeniu")
-        if (cur() != null || host.busyElsewhere()) throw IllegalStateException("Trwa już inne połączenie")
+        val f = factory ?: throw IllegalStateException(tr("Rozmowy nie działają na tym urządzeniu"))
+        if (cur() != null || host.busyElsewhere()) throw IllegalStateException(tr("Trwa już inne połączenie"))
         val to = peers.distinct().filter { it != host.myPub && host.canCall(it) }
-        if (to.isEmpty()) throw IllegalStateException("Nie można zadzwonić do tej osoby")
+        if (to.isEmpty()) throw IllegalStateException(tr("Nie można zadzwonić do tej osoby"))
         val id = pl.szept.crypto.Crypto.randomBytes(12).joinToString("") { "%02x".format(it) }
         val gid = "r:$id"
-        session = try { f.create(video, host.iceServers()) } catch (t: Throwable) { throw IllegalStateException("Nie udało się uruchomić rozmowy") }
+        session = try { f.create(video, host.iceServers()) } catch (t: Throwable) { throw IllegalStateException(tr("Nie udało się uruchomić rozmowy")) }
         rooms[gid] = (to + host.myPub).toSet()
         val c = GroupCall(id, gid, video, Phase.ACTIVE, System.currentTimeMillis(), from = host.myPub, joinedAt = System.currentTimeMillis(),
             invited = to.toSet(), room = rooms[gid]!!)
@@ -240,7 +241,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         val hadSomeone = c.joinedAt > 0 && everConnected.contains(c.id)
         if (!hadSomeone && c.from == host.myPub && !failed) toAll("cancel", c)
         if (failed && !hadSomeone) toAll("leave", c) { put("nr", true) }
-        close(c, if (hadSomeone) "Rozmowa zakończona" else why, quiet = !hadSomeone && !failed)
+        close(c, if (hadSomeone) tr("Rozmowa zakończona") else why, quiet = !hadSomeone && !failed)
     }
     var connectMs = CONNECT_MS
     private val everConnected = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
@@ -258,14 +259,14 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         if (membersOf(c0.gid) == null) return@withLock
         val k = known.value[c0.gid]
         if (k != null && k.cid == c0.id && k.members.count { !it.startsWith(host.myPub + ":") } >= max(c0.video)) {
-            ended(c0.copy(phase = Phase.ENDED, endReason = "Rozmowa jest pełna (maks. ${max(c0.video)} osób)"))
+            ended(c0.copy(phase = Phase.ENDED, endReason = tr("Rozmowa jest pełna (maks. {0} osób)", max(c0.video))))
             host.onRing(null)
             return@withLock
         }
         host.onRing(null)
         ringTimer?.cancel()
         session = try { f.create(c0.video, host.iceServers()) } catch (t: Throwable) {
-            ended(c0.copy(phase = Phase.ENDED, endReason = "Nie udało się uruchomić rozmowy")); return@withLock
+            ended(c0.copy(phase = Phase.ENDED, endReason = tr("Nie udało się uruchomić rozmowy"))); return@withLock
         }
         val c = c0.copy(phase = Phase.ACTIVE, joinedAt = System.currentTimeMillis())
         state.value = c
@@ -282,7 +283,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         host.sendSelfSignal(base("taken", c))
         // w rozmowie prywatnej dzwoniący od razu wie, że nie odbiorę
         if (c.isRoom) toAll("decline", c)
-        if (c.isRoom) logPeer(c)?.let { host.callLog(c.gid, it, "gcall:${c.id}", kindText(c) + " · odrzucone") }
+        if (c.isRoom) logPeer(c)?.let { host.callLog(c.gid, it, "gcall:${c.id}", kindText(c) + tr(" · odrzucone")) }
         state.value = null
     }
 
@@ -293,7 +294,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         // nikt jeszcze nie dołączył — odwołujemy dzwonienie u wszystkich
         val nobody = c.peers.isEmpty() && c.from == host.myPub && !everConnected.contains(c.id)
         toAll(if (nobody) "cancel" else "leave", c)
-        close(c, "Rozmowa zakończona", quiet = true)
+        close(c, tr("Rozmowa zakończona"), quiet = true)
     }
 
     private fun close(c: GroupCall, reason: String, quiet: Boolean = false) {
@@ -306,10 +307,10 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         val kind = kindText(c)
         val talked = everConnected.contains(c.id)
         host.callLog(c.gid, logPeer(c), "gcall:${c.id}", when {
-            reason == NO_ROUTE && !talked -> "$kind · nie udało się połączyć (sieć blokuje połączenie)"
+            reason == NO_ROUTE && !talked -> tr("{0} · nie udało się połączyć (sieć blokuje połączenie)", kind)
             talked || (!c.isRoom && c.joinedAt > 0) -> "$kind · ${secs / 60}:${"%02d".format(secs % 60)}"
-            c.isRoom && c.from == host.myPub -> "$kind · brak odpowiedzi"
-            else -> "$kind · nieodebrana"
+            c.isRoom && c.from == host.myPub -> tr("{0} · brak odpowiedzi", kind)
+            else -> tr("{0} · nieodebrana", kind)
         })
         // bez okna „Nikt nie odebrał” / „Wyszedłeś” — ekran rozmowy po prostu znika
         if (quiet) state.value = null else ended(c.copy(phase = Phase.ENDED, endReason = reason, peers = emptyMap()))
@@ -339,7 +340,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
         links.remove(pid)?.close()
         val now = c.copy(peers = c.peers - pid, notice = if (failed) NO_ROUTE else c.notice)
         state.value = now
-        endIfAlone(now, if (failed) NO_ROUTE else "Rozmowa zakończona", failed)
+        endIfAlone(now, if (failed) NO_ROUTE else tr("Rozmowa zakończona"), failed)
     }
 
     /** Nowe połączenie z uczestnikiem (null = już jest albo rozmowa pełna). */
@@ -433,7 +434,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
             "ring" -> {
                 remember(gid, cid, video, add = pid)
                 val call = GroupCall(cid, gid, video, Phase.RINGING, System.currentTimeMillis(), from = from, room = rooms[gid] ?: emptySet())
-                if (host.now() - p.optLong("ts") > 60_000) { host.callLog(gid, logPeer(call), "gcall:$cid", kindText(call) + " · nieodebrana"); return }
+                if (host.now() - p.optLong("ts") > 60_000) { host.callLog(gid, logPeer(call), "gcall:$cid", kindText(call) + tr(" · nieodebrana")); return }
                 if (c?.id == cid) return
                 if (c != null || host.busyElsewhere()) {
                     if (call.isRoom) host.sendSignal(listOf(from), base("busy", call).put("to_dv", dev))
@@ -447,7 +448,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
                     lock.withLock {
                         cur(cid)?.takeIf { it.phase == Phase.RINGING }?.let {
                             host.onRing(null)
-                            host.callLog(gid, logPeer(it), "gcall:$cid", kindText(it) + " · nieodebrana")
+                            host.callLog(gid, logPeer(it), "gcall:$cid", kindText(it) + tr(" · nieodebrana"))
                             state.value = null
                         }
                     }
@@ -482,7 +483,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
                 val call = c?.takeIf { it.id == cid } ?: return
                 if (call.phase == Phase.RINGING) {
                     ringTimer?.cancel(); host.onRing(null)
-                    host.callLog(gid, logPeer(call), "gcall:$cid", kindText(call) + " · nieodebrana")
+                    host.callLog(gid, logPeer(call), "gcall:$cid", kindText(call) + tr(" · nieodebrana"))
                     state.value = null
                 }
             }
@@ -492,7 +493,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
                 val now = call.copy(invited = call.invited - from)
                 state.value = now
                 if (now.isRoom && now.peers.isEmpty() && now.invited.isEmpty() && !everConnected.contains(cid)) {
-                    close(now, if (op == "busy") "Zajęte" else "Odrzucono", quiet = false)
+                    close(now, if (op == "busy") tr("Zajęte") else tr("Odrzucono"), quiet = false)
                 }
             }
             "add" -> {
@@ -502,7 +503,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
             "full" -> {
                 val call = c?.takeIf { it.id == cid } ?: return
                 dropPeer(cid, pid)
-                if (call.peers.size <= 1 && call.from != host.myPub) close(call, "Rozmowa jest pełna")
+                if (call.peers.size <= 1 && call.from != host.myPub) close(call, tr("Rozmowa jest pełna"))
             }
         }
     }
@@ -514,7 +515,7 @@ class GroupCallManager(private val host: Host, private val scope: CoroutineScope
                 if (p.optString("op") != "taken") return@withLock
                 val c = cur(p.optString("cid"))?.takeIf { it.phase == Phase.RINGING } ?: return@withLock
                 ringTimer?.cancel(); host.onRing(null)
-                ended(c.copy(phase = Phase.ENDED, endReason = "Odebrano na innym urządzeniu"))
+                ended(c.copy(phase = Phase.ENDED, endReason = tr("Odebrano na innym urządzeniu")))
             }
         }
     }

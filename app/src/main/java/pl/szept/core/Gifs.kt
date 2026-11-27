@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -48,8 +49,8 @@ object Gifs {
 
     /** Dodaje plik do kolekcji (ten sam GIF tylko raz). Zwraca zapisany plik. */
     fun save(ctx: Context, src: File): File {
-        if (!isGif(src)) throw Core.SendException("To nie jest GIF")
-        if (src.length() > MAX_GIF) throw Core.SendException("GIF jest za duży (max 8 MB)")
+        if (!isGif(src)) throw Core.SendException(tr("To nie jest GIF"))
+        if (src.length() > MAX_GIF) throw Core.SendException(tr("GIF jest za duży (max 8 MB)"))
         val name = sha(src).take(24) + ".gif"
         val out = File(dir(ctx), name)
         if (!out.exists()) src.copyTo(out)
@@ -62,7 +63,7 @@ object Gifs {
         val tmp = File(ctx.cacheDir, "gif_in_${System.nanoTime()}.gif")
         try {
             ctx.contentResolver.openInputStream(uri)?.use { i -> tmp.outputStream().use { o -> copyLimited(i, o) } }
-                ?: throw Core.SendException("Nie można odczytać pliku")
+                ?: throw Core.SendException(tr("Nie można odczytać pliku"))
             save(ctx, tmp)
         } finally { tmp.delete() }
     }
@@ -76,8 +77,8 @@ object Gifs {
 
     /** Załącznik do wysłania (kopia w pamięci podręcznej — oryginał zostaje w kolekcji). */
     suspend fun attachment(ctx: Context, src: File): Core.Attachment = withContext(Dispatchers.IO) {
-        if (!isGif(src)) throw Core.SendException("To nie jest GIF")
-        if (src.length() > MAX_GIF) throw Core.SendException("GIF jest za duży (max 8 MB)")
+        if (!isGif(src)) throw Core.SendException(tr("To nie jest GIF"))
+        if (src.length() > MAX_GIF) throw Core.SendException(tr("GIF jest za duży (max 8 MB)"))
         val out = File(ctx.cacheDir, "gif_${System.nanoTime()}.gif")
         src.copyTo(out, overwrite = true)
         val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -96,7 +97,7 @@ object Gifs {
         val buf = ByteArray(64 * 1024); var total = 0L
         while (true) {
             val n = i.read(buf); if (n < 0) break
-            total += n; if (total > MAX_GIF) throw Core.SendException("GIF jest za duży (max 8 MB)")
+            total += n; if (total > MAX_GIF) throw Core.SendException(tr("GIF jest za duży (max 8 MB)"))
             o.write(buf, 0, n)
         }
     }
@@ -119,7 +120,7 @@ object Gifs {
 
     /** Popularne (pusta fraza) albo wyniki wyszukiwania. */
     suspend fun klipy(ctx: Context, key: String, query: String, page: Int = 1, base: String = API): Page = withContext(Dispatchers.IO) {
-        if (key.isBlank()) throw Core.SendException("Brak klucza KLIPY")
+        if (key.isBlank()) throw Core.SendException(tr("Brak klucza KLIPY"))
         val q = query.trim()
         val url = "$base/$key/gifs/${if (q.isEmpty()) "trending" else "search"}".toHttpUrl().newBuilder()
             .addQueryParameter("page", page.toString())
@@ -133,7 +134,7 @@ object Gifs {
             val b = r.body?.string() ?: ""
             if (!r.isSuccessful) {
                 val msg = runCatching { JSONObject(b).optJSONObject("errors")?.optJSONArray("message")?.optString(0) }.getOrNull()
-                throw Core.SendException(if (r.code == 401 || r.code == 403 || msg?.contains("key", true) == true) "Nieprawidłowy klucz KLIPY" else "KLIPY: błąd ${r.code}")
+                throw Core.SendException(if (r.code == 401 || r.code == 403 || msg?.contains("key", true) == true) tr("Nieprawidłowy klucz KLIPY") else tr("KLIPY: błąd {0}", r.code))
             }
             b
         }
@@ -144,8 +145,8 @@ object Gifs {
     fun parse(body: String): Page {
         val root = JSONObject(body)
         if (!root.optBoolean("result", true)) {
-            val msg = root.optJSONObject("errors")?.optJSONArray("message")?.optString(0) ?: "błąd"
-            throw Core.SendException(if (msg.contains("key", true)) "Nieprawidłowy klucz KLIPY" else "KLIPY: $msg")
+            val msg = root.optJSONObject("errors")?.optJSONArray("message")?.optString(0) ?: tr("błąd")
+            throw Core.SendException(if (msg.contains("key", true)) tr("Nieprawidłowy klucz KLIPY") else tr("KLIPY: {0}", msg))
         }
         val data = root.optJSONObject("data") ?: JSONObject()
         val arr = data.optJSONArray("data") ?: JSONArray()
@@ -183,7 +184,7 @@ object Gifs {
         if (f.exists() && f.length() > 0) return@withContext f.also { it.setLastModified(System.currentTimeMillis()) }
         val tmp = File(d, f.name + ".part")
         http.newCall(Request.Builder().url(url).build()).execute().use { r ->
-            if (!r.isSuccessful) throw Core.SendException("Nie udało się pobrać GIF-a")
+            if (!r.isSuccessful) throw Core.SendException(tr("Nie udało się pobrać GIF-a"))
             r.body!!.byteStream().use { i -> tmp.outputStream().use { o -> copyLimited(i, o) } }
         }
         tmp.renameTo(f)

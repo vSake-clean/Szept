@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +36,7 @@ fun GameContent(m: Message) {
     when {
         info == null -> Column {
             RichText(m.body)
-            Text("Ta gra jest w nowszej wersji Szepta.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Ta gra jest w nowszej wersji Szepta."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         info.id == "rps" -> RpsBubble(m, info)
         info.chat == GameCatalog.Chat.VERSUS -> DuelBubble(m, info)
@@ -51,17 +52,17 @@ fun AutoCleanRow(chatId: String) {
     var days by remember(chatId) { mutableIntStateOf(core.autoCleanDays(chatId)) }
     var open by remember { mutableStateOf(false) }
     androidx.compose.material3.ListItem(
-        headlineContent = { Text("Automatyczne usuwanie starych wiadomości") },
-        supportingContent = { Text(if (days <= 0) "Wyłączone" else "Wiadomości starsze niż $days dni znikają z tego telefonu") },
+        headlineContent = { Text(tr("Automatyczne usuwanie starych wiadomości")) },
+        supportingContent = { Text(if (days <= 0) tr("Wyłączone") else tr("Wiadomości starsze niż {0} dni znikają z tego telefonu", days)) },
         modifier = Modifier.clickable { open = true },
     )
     if (open) StyleAlertDialog(
         onDismissRequest = { open = false },
-        title = { Text("Usuwaj stare wiadomości") },
+        title = { Text(tr("Usuwaj stare wiadomości")) },
         text = {
             Column {
-                Text("Dotyczy tylko tego telefonu — u rozmówcy nic się nie zmienia.", style = MaterialTheme.typography.bodySmall)
-                listOf(0 to "Wyłączone", 7 to "Starsze niż 7 dni", 30 to "Starsze niż 30 dni", 90 to "Starsze niż 90 dni").forEach { (d, t) ->
+                Text(tr("Dotyczy tylko tego telefonu — u rozmówcy nic się nie zmienia."), style = MaterialTheme.typography.bodySmall)
+                listOf(0 to tr("Wyłączone"), 7 to tr("Starsze niż 7 dni"), 30 to tr("Starsze niż 30 dni"), 90 to tr("Starsze niż 90 dni")).forEach { (d, t) ->
                     Row(Modifier.fillMaxWidth().clickable { days = d; core.setAutoClean(chatId, d); open = false }.padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.material3.RadioButton(days == d, { days = d; core.setAutoClean(chatId, d); open = false })
@@ -70,6 +71,6 @@ fun AutoCleanRow(chatId: String) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { open = false }) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = { open = false }) { Text(tr("Zamknij")) } },
     )
 }

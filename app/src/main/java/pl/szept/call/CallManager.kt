@@ -1,5 +1,6 @@
 package pl.szept.call
 
+import pl.szept.tr
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -104,9 +105,9 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
 
     private fun listener(id: String) = object : RtcEngine.Listener {
         override fun onConnected() { scope.launch { lock.withLock { connected(id) } } }
-        override fun onDisconnected() { scope.launch { lock.withLock { cur(id)?.let { if (it.phase == Phase.CONNECTED) finish(it, "Połączenie przerwane", notifyPeer = true) } } } }
+        override fun onDisconnected() { scope.launch { lock.withLock { cur(id)?.let { if (it.phase == Phase.CONNECTED) finish(it, tr("Połączenie przerwane"), notifyPeer = true) } } } }
         override fun onFailed(reason: String) {
-            scope.launch { lock.withLock { cur(id)?.let { finish(it, "Nie udało się połączyć — sieć blokuje połączenia bezpośrednie. Spróbuj przez Wi-Fi.", notifyPeer = true) } } }
+            scope.launch { lock.withLock { cur(id)?.let { finish(it, tr("Nie udało się połączyć — sieć blokuje połączenia bezpośrednie. Spróbuj przez Wi-Fi."), notifyPeer = true) } } }
         }
     }
 
@@ -121,27 +122,27 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
 
     /** Dzwoni do [peer]. Rzuca IllegalStateException z opisem, gdy się nie da. */
     suspend fun startCall(peer: String, video: Boolean): Call = lock.withLock {
-        val f = factory ?: throw IllegalStateException("Połączenia nie działają na tym urządzeniu")
-        if (cur() != null || host.busyElsewhere()) throw IllegalStateException("Trwa już inne połączenie")
-        if (!host.canCall(peer)) throw IllegalStateException("Nie można zadzwonić do tej osoby")
+        val f = factory ?: throw IllegalStateException(tr("Połączenia nie działają na tym urządzeniu"))
+        if (cur() != null || host.busyElsewhere()) throw IllegalStateException(tr("Trwa już inne połączenie"))
+        if (!host.canCall(peer)) throw IllegalStateException(tr("Nie można zadzwonić do tej osoby"))
         val id = pl.szept.crypto.Crypto.randomBytes(12).joinToString("") { "%02x".format(it) }
         val call = Call(id, peer, video, true, Phase.DIALING, System.currentTimeMillis())
         state.value = call
         val e = try { f.create(video, host.iceServers(), listener(id)) } catch (t: Throwable) {
-            ended(call.copy(phase = Phase.ENDED, endReason = "Nie udało się uruchomić rozmowy"))
-            throw IllegalStateException("Nie udało się uruchomić rozmowy: ${t.message}")
+            ended(call.copy(phase = Phase.ENDED, endReason = tr("Nie udało się uruchomić rozmowy")))
+            throw IllegalStateException(tr("Nie udało się uruchomić rozmowy: {0}", t.message))
         }
         engine = e
         val sdp = try { e.createOffer() } catch (t: Throwable) {
             e.close(); engine = null
-            ended(call.copy(phase = Phase.ENDED, endReason = "Nie udało się przygotować połączenia"))
-            throw IllegalStateException("Nie udało się przygotować połączenia")
+            ended(call.copy(phase = Phase.ENDED, endReason = tr("Nie udało się przygotować połączenia")))
+            throw IllegalStateException(tr("Nie udało się przygotować połączenia"))
         }
         if (cur(id) == null) return@withLock state.value!!   // rozłączono w trakcie przygotowania
         signal("offer", call) { put("sdp", sdp); put("vid", video) }
         timer = scope.launch {
             delay(ringMs)
-            lock.withLock { cur(id)?.takeIf { it.phase == Phase.DIALING }?.let { finish(it, "Brak odpowiedzi", notifyPeer = true, reason = "timeout") } }
+            lock.withLock { cur(id)?.takeIf { it.phase == Phase.DIALING }?.let { finish(it, tr("Brak odpowiedzi"), notifyPeer = true, reason = "timeout") } }
         }
         call
     }
@@ -150,16 +151,16 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
     suspend fun answer() = lock.withLock {
         val c = cur()?.takeIf { it.phase == Phase.RINGING } ?: return@withLock
         val offer = pendingOffer ?: return@withLock
-        val f = factory ?: run { finish(c, "Połączenia nie działają na tym urządzeniu", notifyPeer = true); return@withLock }
+        val f = factory ?: run { finish(c, tr("Połączenia nie działają na tym urządzeniu"), notifyPeer = true); return@withLock }
         host.onRing(null)
         state.value = c.copy(phase = Phase.CONNECTING)
         host.sendSelfSignal(JSONObject().put("t", "call").put("op", "taken").put("cid", c.id).put("ts", host.now()))
         val e = try { f.create(c.video, host.iceServers(), listener(c.id)) } catch (t: Throwable) {
-            finish(c, "Nie udało się uruchomić rozmowy", notifyPeer = true); return@withLock
+            finish(c, tr("Nie udało się uruchomić rozmowy"), notifyPeer = true); return@withLock
         }
         engine = e
         val sdp = try { e.createAnswer(offer) } catch (t: Throwable) {
-            finish(c, "Nie udało się połączyć", notifyPeer = true); return@withLock
+            finish(c, tr("Nie udało się połączyć"), notifyPeer = true); return@withLock
         }
         if (cur(c.id) == null) return@withLock
         signal("answer", c) { put("sdp", sdp) }
@@ -170,13 +171,13 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
     suspend fun decline() = lock.withLock {
         val c = cur()?.takeIf { it.phase == Phase.RINGING } ?: return@withLock
         host.sendSelfSignal(JSONObject().put("t", "call").put("op", "taken").put("cid", c.id).put("ts", host.now()))
-        finish(c, "Odrzucono", notifyPeer = true, reason = "declined")
+        finish(c, tr("Odrzucono"), notifyPeer = true, reason = "declined")
     }
 
     /** Rozłącza (albo anuluje dzwonienie). */
     suspend fun hangup() = lock.withLock {
         val c = cur() ?: return@withLock
-        finish(c, if (c.phase == Phase.DIALING) "Anulowano" else "Zakończono", notifyPeer = true)
+        finish(c, if (c.phase == Phase.DIALING) tr("Anulowano") else tr("Zakończono"), notifyPeer = true)
     }
 
     fun setMuted(m: Boolean) { val c = cur() ?: return; engine?.setMuted(m); state.value = c.copy(muted = m) }
@@ -191,7 +192,7 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
             delay(CONNECT_MS)
             lock.withLock {
                 cur(id)?.takeIf { it.phase == Phase.CONNECTING }?.let {
-                    finish(it, "Nie udało się połączyć — sieć blokuje połączenia bezpośrednie. Spróbuj przez Wi-Fi.", notifyPeer = true)
+                    finish(it, tr("Nie udało się połączyć — sieć blokuje połączenia bezpośrednie. Spróbuj przez Wi-Fi."), notifyPeer = true)
                 }
             }
         }
@@ -208,16 +209,16 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
     }
 
     private fun log(c: Call, reason: String) {
-        val kind = if (c.video) "📹 Rozmowa wideo" else "📞 Połączenie głosowe"
+        val kind = if (c.video) tr("📹 Rozmowa wideo") else tr("📞 Połączenie głosowe")
         val connected = c.connectedAt
         val text = when {
             connected > 0 -> {
                 val s = (System.currentTimeMillis() - connected) / 1000
                 "$kind · ${s / 60}:${"%02d".format(s % 60)}"
             }
-            c.outgoing -> "$kind · " + when (reason) { "busy" -> "zajęte"; "declined" -> "odrzucone"; "timeout" -> "brak odpowiedzi"; else -> "nie połączono" }
-            reason == "declined" -> "$kind · odrzucone"
-            else -> "$kind · nieodebrane"
+            c.outgoing -> "$kind · " + when (reason) { "busy" -> tr("zajęte"); "declined" -> "odrzucone"; "timeout" -> tr("brak odpowiedzi"); else -> tr("nie połączono") }
+            reason == "declined" -> tr("{0} · odrzucone", kind)
+            else -> tr("{0} · nieodebrane", kind)
         }
         host.callLog(c.peer, "call:${c.id}", text, missed = !c.outgoing && connected == 0L && reason != "declined" && reason != "taken")
     }
@@ -270,7 +271,7 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
                 timer?.cancel()
                 timer = scope.launch {
                     delay(ringMs)
-                    lock.withLock { cur(cid)?.takeIf { it.phase == Phase.RINGING }?.let { finish(it, "Nieodebrane", notifyPeer = false, reason = "missed") } }
+                    lock.withLock { cur(cid)?.takeIf { it.phase == Phase.RINGING }?.let { finish(it, tr("Nieodebrane"), notifyPeer = false, reason = "missed") } }
                 }
             }
             "answer" -> {
@@ -286,7 +287,7 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
                 timer?.cancel()
                 scope.launch {
                     try { engine?.applyAnswer(sdp) } catch (e: Exception) {
-                        lock.withLock { cur(cid)?.let { finish(it, "Nie udało się połączyć", notifyPeer = true) } }
+                        lock.withLock { cur(cid)?.let { finish(it, tr("Nie udało się połączyć"), notifyPeer = true) } }
                     }
                 }
                 armConnectTimeout(cid)
@@ -297,11 +298,11 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
                 if (call.peerDev.isNotEmpty() && dv.isNotEmpty() && dv != call.peerDev && call.phase != Phase.DIALING) return
                 val r = if (op == "busy") "busy" else p.optString("r")
                 val text = when {
-                    op == "busy" -> "Zajęte"
-                    r == "declined" -> "Odrzucono"
-                    r == "taken" -> "Odebrano na innym urządzeniu"
-                    call.phase == Phase.RINGING -> "Nieodebrane"
-                    else -> "Rozmówca się rozłączył"
+                    op == "busy" -> tr("Zajęte")
+                    r == "declined" -> tr("Odrzucono")
+                    r == "taken" -> tr("Odebrano na innym urządzeniu")
+                    call.phase == Phase.RINGING -> tr("Nieodebrane")
+                    else -> tr("Rozmówca się rozłączył")
                 }
                 finish(call, text, notifyPeer = false, reason = if (call.phase == Phase.RINGING && r != "declined") "missed" else r)
             }
@@ -316,7 +317,7 @@ class CallManager(private val host: Host, private val scope: CoroutineScope) {
                 val c = cur(p.optString("cid"))?.takeIf { it.phase == Phase.RINGING } ?: return@withLock
                 timer?.cancel(); pendingOffer = null
                 host.onRing(null)
-                ended(c.copy(phase = Phase.ENDED, endReason = "Odebrano na innym urządzeniu"))
+                ended(c.copy(phase = Phase.ENDED, endReason = tr("Odebrano na innym urządzeniu")))
                 log(c, "taken")
             }
         }

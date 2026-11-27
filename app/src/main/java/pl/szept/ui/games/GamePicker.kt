@@ -2,6 +2,7 @@
 
 package pl.szept.ui.games
 
+import pl.szept.tr
 import pl.szept.ui.StyleAlertDialog
 
 import androidx.compose.foundation.clickable
@@ -38,14 +39,14 @@ import pl.szept.ui.rememberDb
 
 /** Krótki opis trybu gry (na liście). */
 fun modeLabel(info: GameCatalog.Info): String = when {
-    info.python -> "Python"
-    info.chat == GameCatalog.Chat.VERSUS -> if (info.players == "2") "we dwoje" else "we dwoje lub więcej"
-    info.chat == GameCatalog.Chat.GROUP -> if (info.groupOnly) "tylko w grupie" else "w rozmowie"
-    info.chat == GameCatalog.Chat.CHALLENGE -> "sam lub wyzwanie"
-    else -> "sam"
+    info.python -> tr("Python")
+    info.chat == GameCatalog.Chat.VERSUS -> if (info.players == "2") tr("we dwoje") else tr("we dwoje lub więcej")
+    info.chat == GameCatalog.Chat.GROUP -> if (info.groupOnly) tr("tylko w grupie") else tr("w rozmowie")
+    info.chat == GameCatalog.Chat.CHALLENGE -> tr("sam lub wyzwanie")
+    else -> tr("sam")
 }
 
-private enum class Filter(val label: String) { ALL("Wszystkie"), SOLO("Sam"), CHALLENGE("Wyzwania"), VERSUS("We dwoje"), GROUP("W grupie") }
+private enum class Filter(val label: String) { ALL(tr("Wszystkie")), SOLO("Sam"), CHALLENGE(tr("Wyzwania")), VERSUS(tr("We dwoje")), GROUP(tr("W grupie")) }
 
 /** Lista gier z wyszukiwarką i filtrami — pozycje jak w menu spinacza (ikona Material + nazwa). */
 @Composable
@@ -69,8 +70,8 @@ private fun GameList(games: List<GameCatalog.Info>, filters: List<Filter>, heade
     }
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), singleLine = true,
-            placeholder = { Text("Szukaj gry") }, leadingIcon = { Icon(Icons.Default.Search, null) },
-            trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { query = "" }) { Icon(Icons.Default.Clear, "Wyczyść") } }) else null,
+            placeholder = { Text(tr("Szukaj gry")) }, leadingIcon = { Icon(Icons.Default.Search, null) },
+            trailingIcon = if (query.isNotEmpty()) ({ IconButton(onClick = { query = "" }) { Icon(Icons.Default.Clear, tr("Wyczyść")) } }) else null,
             shape = RoundedCornerShape(24.dp))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             filters.forEach { f -> FilterChip(filter == f && cat == null, { filter = f; cat = null }, { Text(f.label) }) }
@@ -80,7 +81,7 @@ private fun GameList(games: List<GameCatalog.Info>, filters: List<Filter>, heade
         }
         LazyColumn(Modifier.weight(1f)) {
             header?.let { h -> item { h() } }
-            item { Text("${shown.size} " + GameCatalog.plural(shown.size.toLong(), "gra", "gry", "gier"), Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            item { Text("${shown.size} " + GameCatalog.plural(shown.size.toLong(), tr("gra"), tr("gry"), tr("gier")), Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             val grouped = query.isEmpty() && cat == null
             if (grouped) {
@@ -121,8 +122,8 @@ fun GamePickerDialog(chatId: String, isGroup: Boolean, onDismiss: () -> Unit) {
         Surface(Modifier.fillMaxSize(), color = pl.szept.ui.baseColor()) {
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                 TopAppBar(
-                    title = { Text("Zagraj") },
-                    navigationIcon = { IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Zamknij") } },
+                    title = { Text(tr("Zagraj")) },
+                    navigationIcon = { IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Zamknij")) } },
                 )
                 GameList(games, listOf(Filter.ALL, Filter.GROUP, Filter.VERSUS, Filter.CHALLENGE, Filter.SOLO)) { picked = it }
             }
@@ -152,25 +153,25 @@ fun GameDetailDialog(info: GameCatalog.Info, chatId: String?, isGroup: Boolean, 
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
                 Text(info.desc)
                 Spacer(Modifier.height(6.dp))
-                Text("Tryb: ${modeLabel(info)} · gracze: ${info.players}" + if (info.score.has) " · wynik: " + scoreLabel(info.score) else "",
+                Text(tr("Tryb: {0} · gracze: {1}", modeLabel(info), info.players) + if (info.score.has) tr(" · wynik: ") + scoreLabel(info.score) else "",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (canChat) when (info.id) {
                     "hangman" -> {
                         OutlinedTextField(word, { word = Games.cleanWord(it).take(20) }, Modifier.fillMaxWidth().padding(top = 8.dp), singleLine = true,
-                            label = { Text("Twoje hasło (puste = losowe)") })
-                        OutlinedTextField(hint, { hint = it.take(60) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Podpowiedź (opcjonalnie)") })
+                            label = { Text(tr("Twoje hasło (puste = losowe)")) })
+                        OutlinedTextField(hint, { hint = it.take(60) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Podpowiedź (opcjonalnie)")) })
                     }
                     "wyr" -> {
-                        Text("Własne pytanie (puste = losowe):", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelMedium)
-                        OutlinedTextField(a, { a = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Opcja A") })
-                        OutlinedTextField(b, { b = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Opcja B") })
+                        Text(tr("Własne pytanie (puste = losowe):"), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelMedium)
+                        OutlinedTextField(a, { a = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Opcja A")) })
+                        OutlinedTextField(b, { b = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Opcja B")) })
                     }
-                    "whoof" -> OutlinedTextField(q, { q = it.take(120) }, Modifier.fillMaxWidth().padding(top = 8.dp), singleLine = true, label = { Text("Kto z nas… (puste = losowe)") })
-                    "ball8" -> OutlinedTextField(q, { q = it.take(200) }, Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("Twoje pytanie") })
+                    "whoof" -> OutlinedTextField(q, { q = it.take(120) }, Modifier.fillMaxWidth().padding(top = 8.dp), singleLine = true, label = { Text(tr("Kto z nas… (puste = losowe)")) })
+                    "ball8" -> OutlinedTextField(q, { q = it.take(200) }, Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text(tr("Twoje pytanie")) })
                     "pick" -> OutlinedTextField(max, { max = it.filter { c -> c.isDigit() }.take(7) }, Modifier.fillMaxWidth().padding(top = 8.dp), singleLine = true,
-                        label = { Text("Liczba od 1 do… (puste = losowa osoba)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                        label = { Text(tr("Liczba od 1 do… (puste = losowa osoba)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                     "truth" -> Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Losowo", "Prawda", "Wyzwanie").forEachIndexed { i, t -> FilterChip(truth == i, { truth = i }, { Text(t) }) }
+                        listOf(tr("Losowo"), tr("Prawda"), tr("Wyzwanie")).forEachIndexed { i, t -> FilterChip(truth == i, { truth = i }, { Text(t) }) }
                     }
                 }
             }
@@ -187,14 +188,14 @@ fun GameDetailDialog(info: GameCatalog.Info, chatId: String?, isGroup: Boolean, 
                 }
                 startInChat(ctx, chatId!!, info.id, extra)
                 onDone()
-            }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(if (info.chat == GameCatalog.Chat.CHALLENGE) "Wyzwij rozmowę" else "Wyślij do rozmowy") }
-            else if (info.solo) Button(onClick = { Play.start(ctx, info.id); onDone() }) { Text(if (info.ai) "Zagraj z komputerem" else "Zagraj") }
+            }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(if (info.chat == GameCatalog.Chat.CHALLENGE) tr("Wyzwij rozmowę") else tr("Wyślij do rozmowy")) }
+            else if (info.solo) Button(onClick = { Play.start(ctx, info.id); onDone() }) { Text(if (info.ai) tr("Zagraj z komputerem") else tr("Zagraj")) }
         },
         dismissButton = {
             Row {
-                if (info.score.has && info.solo) TextButton(onClick = { totals = true }) { Text("Łącznie") }
-                if (canChat && info.solo) TextButton(onClick = { Play.start(ctx, info.id); onDone() }) { Text(if (info.ai) "Z komputerem" else "Sam") }
-                else TextButton(onClick = onDismiss) { Text("Anuluj") }
+                if (info.score.has && info.solo) TextButton(onClick = { totals = true }) { Text(tr("Łącznie")) }
+                if (canChat && info.solo) TextButton(onClick = { Play.start(ctx, info.id); onDone() }) { Text(if (info.ai) tr("Z komputerem") else "Sam") }
+                else TextButton(onClick = onDismiss) { Text(tr("Anuluj")) }
             }
         },
     )
@@ -202,10 +203,10 @@ fun GameDetailDialog(info: GameCatalog.Info, chatId: String?, isGroup: Boolean, 
 }
 
 fun scoreLabel(s: GameCatalog.Score): String = when (s.kind) {
-    GameCatalog.Score.Kind.WDL -> "wygrane i przegrane"
-    GameCatalog.Score.Kind.TIME -> if (s.higher) "czas (dłużej = lepiej)" else "czas (szybciej = lepiej)"
-    GameCatalog.Score.Kind.NUMBER -> (s.forms.getOrNull(2) ?: "punkty") + if (s.higher) " (więcej = lepiej)" else " (mniej = lepiej)"
-    GameCatalog.Score.Kind.NONE -> "bez wyniku"
+    GameCatalog.Score.Kind.WDL -> tr("wygrane i przegrane")
+    GameCatalog.Score.Kind.TIME -> if (s.higher) tr("czas (dłużej = lepiej)") else tr("czas (szybciej = lepiej)")
+    GameCatalog.Score.Kind.NUMBER -> (s.forms.getOrNull(2) ?: tr("punkty")) + if (s.higher) tr(" (więcej = lepiej)") else tr(" (mniej = lepiej)")
+    GameCatalog.Score.Kind.NONE -> tr("bez wyniku")
 }
 
 // ============================ ekran „Gry” ============================
@@ -220,14 +221,14 @@ fun GamesScreen(nav: Nav) {
     Scaffold(topBar = { pl.szept.ui.BackBar("Gry", nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             TabRow(tab) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("Graj") }, icon = { Icon(Icons.Default.SportsEsports, null) })
-                Tab(tab == 1, { tab = 1 }, text = { Text("Moje wyniki") }, icon = { Icon(Icons.Default.Leaderboard, null) })
+                Tab(tab == 0, { tab = 0 }, text = { Text(tr("Graj")) }, icon = { Icon(Icons.Default.SportsEsports, null) })
+                Tab(tab == 1, { tab = 1 }, text = { Text(tr("Moje wyniki")) }, icon = { Icon(Icons.Default.Leaderboard, null) })
             }
             if (tab == 0) GameList(solo, listOf(Filter.ALL, Filter.CHALLENGE, Filter.VERSUS), header = {
                 val pending = remember(pyChanges) { PyGames.pending() }
-                if (pending.isNotEmpty()) Text("Pobieram gry od administratora: " + pending.joinToString { it.name }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                if (pending.isNotEmpty()) Text(tr("Pobieram gry od administratora: ") + pending.joinToString { it.name }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Text("Gry z wynikiem możesz też wysłać do rozmowy (spinacz → Gra) — wtedy każdy gra ten sam układ, a tabela pokazuje, kto wygrał.",
+                Text(tr("Gry z wynikiem możesz też wysłać do rozmowy (spinacz → Gra) — wtedy każdy gra ten sam układ, a tabela pokazuje, kto wygrał."),
                     Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }) { picked = it }
             else MyStatsList()
@@ -250,21 +251,21 @@ private fun MyStatsList() {
     var open by remember { mutableStateOf<GameCatalog.Info?>(null) }
     val list = data ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     if (list.isEmpty()) {
-        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text("Zagraj w coś — tu zobaczysz swoje wyniki i rekordy.") }
+        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(tr("Zagraj w coś — tu zobaczysz swoje wyniki i rekordy.")) }
         return
     }
     LazyColumn(Modifier.fillMaxSize()) {
         item {
-            Text("Rozegrane gry: ${list.sumOf { it.second.first }}", Modifier.padding(16.dp), style = MaterialTheme.typography.titleSmall)
+            Text(tr("Rozegrane gry: {0}", list.sumOf { it.second.first }), Modifier.padding(16.dp), style = MaterialTheme.typography.titleSmall)
         }
         items(list, key = { it.first.id }) { (info, c, best) ->
             ListItem(
                 headlineContent = { Text(info.name) },
                 supportingContent = {
-                    Text("rozegrane: ${c.first} · ostatnio: ${fmtDate(c.second)}" + (best?.let { " · " + (if (info.score.kind == GameCatalog.Score.Kind.WDL) "" else "rekord: " + info.score.fmt(it)) } ?: ""))
+                    Text(tr("rozegrane: {0} · ostatnio: {1}", c.first, fmtDate(c.second)) + (best?.let { " · " + (if (info.score.kind == GameCatalog.Score.Kind.WDL) "" else "rekord: " + info.score.fmt(it)) } ?: ""))
                 },
                 leadingContent = { GameBadge(info) },
-                trailingContent = { Icon(Icons.Default.Leaderboard, "Łącznie") },
+                trailingContent = { Icon(Icons.Default.Leaderboard, tr("Łącznie")) },
                 modifier = Modifier.clickable { open = info },
             )
         }

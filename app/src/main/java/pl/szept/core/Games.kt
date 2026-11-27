@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import org.json.JSONArray
 import org.json.JSONObject
 import pl.szept.data.Db
@@ -142,10 +143,10 @@ object Games {
 
     /** Treść wiadomości dla starszych wersji Szepta i podglądu na liście rozmów (bez tajemnic gry). */
     fun fallbackText(info: GameCatalog.Info, game: JSONObject): String = when (info.id) {
-        DICE -> game.optJSONArray("v")?.let { a -> List(a.length()) { a.optInt(it) } }?.let { v -> "🎲 Rzut kośćmi: ${v.joinToString(" i ")} (razem ${v.sum()})" } ?: "🎲 Rzut kośćmi"
-        "coin" -> "🪙 Rzut monetą — " + if (game.optInt("v") == 0) "orzeł" else "reszka"
-        "ball8" -> "🎱 Magiczna kula — " + game.optString("a")
-        else -> "🎮 ${info.name} — zagraj w aktualnej wersji Szepta"
+        DICE -> game.optJSONArray("v")?.let { a -> List(a.length()) { a.optInt(it) } }?.let { v -> tr("🎲 Rzut kośćmi: {0} (razem {1})", v.joinToString(" i "), v.sum()) } ?: tr("🎲 Rzut kośćmi")
+        "coin" -> tr("🪙 Rzut monetą — ") + if (game.optInt("v") == 0) tr("orzeł") else tr("reszka")
+        "ball8" -> tr("🎱 Magiczna kula — ") + game.optString("a")
+        else -> tr("🎮 {0} — zagraj w aktualnej wersji Szepta", info.name)
     }
 
     /** Słowo do wisielca: tylko litery, wielkie. */

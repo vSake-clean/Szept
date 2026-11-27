@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,41 +73,41 @@ fun LanScreen(nav: Nav) {
 
     val hotspotPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
         if (res.values.all { it }) core.lan.startHotspot()
-        else toast(ctx, "Bez tego uprawnienia Android nie pozwala utworzyć sieci Wi-Fi")
+        else toast(ctx, tr("Bez tego uprawnienia Android nie pozwala utworzyć sieci Wi-Fi"))
     }
     val scan = rememberQrScanner { text ->
         when (val p = Links.parse(text)) {
             is Links.Parsed.Lan -> {
                 if (!on) { on = true; core.setLanEnabled(true) }
                 if (!core.lan.joinNetwork(p.ssid, p.pass, p.host, p.port))
-                    toast(ctx, "Połącz się ręcznie w ustawieniach Wi-Fi z siecią „${p.ssid}”, hasło: ${p.pass}")
+                    toast(ctx, tr("Połącz się ręcznie w ustawieniach Wi-Fi z siecią „{0}”, hasło: {1}", p.ssid, p.pass))
             }
-            else -> toast(ctx, "To nie jest kod sieci Szept")
+            else -> toast(ctx, tr("To nie jest kod sieci Szept"))
         }
     }
 
-    Scaffold(topBar = { BackBar("Bez internetu", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Bez internetu"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "Gdy nie ma internetu (wyjazd, góry, awaria), telefony z Szeptem w tej samej sieci Wi-Fi mogą pisać do siebie bezpośrednio. " +
-                    "Każdy telefon z włączoną opcją przechowuje zaszyfrowane koperty dla innych i oddaje je, gdy się pojawią. " +
-                    "Nie ma routera? Jeden telefon tworzy sieć Wi-Fi, a inni skanują jego kod.",
+                tr("Gdy nie ma internetu (wyjazd, góry, awaria), telefony z Szeptem w tej samej sieci Wi-Fi mogą pisać do siebie bezpośrednio. ") +
+                    tr("Każdy telefon z włączoną opcją przechowuje zaszyfrowane koperty dla innych i oddaje je, gdy się pojawią. ") +
+                    tr("Nie ma routera? Jeden telefon tworzy sieć Wi-Fi, a inni skanują jego kod."),
                 style = MaterialTheme.typography.bodyMedium,
             )
             ListItem(
-                headlineContent = { Text("Sieć lokalna", fontWeight = FontWeight.Bold) },
+                headlineContent = { Text(tr("Sieć lokalna"), fontWeight = FontWeight.Bold) },
                 supportingContent = {
                     Text(
-                        if (!running) "Wyłączona"
-                        else "Działa · telefony w pobliżu: ${peers.count { it.second == Relay.State.CONNECTED }}" +
-                            (if (clients > 0) " · połączonych z Tobą: $clients" else "") + " · koperty w pamięci: $stored",
+                        if (!running) tr("Wyłączona")
+                        else tr("Działa · telefony w pobliżu: {0}", peers.count { it.second == Relay.State.CONNECTED }) +
+                            (if (clients > 0) tr(" · połączonych z Tobą: {0}", clients) else "") + tr(" · koperty w pamięci: {0}", stored),
                     )
                 },
                 trailingContent = { Switch(on, { v -> on = v; core.setLanEnabled(v) }) },
             )
             if (running) {
                 if (addresses.isNotEmpty()) Text(
-                    "Adres tego telefonu: " + addresses.joinToString { "$it:${core.lan.relay.port}" },
+                    tr("Adres tego telefonu: ") + addresses.joinToString { "$it:${core.lan.relay.port}" },
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 peers.forEach { (url, st) ->
@@ -120,11 +121,11 @@ fun LanScreen(nav: Nav) {
             status?.let { Text(it, Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }
 
             HorizontalDivider(Modifier.padding(vertical = 12.dp))
-            Text("Bez routera: sieć z tego telefonu", fontWeight = FontWeight.Bold)
+            Text(tr("Bez routera: sieć z tego telefonu"), fontWeight = FontWeight.Bold)
             val h = hotspot
             if (h == null) {
                 Text(
-                    "Telefon utworzy własną sieć Wi-Fi (bez internetu). Pozostali zeskanują kod, który się tu pojawi.",
+                    tr("Telefon utworzy własną sieć Wi-Fi (bez internetu). Pozostali zeskanują kod, który się tu pojawi."),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(6.dp))
@@ -135,59 +136,59 @@ fun LanScreen(nav: Nav) {
                         else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                     )
                 }, Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.WifiTethering, null); Spacer(Modifier.width(8.dp)); Text("Utwórz sieć Wi-Fi")
+                    Icon(Icons.Default.WifiTethering, null); Spacer(Modifier.width(8.dp)); Text(tr("Utwórz sieć Wi-Fi"))
                 }
             } else {
                 val link = remember(h) { LanManager.joinLink(h) }
                 Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                     Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         QrImage(link, 220.dp)
-                        Text("Sieć: ${h.ssid}", fontWeight = FontWeight.Bold)
-                        Text("Hasło: ${h.pass}")
+                        Text(tr("Sieć: {0}", h.ssid), fontWeight = FontWeight.Bold)
+                        Text(tr("Hasło: {0}", h.pass))
                         Text(
-                            "Znajomi: Szept → Bez internetu → „Dołącz do sieci” i zeskanuj kod. Na starszych telefonach połącz się z tą siecią w ustawieniach Wi-Fi.",
+                            tr("Znajomi: Szept → Bez internetu → „Dołącz do sieci” i zeskanuj kod. Na starszych telefonach połącz się z tą siecią w ustawieniach Wi-Fi."),
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Row {
-                            TextButton(onClick = { shareText(ctx, "Sieć Szept bez internetu: $link") }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(4.dp)); Text("Wyślij") }
-                            TextButton(onClick = { core.lan.stopHotspot() }) { Text("Wyłącz sieć") }
+                            TextButton(onClick = { shareText(ctx, tr("Sieć Szept bez internetu: {0}", link)) }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(4.dp)); Text(tr("Wyślij")) }
+                            TextButton(onClick = { core.lan.stopHotspot() }) { Text(tr("Wyłącz sieć")) }
                         }
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = scan, Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Dołącz do sieci (skanuj kod)")
+                Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text(tr("Dołącz do sieci (skanuj kod)"))
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                OutlinedTextField(manual, { manual = it.trim() }, Modifier.weight(1f), singleLine = true, placeholder = { Text("lub adres, np. 192.168.1.20") })
+                OutlinedTextField(manual, { manual = it.trim() }, Modifier.weight(1f), singleLine = true, placeholder = { Text(tr("lub adres, np. 192.168.1.20")) })
                 TextButton(onClick = {
                     if (!on) { on = true; core.setLanEnabled(true) }
                     val url = core.lan.addManual(manual)
-                    toast(ctx, if (url == null) "Nieprawidłowy adres" else "Dodano $url")
+                    toast(ctx, if (url == null) tr("Nieprawidłowy adres") else tr("Dodano {0}", url))
                     if (url != null) manual = ""
-                }) { Text("Dodaj") }
+                }) { Text(tr("Dodaj")) }
             }
 
             HorizontalDivider(Modifier.padding(vertical = 12.dp))
-            Text("Kurier", fontWeight = FontWeight.Bold)
+            Text(tr("Kurier"), fontWeight = FontWeight.Bold)
             ListItem(
-                headlineContent = { Text("Wysyłaj dalej, gdy wróci internet") },
-                supportingContent = { Text("Koperty, które inni zostawili w Twoim telefonie, trafią na przekaźniki w internecie, gdy tylko złapiesz zasięg.") },
+                headlineContent = { Text(tr("Wysyłaj dalej, gdy wróci internet")) },
+                supportingContent = { Text(tr("Koperty, które inni zostawili w Twoim telefonie, trafią na przekaźniki w internecie, gdy tylko złapiesz zasięg.")) },
                 trailingContent = { Switch(fwd, { v -> fwd = v; core.setLanForward(v) }) },
             )
             ListItem(
-                headlineContent = { Text("Zabieraj wiadomości dla znajomych") },
+                headlineContent = { Text(tr("Zabieraj wiadomości dla znajomych")) },
                 supportingContent = {
                     Text(
-                        "Gdy masz internet, telefon pobiera zaszyfrowane koperty dla Twoich znajomych (z ostatnich 3 dni) i oddaje je, " +
-                            "gdy spotkacie się bez internetu. Nie widzisz ich treści. Zużywa trochę więcej danych.",
+                        tr("Gdy masz internet, telefon pobiera zaszyfrowane koperty dla Twoich znajomych (z ostatnich 3 dni) i oddaje je, ") +
+                            tr("gdy spotkacie się bez internetu. Nie widzisz ich treści. Zużywa trochę więcej danych."),
                     )
                 },
                 trailingContent = { Switch(courier, { v -> courier = v; core.setCourier(v) }) },
             )
-            if (stored > 0) TextButton(onClick = { core.lan.relay.clear(); core.lan.stored.value = 0; toast(ctx, "Wyczyszczono") }) {
-                Text("Wyczyść przechowywane koperty ($stored)")
+            if (stored > 0) TextButton(onClick = { core.lan.relay.clear(); core.lan.stored.value = 0; toast(ctx, tr("Wyczyszczono")) }) {
+                Text(tr("Wyczyść przechowywane koperty ({0})", stored))
             }
             Spacer(Modifier.height(24.dp))
         }

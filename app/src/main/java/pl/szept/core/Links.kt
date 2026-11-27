@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import pl.szept.crypto.isHex64
 import pl.szept.crypto.isPubKey
 import java.net.URLDecoder
@@ -60,7 +61,7 @@ object Links {
                 val gid = parts[1]
                 val tok = query["t"] ?: ""
                 if (gid.length < 8 || admins.isEmpty() || tok.isEmpty()) null
-                else Parsed.GroupInvite(gid, tok, admins, query["n"] ?: "Grupa")
+                else Parsed.GroupInvite(gid, tok, admins, query["n"] ?: tr("Grupa"))
             }
             else -> null
         }

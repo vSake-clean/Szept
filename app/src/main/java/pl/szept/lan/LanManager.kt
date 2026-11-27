@@ -1,5 +1,6 @@
 package pl.szept.lan
 
+import pl.szept.tr
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
@@ -88,7 +89,7 @@ class LanManager(private val ctx: Context, private val host: Host, relayDb: Stri
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
     private val clients = ConcurrentHashMap<Network, OkHttpClient>()
 
-    val selfName get() = "Szept-" + host.deviceTag.take(10)
+    val selfName get() = tr("Szept-") + host.deviceTag.take(10)
 
     // ---------------- włączanie ----------------
 
@@ -97,7 +98,7 @@ class LanManager(private val ctx: Context, private val host: Host, relayDb: Stri
         if (running.value) return
         val port = try { relay.start() } catch (e: Exception) {
             Log.w(TAG, "lan: nie mogę uruchomić przekaźnika", e)
-            status.value = "Nie udało się uruchomić przekaźnika: ${e.message}"
+            status.value = tr("Nie udało się uruchomić przekaźnika: {0}", e.message)
             return
         }
         relay.onStored = { origin -> stored.value = relay.count(); host.onLanStored(origin) }
@@ -251,7 +252,7 @@ class LanManager(private val ctx: Context, private val host: Host, relayDb: Stri
     fun startHotspot() {
         if (!running.value) start()
         val wm = ctx.applicationContext.getSystemService(WifiManager::class.java) ?: return
-        status.value = "Uruchamiam sieć Wi-Fi…"
+        status.value = tr("Uruchamiam sieć Wi-Fi…")
         try {
             wm.startLocalOnlyHotspot(object : WifiManager.LocalOnlyHotspotCallback() {
                 override fun onStarted(res: WifiManager.LocalOnlyHotspotReservation) {
@@ -273,16 +274,16 @@ class LanManager(private val ctx: Context, private val host: Host, relayDb: Stri
                 override fun onFailed(reason: Int) {
                     hotspot.value = null
                     status.value = when (reason) {
-                        ERROR_TETHERING_DISALLOWED -> "Telefon nie pozwala na tworzenie sieci (ustawienia operatora lub administratora)."
-                        ERROR_INCOMPATIBLE_MODE -> "Wyłącz zwykły hotspot / udostępnianie internetu i spróbuj ponownie."
-                        else -> "Nie udało się utworzyć sieci (kod $reason). Włącz Wi-Fi i lokalizację, wyłącz zwykły hotspot."
+                        ERROR_TETHERING_DISALLOWED -> tr("Telefon nie pozwala na tworzenie sieci (ustawienia operatora lub administratora).")
+                        ERROR_INCOMPATIBLE_MODE -> tr("Wyłącz zwykły hotspot / udostępnianie internetu i spróbuj ponownie.")
+                        else -> tr("Nie udało się utworzyć sieci (kod {0}). Włącz Wi-Fi i lokalizację, wyłącz zwykły hotspot.", reason)
                     }
                 }
             }, main)
         } catch (e: SecurityException) {
-            status.value = "Brak uprawnienia do tworzenia sieci Wi-Fi."
+            status.value = tr("Brak uprawnienia do tworzenia sieci Wi-Fi.")
         } catch (e: Exception) {
-            status.value = "Nie udało się utworzyć sieci: ${e.message}"
+            status.value = tr("Nie udało się utworzyć sieci: {0}", e.message)
         }
     }
 
@@ -312,14 +313,14 @@ class LanManager(private val ctx: Context, private val host: Host, relayDb: Stri
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 wifiNet = network
-                status.value = "Połączono z siecią „$ssid”"
+                status.value = tr("Połączono z siecią „{0}”", ssid)
                 scope.launch { delay(1000); probeGateway(network, c.getLinkProperties(network), hostIp, port) }
             }
-            override fun onUnavailable() { status.value = "Nie udało się połączyć z „$ssid”" }
-            override fun onLost(network: Network) { if (wifiNet == network) wifiNet = null; status.value = "Rozłączono z „$ssid”" }
+            override fun onUnavailable() { status.value = tr("Nie udało się połączyć z „{0}”", ssid) }
+            override fun onLost(network: Network) { if (wifiNet == network) wifiNet = null; status.value = tr("Rozłączono z „{0}”", ssid) }
         }
-        status.value = "Łączę z „$ssid”…"
-        return try { c.requestNetwork(req, cb); joinCallback = cb; true } catch (e: Exception) { status.value = "Błąd: ${e.message}"; false }
+        status.value = tr("Łączę z „{0}”…", ssid)
+        return try { c.requestNetwork(req, cb); joinCallback = cb; true } catch (e: Exception) { status.value = tr("Błąd: {0}", e.message); false }
     }
 
     fun leaveNetwork() {

@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -109,17 +110,17 @@ fun ArchiveScreen(nav: Nav) {
     val chats by rememberDb { core.db.chats() }
     val revealed by core.hiddenRevealed.collectAsState()
     var menu by remember { mutableStateOf<Chat?>(null) }
-    Scaffold(topBar = { BackBar("Zarchiwizowane", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Zarchiwizowane"), nav) }) { pad ->
         val list = chats?.filter { it.archived && (!it.hidden || revealed) } ?: emptyList()
         LazyColumn(Modifier.padding(pad).fillMaxSize()) {
             item {
                 Text(
-                    "Zarchiwizowane rozmowy nie wyskakują na górę listy. Nowe wiadomości nadal przychodzą (z powiadomieniami, chyba że wyciszysz rozmowę). " +
-                        "Przytrzymaj rozmowę, aby ją przywrócić.",
+                    tr("Zarchiwizowane rozmowy nie wyskakują na górę listy. Nowe wiadomości nadal przychodzą (z powiadomieniami, chyba że wyciszysz rozmowę). ") +
+                        tr("Przytrzymaj rozmowę, aby ją przywrócić."),
                     Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (chats != null && list.isEmpty()) item { Text("Archiwum jest puste.", Modifier.padding(16.dp)) }
+            if (chats != null && list.isEmpty()) item { Text(tr("Archiwum jest puste."), Modifier.padding(16.dp)) }
             items(list, key = { it.id }) { c -> ChatRow(c, onLong = { menu = c }) { nav.go(Screen.Chat(c.id)) } }
         }
     }
@@ -147,7 +148,7 @@ fun SearchScreen(nav: Nav) {
     LaunchedEffect(q) {
         if (core.hasHiddenPin && q.length in 4..8 && q.all { it.isDigit() } && withContext(Dispatchers.IO) { core.verifyHiddenPin(q) }) {
             core.hiddenRevealed.value = true
-            toast(ctx, "Pokazano ukryte czaty")
+            toast(ctx, tr("Pokazano ukryte czaty"))
             nav.back()
         }
     }
@@ -155,10 +156,10 @@ fun SearchScreen(nav: Nav) {
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wstecz") } },
+                navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Wstecz")) } },
                 title = {
                     TextField(
-                        q, { q = it }, Modifier.fillMaxWidth(), placeholder = { Text("Szukaj rozmów i wiadomości") }, singleLine = true,
+                        q, { q = it }, Modifier.fillMaxWidth(), placeholder = { Text(tr("Szukaj rozmów i wiadomości")) }, singleLine = true,
                         colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
                     )
                 },
@@ -169,19 +170,19 @@ fun SearchScreen(nav: Nav) {
         LazyColumn(Modifier.padding(pad).fillMaxSize().imePadding()) {
             if (q.trim().length < 2) item {
                 Text(
-                    "Wpisz co najmniej 2 znaki. Wiadomości czasowe i znikające nie są przeszukiwane.",
+                    tr("Wpisz co najmniej 2 znaki. Wiadomości czasowe i znikające nie są przeszukiwane."),
                     Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (chats.isNotEmpty()) {
-                item { Text("Rozmowy", Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
+                item { Text(tr("Rozmowy"), Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
                 items(chats, key = { "c" + it.id }) { c -> ChatRow(c) { nav.go(Screen.Chat(c.id)) } }
             }
             if (msgs.isNotEmpty()) {
-                item { Text("Wiadomości (${msgs.size})", Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
+                item { Text(tr("Wiadomości ({0})", msgs.size), Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
                 items(msgs, key = { "m" + it.id }) { m -> SearchHit(m, chatNames?.get(m.chat) ?: "", q.trim()) { nav.go(Screen.Chat(m.chat, m.id)) } }
             }
-            if (q.trim().length >= 2 && chats.isEmpty() && msgs.isEmpty()) item { Text("Nic nie znaleziono.", Modifier.padding(16.dp)) }
+            if (q.trim().length >= 2 && chats.isEmpty() && msgs.isEmpty()) item { Text(tr("Nic nie znaleziono."), Modifier.padding(16.dp)) }
         }
     }
 }
@@ -234,12 +235,12 @@ fun BroadcastScreen(nav: Nav) {
     var sending by remember { mutableStateOf(false) }
     var filter by remember { mutableStateOf("") }
     Scaffold(
-        topBar = { BackBar("Wiadomość do wielu", nav) },
+        topBar = { BackBar(tr("Wiadomość do wielu"), nav) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
                     if (sending) return@ExtendedFloatingActionButton
-                    if (text.isBlank() || selected.isEmpty()) { toast(ctx, "Wpisz wiadomość i wybierz osoby"); return@ExtendedFloatingActionButton }
+                    if (text.isBlank() || selected.isEmpty()) { toast(ctx, tr("Wpisz wiadomość i wybierz osoby")); return@ExtendedFloatingActionButton }
                     sending = true
                     scope.launch {
                         var ok = 0
@@ -247,29 +248,29 @@ fun BroadcastScreen(nav: Nav) {
                             try { core.sendText(core.openDm(pk), text); ok++ } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
                         }
                         sending = false
-                        toast(ctx, "Wysłano do $ok os.")
+                        toast(ctx, tr("Wysłano do {0} os.", ok))
                         // wysyłanie trwa chwilę — wróć tylko, jeśli nadal jesteśmy na tym ekranie (nie zamykaj innego)
                         if (nav.current == Screen.Broadcast) nav.back()
                     }
                 },
                 icon = { Icon(Icons.AutoMirrored.Filled.Send, null) },
-                text = { Text(if (sending) "Wysyłanie…" else "Wyślij (${selected.size})") },
+                text = { Text(if (sending) tr("Wysyłanie…") else tr("Wyślij ({0})", selected.size)) },
             )
         },
     ) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize().imePadding()) {
             item {
-                OutlinedTextField(text, { text = it.take(10_000) }, Modifier.fillMaxWidth().padding(16.dp), label = { Text("Wiadomość") }, minLines = 3, maxLines = 8)
+                OutlinedTextField(text, { text = it.take(10_000) }, Modifier.fillMaxWidth().padding(16.dp), label = { Text(tr("Wiadomość")) }, minLines = 3, maxLines = 8)
                 Text(
-                    "Każda wybrana osoba dostanie tę wiadomość osobno — jak zwykłą prywatną wiadomość od Ciebie. Odbiorcy nie widzą siebie nawzajem.",
+                    tr("Każda wybrana osoba dostanie tę wiadomość osobno — jak zwykłą prywatną wiadomość od Ciebie. Odbiorcy nie widzą siebie nawzajem."),
                     Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(filter, { filter = it }, Modifier.weight(1f).padding(8.dp), placeholder = { Text("Szukaj osoby") }, singleLine = true)
+                    OutlinedTextField(filter, { filter = it }, Modifier.weight(1f).padding(8.dp), placeholder = { Text(tr("Szukaj osoby")) }, singleLine = true)
                     TextButton(onClick = {
                         val all = people?.map { it.pk } ?: emptyList()
                         if (selected.size == all.size) selected.clear() else { selected.clear(); selected.addAll(all) }
-                    }) { Text(if (selected.size == (people?.size ?: -1)) "Odznacz" else "Wszyscy") }
+                    }) { Text(if (selected.size == (people?.size ?: -1)) tr("Odznacz") else tr("Wszyscy")) }
                 }
             }
             val list = people?.filter { filter.isBlank() || it.display.contains(filter, true) } ?: emptyList()
@@ -297,7 +298,7 @@ fun ForwardScreen(nav: Nav, msgId: String) {
     var filter by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     Scaffold(
-        topBar = { BackBar("Przekaż do…", nav) },
+        topBar = { BackBar(tr("Przekaż do…"), nav) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
@@ -307,13 +308,13 @@ fun ForwardScreen(nav: Nav, msgId: String) {
                     scope.launch {
                         try {
                             val n = core.forward(msg, selected.toList())
-                            toast(ctx, "Przekazano do $n " + if (n == 1) "rozmowy" else "rozmów")
+                            toast(ctx, tr("Przekazano do {0} ", n) + if (n == 1) "rozmowy" else tr("rozmów"))
                             nav.back()
                         } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; toast(ctx, sendError(e)) } finally { busy = false }
                     }
                 },
                 icon = { Icon(Icons.AutoMirrored.Filled.Send, null) },
-                text = { Text("Przekaż (${selected.size})") },
+                text = { Text(tr("Przekaż ({0})", selected.size)) },
             )
         },
     ) { pad ->
@@ -324,7 +325,7 @@ fun ForwardScreen(nav: Nav, msgId: String) {
                         Text("↪ " + Db.preview(msg), Modifier.padding(12.dp), maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                OutlinedTextField(filter, { filter = it }, Modifier.fillMaxWidth().padding(horizontal = 12.dp), placeholder = { Text("Szukaj rozmowy") }, singleLine = true)
+                OutlinedTextField(filter, { filter = it }, Modifier.fillMaxWidth().padding(horizontal = 12.dp), placeholder = { Text(tr("Szukaj rozmowy")) }, singleLine = true)
             }
             val list = chats?.filter { (!it.hidden || revealed) && it.id != m?.chat && (filter.isBlank() || it.name.contains(filter, true)) } ?: emptyList()
             items(list, key = { it.id }) { c ->
@@ -358,17 +359,17 @@ fun MediaGalleryScreen(nav: Nav, chatId: String) {
     val links by rememberDb(chatId) {
         core.db.chatMedia(chatId, listOf(Kind.TEXT, Kind.IMAGE, Kind.VIDEO, Kind.FILE)).flatMap { m -> urlRx.findAll(m.body).map { it.value.trimEnd('.', ',', ')', '!', '?') to m }.toList() }
     }
-    Scaffold(topBar = { BackBar("Multimedia, pliki i linki", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Multimedia, pliki i linki"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("Media (${media?.size ?: 0})") })
-                Tab(tab == 1, { tab = 1 }, text = { Text("Pliki (${files?.size ?: 0})") })
-                Tab(tab == 2, { tab = 2 }, text = { Text("Linki (${links?.size ?: 0})") })
+                Tab(tab == 0, { tab = 0 }, text = { Text(tr("Media ({0})", media?.size ?: 0)) })
+                Tab(tab == 1, { tab = 1 }, text = { Text(tr("Pliki ({0})", files?.size ?: 0)) })
+                Tab(tab == 2, { tab = 2 }, text = { Text(tr("Linki ({0})", links?.size ?: 0)) })
             }
             when (tab) {
                 0 -> {
                     val l = media ?: emptyList()
-                    if (l.isEmpty()) Text("Brak zdjęć i filmów.", Modifier.padding(16.dp))
+                    if (l.isEmpty()) Text(tr("Brak zdjęć i filmów."), Modifier.padding(16.dp))
                     LazyVerticalGrid(GridCells.Adaptive(110.dp), Modifier.fillMaxSize().padding(2.dp)) {
                         items(l, key = { it.id }) { m ->
                             Box(Modifier.padding(2.dp).aspectRatio(1f).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.1f))
@@ -386,11 +387,11 @@ fun MediaGalleryScreen(nav: Nav, chatId: String) {
                 }
                 1 -> LazyColumn(Modifier.fillMaxSize()) {
                     val l = files ?: emptyList()
-                    if (l.isEmpty()) item { Text("Brak plików i głosówek.", Modifier.padding(16.dp)) }
+                    if (l.isEmpty()) item { Text(tr("Brak plików i głosówek."), Modifier.padding(16.dp)) }
                     items(l, key = { it.id }) { m ->
                         ListItem(
                             leadingContent = { Icon(if (m.kind == Kind.VOICE) Icons.Default.PlayArrow else Icons.AutoMirrored.Filled.InsertDriveFile, null) },
-                            headlineContent = { Text(if (m.kind == Kind.VOICE) "Wiadomość głosowa · " + formatDuration(m.media?.dur ?: 0) else m.media?.name ?: "Plik", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            headlineContent = { Text(if (m.kind == Kind.VOICE) tr("Wiadomość głosowa · ") + formatDuration(m.media?.dur ?: 0) else m.media?.name ?: tr("Plik"), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             supportingContent = { Text((if (m.mine) "Ty" else core.db.nameOf(m.sender)) + " · " + formatWhen(m.ts) + " · " + formatSize(m.media?.size ?: 0)) },
                             modifier = Modifier.clickable(enabled = m.path != null) { m.path?.let { openFile(ctx, it, m.media?.mime ?: "") } },
                         )
@@ -398,7 +399,7 @@ fun MediaGalleryScreen(nav: Nav, chatId: String) {
                 }
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     val l = links ?: emptyList()
-                    if (l.isEmpty()) item { Text("Brak linków.", Modifier.padding(16.dp)) }
+                    if (l.isEmpty()) item { Text(tr("Brak linków."), Modifier.padding(16.dp)) }
                     items(l) { (url, m) ->
                         ListItem(
                             leadingContent = { Icon(Icons.Default.Link, null) },
@@ -428,13 +429,13 @@ fun AppearanceScreen(nav: Nav) {
                 val a = pl.szept.core.MediaUtil.prepareImage(ctx, uri)
                 a.file.copyTo(UiPrefs.wallpaperFile(ctx), overwrite = true); a.file.delete()
                 UiPrefs.wallpaper = "img"; UiPrefs.wallpaperVer++; UiPrefs.save(ctx)
-            } catch (e: Exception) { toast(ctx, "Nie udało się") }
+            } catch (e: Exception) { toast(ctx, tr("Nie udało się")) }
         }
     }
     val st = pl.szept.ui.style.LocalStyle.current
-    Scaffold(topBar = { BackBar("Wygląd", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Wygląd"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text("Styl aplikacji", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Styl aplikacji"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(16.dp))
                     .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), RoundedCornerShape(16.dp))
@@ -446,31 +447,31 @@ fun AppearanceScreen(nav: Nav) {
                     Text(st.spec.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(st.spec.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(4.dp))
-                    Text("Zmień styl (${pl.szept.ui.style.STYLES.size} do wyboru) ›", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Zmień styl ({0} do wyboru) ›", pl.szept.ui.style.STYLES.size), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
             }
             val animOn = pl.szept.ui.style.Anim.entries.count { it.key !in UiPrefs.animOff }
             OutlinedButton(onClick = { nav.go(Screen.Animations) }, Modifier.fillMaxWidth()) {
-                Text(if (UiPrefs.anim) "Animacje: $animOn z ${pl.szept.ui.style.Anim.entries.size} włączonych" else "Animacje: wyłączone")
+                Text(if (UiPrefs.anim) tr("Animacje: {0} z {1} włączonych", animOn, pl.szept.ui.style.Anim.entries.size) else tr("Animacje: wyłączone"))
             }
             OutlinedButton(onClick = { nav.go(Screen.Wizard) }, Modifier.fillMaxWidth()) {
-                Text("Kreator wyglądu — ustaw wszystko krok po kroku")
+                Text(tr("Kreator wyglądu — ustaw wszystko krok po kroku"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Motyw", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Motyw"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             if (st.spec.mode != pl.szept.ui.style.Mode.FOLLOW) Text(
-                "Styl „${st.spec.name}” jest zawsze ${if (st.dark) "ciemny" else "jasny"} — ustawienie motywu zadziała w innych stylach.",
+                tr("Styl „{0}” jest zawsze {1} — ustawienie motywu zadziała w innych stylach.", st.spec.name, if (st.dark) tr("ciemny") else tr("jasny")),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            listOf(0 to "Jak w systemie", 1 to "Jasny", 2 to "Ciemny", 3 to "Czarny (AMOLED, oszczędza baterię)").forEach { (v, t) ->
+            listOf(0 to tr("Jak w systemie"), 1 to tr("Jasny"), 2 to tr("Ciemny"), 3 to tr("Czarny (AMOLED, oszczędza baterię)")).forEach { (v, t) ->
                 Row(Modifier.fillMaxWidth().clickable { UiPrefs.theme = v; UiPrefs.save(ctx) }, verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(UiPrefs.theme == v, { UiPrefs.theme = v; UiPrefs.save(ctx) }); Text(t)
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("Kolor", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Kolor"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             if (!st.spec.accent) Text(
-                "Styl „${st.spec.name}” ma własne kolory. Wybrany kolor działa w stylach: " + pl.szept.ui.style.STYLES.filter { it.accent }.joinToString { it.name } + ".",
+                tr("Styl „{0}” ma własne kolory. Wybrany kolor działa w stylach: ", st.spec.name) + pl.szept.ui.style.STYLES.filter { it.accent }.joinToString { it.name } + ".",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 8.dp)) {
@@ -486,14 +487,14 @@ fun AppearanceScreen(nav: Nav) {
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("Rozmiar tekstu", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Rozmiar tekstu"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(0.85f to "Mały", 1f to "Normalny", 1.15f to "Duży", 1.3f to "Bardzo duży").forEach { (v, t) ->
+                listOf(0.85f to tr("Mały"), 1f to tr("Normalny"), 1.15f to tr("Duży"), 1.3f to tr("Bardzo duży")).forEach { (v, t) ->
                     FilterChip(UiPrefs.fontScale == v, { UiPrefs.fontScale = v; UiPrefs.save(ctx) }, { Text(t) })
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("Tapeta rozmów", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Tapeta rozmów"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                 WallChoice(UiPrefs.wallpaper == "", Modifier.background(baseColor())) { UiPrefs.wallpaper = ""; UiPrefs.save(ctx) }
                 WALLPAPERS.forEachIndexed { i, colors ->
@@ -501,37 +502,37 @@ fun AppearanceScreen(nav: Nav) {
                 }
             }
             OutlinedButton(onClick = { pickWall.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, Modifier.fillMaxWidth()) {
-                Text(if (UiPrefs.wallpaper == "img") "Zmień własne zdjęcie tapety" else "Własne zdjęcie jako tapeta")
+                Text(if (UiPrefs.wallpaper == "img") tr("Zmień własne zdjęcie tapety") else tr("Własne zdjęcie jako tapeta"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Wiadomość usunięta u rozmówcy", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text("Gdy usuniesz swoją wiadomość tylko u rozmówcy, u Ciebie zostaje z oznaczeniem:", style = MaterialTheme.typography.bodySmall)
-            listOf(0 to "🔴 Czerwona kropka", 1 to "Napis „usunięte u rozmówcy”", 2 to "Bez oznaczenia").forEach { (v, t) ->
+            Text(tr("Wiadomość usunięta u rozmówcy"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Gdy usuniesz swoją wiadomość tylko u rozmówcy, u Ciebie zostaje z oznaczeniem:"), style = MaterialTheme.typography.bodySmall)
+            listOf(0 to tr("🔴 Czerwona kropka"), 1 to tr("Napis „usunięte u rozmówcy”"), 2 to tr("Bez oznaczenia")).forEach { (v, t) ->
                 Row(Modifier.fillMaxWidth().clickable { UiPrefs.delMark = v; UiPrefs.save(ctx) }, verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(UiPrefs.delMark == v, { UiPrefs.delMark = v; UiPrefs.save(ctx) }); Text(t)
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("Podgląd", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Podgląd"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             Box(Modifier.fillMaxWidth().height(170.dp).padding(vertical = 6.dp).clip(RoundedCornerShape(12.dp)).border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(12.dp))) {
                 pl.szept.ui.style.StyleBackground(Modifier.matchParentSize())
                 ChatWallpaper(Modifier.matchParentSize())
                 Column(Modifier.padding(8.dp)) {
-                    pl.szept.ui.style.StyledBubble(false) { Text("Cześć! Jak leci? 👋", Modifier.padding(10.dp)) }
+                    pl.szept.ui.style.StyledBubble(false) { Text(tr("Cześć! Jak leci? 👋"), Modifier.padding(10.dp)) }
                     Spacer(Modifier.height(6.dp))
                     Row(Modifier.fillMaxWidth()) {
                         Spacer(Modifier.weight(1f))
-                        pl.szept.ui.style.StyledBubble(true) { Text("Super, a u Ciebie? 😄", Modifier.padding(10.dp)) }
+                        pl.szept.ui.style.StyledBubble(true) { Text(tr("Super, a u Ciebie? 😄"), Modifier.padding(10.dp)) }
                     }
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 12.dp))
-            Text("Dźwięki powiadomień", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("Dźwięki powiadomień"), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             Text(
-                "Dźwięk wszystkich wiadomości zmienisz w ustawieniach systemu. Osobny dźwięk dla jednej rozmowy ustawisz w jej profilu (dotknij nazwy na górze rozmowy).",
+                tr("Dźwięk wszystkich wiadomości zmienisz w ustawieniach systemu. Osobny dźwięk dla jednej rozmowy ustawisz w jej profilu (dotknij nazwy na górze rozmowy)."),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = { AndroidNotifier.openChannelSettings(ctx, AndroidNotifier.CH_MSG) }, Modifier.fillMaxWidth()) { Text("Dźwięk wiadomości…") }
+            OutlinedButton(onClick = { AndroidNotifier.openChannelSettings(ctx, AndroidNotifier.CH_MSG) }, Modifier.fillMaxWidth()) { Text(tr("Dźwięk wiadomości…")) }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -555,24 +556,24 @@ fun OwnRelayScreen(nav: Nav) {
     val core = App.core
     var url by remember { mutableStateOf("") }
     val link = remember { Links.relays(core.configuredRelays()) }
-    Scaffold(topBar = { BackBar("Własny przekaźnik", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Własny przekaźnik"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "Przekaźnik to „skrzynka pocztowa” na zaszyfrowane koperty. Szept domyślnie korzysta z publicznych przekaźników Nostr, " +
-                    "ale możesz uruchomić własny — wtedy Wasze wiadomości nie zależą od nikogo obcego.",
+                tr("Przekaźnik to „skrzynka pocztowa” na zaszyfrowane koperty. Szept domyślnie korzysta z publicznych przekaźników Nostr, ") +
+                    tr("ale możesz uruchomić własny — wtedy Wasze wiadomości nie zależą od nikogo obcego."),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(12.dp))
-            Text("Krok po kroku (Raspberry Pi, stary komputer lub serwer VPS)", fontWeight = FontWeight.Bold)
+            Text(tr("Krok po kroku (Raspberry Pi, stary komputer lub serwer VPS)"), fontWeight = FontWeight.Bold)
             listOf(
                 "1. Zainstaluj Dockera (na Raspberry Pi OS / Ubuntu): curl -fsSL https://get.docker.com | sh",
-                "2. Uruchom przekaźnik (nostr-rs-relay; na Raspberry Pi użyj 64-bitowego systemu):\n" +
-                    "docker run -d --name przekaznik --restart unless-stopped -p 8080:8080 -v przekaznik:/usr/src/app/db scsibug/nostr-rs-relay",
+                tr("2. Uruchom przekaźnik (nostr-rs-relay; na Raspberry Pi użyj 64-bitowego systemu):\n") +
+                    tr("docker run -d --name przekaznik --restart unless-stopped -p 8080:8080 -v przekaznik:/usr/src/app/db scsibug/nostr-rs-relay"),
                 "3a. W sieci domowej: dodaj w Szepcie adres ws://ADRES-IP-KOMPUTERA:8080 (np. ws://192.168.1.20:8080). Działa tylko w tej samej sieci Wi-Fi.",
-                "3b. Z całego internetu: potrzebujesz domeny i szyfrowania TLS. Najprościej: Caddy (caddy reverse-proxy --from twoja.domena.pl --to localhost:8080) " +
+                tr("3b. Z całego internetu: potrzebujesz domeny i szyfrowania TLS. Najprościej: Caddy (caddy reverse-proxy --from twoja.domena.pl --to localhost:8080) ") +
                     "albo bezpłatny tunel (np. Cloudflare Tunnel). Adres w Szepcie: wss://twoja.domena.pl",
-                "4. Dodaj adres poniżej i wyślij link z przekaźnikami znajomym — po jego otwarciu Szept doda im te same przekaźniki.",
-                "Wskazówka: zostaw też kilka publicznych przekaźników — jeśli Twój komputer się wyłączy, wiadomości dalej dojdą.",
+                tr("4. Dodaj adres poniżej i wyślij link z przekaźnikami znajomym — po jego otwarciu Szept doda im te same przekaźniki."),
+                tr("Wskazówka: zostaw też kilka publicznych przekaźników — jeśli Twój komputer się wyłączy, wiadomości dalej dojdą."),
             ).forEach {
                 Text(it, Modifier.padding(vertical = 4.dp), style = MaterialTheme.typography.bodySmall, fontFamily = if (it.contains("docker") || it.contains("caddy")) FontFamily.Monospace else FontFamily.Default)
             }
@@ -583,23 +584,23 @@ fun OwnRelayScreen(nav: Nav) {
                     val u = if (url.startsWith("ws")) url else "wss://$url"
                     if (url.isBlank()) return@TextButton
                     core.setRelays((core.configuredRelays() + u).distinct())
-                    toast(ctx, if (u.startsWith("ws://")) "Dodano (bez szyfrowania połączenia — tylko w zaufanej sieci domowej)" else "Dodano przekaźnik")
+                    toast(ctx, if (u.startsWith("ws://")) tr("Dodano (bez szyfrowania połączenia — tylko w zaufanej sieci domowej)") else tr("Dodano przekaźnik"))
                     url = ""
-                }) { Text("Dodaj") }
+                }) { Text(tr("Dodaj")) }
             }
             Text(
                 "Uwaga: ws:// (bez „s”) nie szyfruje połączenia z przekaźnikiem. Treść wiadomości i tak jest zaszyfrowana end-to-end, ale w sieci widać, do kogo są koperty.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             HorizontalDivider(Modifier.padding(vertical = 12.dp))
-            Text("Udostępnij swoje przekaźniki", fontWeight = FontWeight.Bold)
-            Text("Znajomy otworzy link w Szepcie i jednym dotknięciem doda te same przekaźniki.", style = MaterialTheme.typography.bodySmall)
+            Text(tr("Udostępnij swoje przekaźniki"), fontWeight = FontWeight.Bold)
+            Text(tr("Znajomy otworzy link w Szepcie i jednym dotknięciem doda te same przekaźniki."), style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
             QrImage(link, 200.dp)
             Row {
-                OutlinedButton(onClick = { shareText(ctx, "Przekaźniki do Szepta: $link") }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(6.dp)); Text("Wyślij") }
+                OutlinedButton(onClick = { shareText(ctx, tr("Przekaźniki do Szepta: {0}", link)) }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(6.dp)); Text(tr("Wyślij")) }
                 Spacer(Modifier.width(8.dp))
-                OutlinedButton(onClick = { copyText(ctx, link) }) { Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(6.dp)); Text("Kopiuj") }
+                OutlinedButton(onClick = { copyText(ctx, link) }) { Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(6.dp)); Text(tr("Kopiuj")) }
             }
             Spacer(Modifier.height(24.dp))
         }

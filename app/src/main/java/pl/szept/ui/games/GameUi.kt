@@ -2,6 +2,7 @@
 
 package pl.szept.ui.games
 
+import pl.szept.tr
 import pl.szept.ui.StyleAlertDialog
 
 import androidx.activity.compose.BackHandler
@@ -188,7 +189,7 @@ fun whoName(pk: String?): String = when (pk) { null -> "?"; App.core.myPub -> "T
 
 fun fmtMove(v: Double): String = if (v == Math.floor(v) && Math.abs(v) < 1e15) v.toLong().toString() else String.format(Locale.US, "%.3f", v).trimEnd('0').trimEnd('.')
 
-private val dateFmt = SimpleDateFormat("d.MM.yy HH:mm", Locale("pl"))
+private val dateFmt = SimpleDateFormat("d.MM.yy HH:mm", pl.szept.I18n.locale)
 fun fmtDate(ts: Long): String = dateFmt.format(Date(ts))
 
 // ============================ gra na pełnym ekranie ============================
@@ -207,9 +208,9 @@ object Play {
 
     fun start(ctx: android.content.Context, id: String, seed: Long? = null, chatMsg: String? = null, chatId: String? = null) {
         val info = GameCatalog.byId(id)
-        if (info == null) { toast(ctx, "Tej gry nie ma w tej wersji Szepta — zaktualizuj aplikację"); return }
+        if (info == null) { toast(ctx, tr("Tej gry nie ma w tej wersji Szepta — zaktualizuj aplikację")); return }
         if (info.python) { PyGameActivity.launch(ctx, id, chatMsg, chatId); return }
-        if (SOLO_GAMES[id] == null) { toast(ctx, "Tej gry nie da się uruchomić samemu"); return }
+        if (SOLO_GAMES[id] == null) { toast(ctx, tr("Tej gry nie da się uruchomić samemu")); return }
         req = PlayReq(id, seed ?: Games.secureLong(), chatMsg, chatId)
     }
 }
@@ -251,17 +252,17 @@ fun PlayHost() {
     Surface(Modifier.fillMaxSize(), color = pl.szept.ui.baseColor()) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { if (playing) confirmExit = true else Play.req = null }) { Icon(Icons.Default.Close, "Zamknij grę") }
+                IconButton(onClick = { if (playing) confirmExit = true else Play.req = null }) { Icon(Icons.Default.Close, tr("Zamknij grę")) }
                 GameBadge(info, 30.dp)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(info.name, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (r.chatMsg != null) Text("Wyzwanie w rozmowie", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    if (r.chatMsg != null) Text(tr("Wyzwanie w rozmowie"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
                 if (info.score.has) TextButton(onClick = { totals = true }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Default.Leaderboard, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Łącznie")
+                    Icon(Icons.Default.Leaderboard, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Łącznie"))
                 }
-                IconButton(onClick = { help = true }) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "Jak grać") }
+                IconButton(onClick = { help = true }) { Icon(Icons.AutoMirrored.Filled.HelpOutline, tr("Jak grać")) }
             }
             // przesunięcia palcem przy krawędziach należą do gry, nie do systemowego gestu „wstecz”
             Box(Modifier.weight(1f).fillMaxWidth().systemGestureExclusion()) {
@@ -295,10 +296,10 @@ fun PlayHost() {
     if (totals) TotalsDialog(info, r.chatMsg, r.chatId) { totals = false }
     if (confirmExit) StyleAlertDialog(
         onDismissRequest = { confirmExit = false },
-        title = { Text("Zakończyć grę?") },
-        text = { Text(if (r.chatMsg != null) "Ta próba nie zostanie zapisana w wyzwaniu." else "Bieżąca gra nie zostanie zapisana.") },
-        confirmButton = { TextButton(onClick = { confirmExit = false; Play.req = null }) { Text("Zakończ") } },
-        dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Graj dalej") } },
+        title = { Text(tr("Zakończyć grę?")) },
+        text = { Text(if (r.chatMsg != null) tr("Ta próba nie zostanie zapisana w wyzwaniu.") else tr("Bieżąca gra nie zostanie zapisana.")) },
+        confirmButton = { TextButton(onClick = { confirmExit = false; Play.req = null }) { Text(tr("Zakończ")) } },
+        dismissButton = { TextButton(onClick = { confirmExit = false }) { Text(tr("Graj dalej")) } },
     )
     if (help) StyleAlertDialog(
         onDismissRequest = { help = false },
@@ -318,30 +319,30 @@ fun ResultPanel(info: GameCatalog.Info, score: Double, prevBest: Double?, challe
                 GameBadge(info, 48.dp)
                 Spacer(Modifier.height(8.dp))
                 val wdl = info.score.kind == GameCatalog.Score.Kind.WDL
-                Text(if (wdl) info.score.fmt(score) + (if (score >= 0.99) "!" else "") else "Koniec gry", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(if (wdl) info.score.fmt(score) + (if (score >= 0.99) "!" else "") else tr("Koniec gry"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 if (info.score.has && !wdl) {
-                    Text("Twój wynik", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Twój wynik"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(info.score.fmt(score), fontSize = 36.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     when {
                         prevBest == null || info.score.better(score, prevBest) -> Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFB300)); Spacer(Modifier.width(4.dp))
-                            Text(if (prevBest == null) "Pierwszy wynik — to Twój rekord" else "Nowy rekord!", fontWeight = FontWeight.Bold, color = Color(0xFFFFA000))
+                            Text(if (prevBest == null) tr("Pierwszy wynik — to Twój rekord") else tr("Nowy rekord!"), fontWeight = FontWeight.Bold, color = Color(0xFFFFA000))
                         }
-                        else -> Text("Twój rekord: " + info.score.fmt(prevBest), style = MaterialTheme.typography.bodyMedium)
+                        else -> Text(tr("Twój rekord: ") + info.score.fmt(prevBest), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 if (wdl) {
                     val all by rememberDb(info.id, score) { App.core.db.gameScores(info.id) }
                     all?.let { l ->
-                        Text("Bilans: ${l.count { it.score >= 0.99 }} wygr. · ${l.count { it.score in 0.49..0.51 }} rem. · ${l.count { it.score < 0.49 }} przegr.",
+                        Text(tr("Bilans: {0} wygr. · {1} rem. · {2} przegr.", l.count { it.score >= 0.99 }, l.count { it.score in 0.49..0.51 }, l.count { it.score < 0.49 }),
                             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
-                if (challenge) Text("Wynik wysłany do rozmowy", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp))
+                if (challenge) Text(tr("Wynik wysłany do rozmowy"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(14.dp))
-                Button(onClick = onAgain, Modifier.fillMaxWidth()) { Icon(Icons.Default.Replay, null); Spacer(Modifier.width(6.dp)); Text("Zagraj jeszcze raz") }
-                if (info.score.has) OutlinedButton(onClick = onTotals, Modifier.fillMaxWidth()) { Icon(Icons.Default.Leaderboard, null); Spacer(Modifier.width(6.dp)); Text("Łącznie") }
-                TextButton(onClick = onClose, Modifier.fillMaxWidth()) { Text("Zamknij") }
+                Button(onClick = onAgain, Modifier.fillMaxWidth()) { Icon(Icons.Default.Replay, null); Spacer(Modifier.width(6.dp)); Text(tr("Zagraj jeszcze raz")) }
+                if (info.score.has) OutlinedButton(onClick = onTotals, Modifier.fillMaxWidth()) { Icon(Icons.Default.Leaderboard, null); Spacer(Modifier.width(6.dp)); Text(tr("Łącznie")) }
+                TextButton(onClick = onClose, Modifier.fillMaxWidth()) { Text(tr("Zamknij")) }
             }
         }
     }
@@ -355,12 +356,12 @@ fun FailPanel(info: GameCatalog.Info, why: String, onAgain: () -> Unit, onTotals
             Column(Modifier.padding(20.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 GameBadge(info, 48.dp)
                 Spacer(Modifier.height(8.dp))
-                Text("Nie udało się", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(tr("Nie udało się"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(why, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
                 Spacer(Modifier.height(14.dp))
-                Button(onClick = onAgain, Modifier.fillMaxWidth()) { Icon(Icons.Default.Replay, null); Spacer(Modifier.width(6.dp)); Text("Spróbuj jeszcze raz") }
-                if (info.score.has) OutlinedButton(onClick = onTotals, Modifier.fillMaxWidth()) { Icon(Icons.Default.Leaderboard, null); Spacer(Modifier.width(6.dp)); Text("Łącznie") }
-                TextButton(onClick = onClose, Modifier.fillMaxWidth()) { Text("Zamknij") }
+                Button(onClick = onAgain, Modifier.fillMaxWidth()) { Icon(Icons.Default.Replay, null); Spacer(Modifier.width(6.dp)); Text(tr("Spróbuj jeszcze raz")) }
+                if (info.score.has) OutlinedButton(onClick = onTotals, Modifier.fillMaxWidth()) { Icon(Icons.Default.Leaderboard, null); Spacer(Modifier.width(6.dp)); Text(tr("Łącznie")) }
+                TextButton(onClick = onClose, Modifier.fillMaxWidth()) { Text(tr("Zamknij")) }
             }
         }
     }
@@ -372,10 +373,10 @@ fun FailPanel(info: GameCatalog.Info, why: String, onAgain: () -> Unit, onTotals
 @Composable
 fun TotalsDialog(info: GameCatalog.Info, chatMsg: String?, chatId: String?, onDismiss: () -> Unit) {
     val tabs = buildList {
-        if (chatMsg != null && info.chat == GameCatalog.Chat.CHALLENGE) add("Ta gra")
-        if (chatId != null && info.inChat) add("W tej rozmowie")
-        if (info.solo) add("Moje wyniki")
-    }.ifEmpty { listOf("Moje wyniki") }
+        if (chatMsg != null && info.chat == GameCatalog.Chat.CHALLENGE) add(tr("Ta gra"))
+        if (chatId != null && info.inChat) add(tr("W tej rozmowie"))
+        if (info.solo) add(tr("Moje wyniki"))
+    }.ifEmpty { listOf(tr("Moje wyniki")) }
     var tab by remember { mutableIntStateOf(0) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.86f), shape = RoundedCornerShape(20.dp)) {
@@ -383,16 +384,16 @@ fun TotalsDialog(info: GameCatalog.Info, chatMsg: String?, chatId: String?, onDi
                 Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     GameBadge(info, 32.dp); Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Łącznie", style = MaterialTheme.typography.titleLarge)
+                        Text(tr("Łącznie"), style = MaterialTheme.typography.titleLarge)
                         Text(info.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Zamknij") }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Zamknij")) }
                 }
                 if (tabs.size > 1) TabRow(tab) { tabs.forEachIndexed { i, t -> Tab(tab == i, { tab = i }, text = { Text(t) }) } }
                 Box(Modifier.weight(1f)) {
                     when (tabs[tab.coerceIn(0, tabs.lastIndex)]) {
-                        "Ta gra" -> ThisChallengeTable(info, chatMsg!!)
-                        "W tej rozmowie" -> ChatTotalsTable(info, chatId!!)
+                        tr("Ta gra") -> ThisChallengeTable(info, chatMsg!!)
+                        tr("W tej rozmowie") -> ChatTotalsTable(info, chatId!!)
                         else -> MyScoresTable(info)
                     }
                 }
@@ -431,9 +432,9 @@ private fun TableRow(cells: List<String>, weights: List<Float>, header: Boolean 
 }
 
 private fun ctxLabel(ctx: String): String = when {
-    ctx == "solo" -> "sam"
-    ctx == "ai" -> "z komputerem"
-    ctx.startsWith("chat:") -> App.core.db.chat(ctx.removePrefix("chat:"))?.name?.let { "wyzwanie: $it" } ?: "wyzwanie"
+    ctx == "solo" -> tr("sam")
+    ctx == "ai" -> tr("z komputerem")
+    ctx.startsWith("chat:") -> App.core.db.chat(ctx.removePrefix("chat:"))?.name?.let { tr("wyzwanie: {0}", it) } ?: tr("wyzwanie")
     else -> ctx
 }
 
@@ -446,31 +447,31 @@ fun MyScoresTable(info: GameCatalog.Info) {
     val list = rows ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     val sc = info.score
     if (list.isEmpty()) {
-        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text("Nie masz jeszcze wyników w tej grze.", textAlign = TextAlign.Center) }
+        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(tr("Nie masz jeszcze wyników w tej grze."), textAlign = TextAlign.Center) }
         return
     }
     val best = sc.best(list.map { it.score })
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             FlowRow(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatChip("rozegrane", list.size.toString())
+                StatChip(tr("rozegrane"), list.size.toString())
                 if (sc.kind == GameCatalog.Score.Kind.WDL) {
-                    StatChip("wygrane", list.count { it.score >= 0.99 }.toString())
-                    StatChip("remisy", list.count { it.score in 0.49..0.51 }.toString())
-                    StatChip("przegrane", list.count { it.score < 0.49 }.toString())
+                    StatChip(tr("wygrane"), list.count { it.score >= 0.99 }.toString())
+                    StatChip(tr("remisy"), list.count { it.score in 0.49..0.51 }.toString())
+                    StatChip(tr("przegrane"), list.count { it.score < 0.49 }.toString())
                 } else {
-                    best?.let { StatChip(if (sc.kind == GameCatalog.Score.Kind.TIME && !sc.higher) "najlepszy czas" else "najlepszy wynik", sc.fmt(it)) }
-                    StatChip("średnio", sc.fmt(list.map { it.score }.average()))
-                    StatChip("ostatni", sc.fmt(list.first().score))
+                    best?.let { StatChip(if (sc.kind == GameCatalog.Score.Kind.TIME && !sc.higher) tr("najlepszy czas") else tr("najlepszy wynik"), sc.fmt(it)) }
+                    StatChip(tr("średnio"), sc.fmt(list.map { it.score }.average()))
+                    StatChip(tr("ostatni"), sc.fmt(list.first().score))
                 }
             }
             if (sc.kind != GameCatalog.Score.Kind.WDL) Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(sortBest, { sortBest = true }, { Text("Najlepsze") })
+                FilterChip(sortBest, { sortBest = true }, { Text(tr("Najlepsze")) })
                 Spacer(Modifier.width(8.dp))
-                FilterChip(!sortBest, { sortBest = false }, { Text("Najnowsze") })
+                FilterChip(!sortBest, { sortBest = false }, { Text(tr("Najnowsze")) })
             }
             Spacer(Modifier.height(6.dp))
-            TableRow(listOf("#", "Kiedy", "Gdzie", "Wynik"), listOf(0.4f, 1.6f, 1.1f, 1.3f), header = true)
+            TableRow(listOf("#", tr("Kiedy"), tr("Gdzie"), tr("Wynik")), listOf(0.4f, 1.6f, 1.1f, 1.3f), header = true)
         }
         val sorted = if (sortBest && sc.kind != GameCatalog.Score.Kind.WDL) sc.sort(list) { it.score } else list
         items(sorted.size) { i ->
@@ -479,15 +480,15 @@ fun MyScoresTable(info: GameCatalog.Info) {
                 listOf(0.4f, 1.6f, 1.1f, 1.3f), highlight = s.score == best && sc.kind != GameCatalog.Score.Kind.WDL, odd = i % 2 == 1)
         }
         item {
-            TextButton(onClick = { confirmClear = true }, Modifier.padding(8.dp)) { Icon(Icons.Default.DeleteOutline, null); Spacer(Modifier.width(4.dp)); Text("Wyczyść moje wyniki") }
+            TextButton(onClick = { confirmClear = true }, Modifier.padding(8.dp)) { Icon(Icons.Default.DeleteOutline, null); Spacer(Modifier.width(4.dp)); Text(tr("Wyczyść moje wyniki")) }
         }
     }
     if (confirmClear) StyleAlertDialog(
         onDismissRequest = { confirmClear = false },
-        title = { Text("Wyczyścić wyniki?") },
-        text = { Text("Wszystkie Twoje wyniki w grze „${info.name}” znikną z tego telefonu.") },
-        confirmButton = { TextButton(onClick = { confirmClear = false; App.work.launch(Dispatchers.IO) { App.core.db.clearGameScores(info.id) } }) { Text("Wyczyść") } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Anuluj") } },
+        title = { Text(tr("Wyczyścić wyniki?")) },
+        text = { Text(tr("Wszystkie Twoje wyniki w grze „{0}” znikną z tego telefonu.", info.name)) },
+        confirmButton = { TextButton(onClick = { confirmClear = false; App.work.launch(Dispatchers.IO) { App.core.db.clearGameScores(info.id) } }) { Text(tr("Wyczyść")) } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -501,21 +502,21 @@ fun ThisChallengeTable(info: GameCatalog.Info, msgId: String) {
     val ranking = remember(all) { Games.challengeRanking(sc, all) }
     val attempts = remember(all) { all.mapNotNull { m -> m.mv.toDoubleOrNull()?.let { Triple(m.sender, it, m.ts) } } }
     LazyColumn(Modifier.fillMaxSize()) {
-        item { Text("Ranking", Modifier.padding(12.dp), style = MaterialTheme.typography.titleSmall) }
-        item { TableRow(listOf("Miejsce", "Osoba", "Próby", "Najlepszy"), listOf(0.8f, 1.6f, 0.7f, 1.2f), header = true) }
+        item { Text(tr("Ranking"), Modifier.padding(12.dp), style = MaterialTheme.typography.titleSmall) }
+        item { TableRow(listOf(tr("Miejsce"), tr("Osoba"), tr("Próby"), tr("Najlepszy")), listOf(0.8f, 1.6f, 0.7f, 1.2f), header = true) }
         items(ranking.size) { i ->
             val (pk, v) = ranking[i]
             TableRow(listOf(listOf("🥇", "🥈", "🥉").getOrElse(i) { "${i + 1}." }, whoName(pk), (results[pk]?.size ?: 0).toString(), sc.fmt(v)),
                 listOf(0.8f, 1.6f, 0.7f, 1.2f), highlight = pk == App.core.myPub, odd = i % 2 == 1)
         }
-        item { Text("Wszystkie próby", Modifier.padding(12.dp), style = MaterialTheme.typography.titleSmall) }
-        item { TableRow(listOf("Osoba", "Kiedy", "Wynik"), listOf(1.5f, 1.3f, 1.2f), header = true) }
+        item { Text(tr("Wszystkie próby"), Modifier.padding(12.dp), style = MaterialTheme.typography.titleSmall) }
+        item { TableRow(listOf(tr("Osoba"), tr("Kiedy"), tr("Wynik")), listOf(1.5f, 1.3f, 1.2f), header = true) }
         val byTime = attempts.sortedByDescending { it.third }
         items(byTime.size) { i ->
             val (pk, v, ts) = byTime[i]
             TableRow(listOf(whoName(pk), fmtDate(ts), sc.fmt(v)), listOf(1.5f, 1.3f, 1.2f), highlight = ranking.firstOrNull()?.let { it.first == pk && it.second == v } == true, odd = i % 2 == 1)
         }
-        if (ranking.isEmpty()) item { Text("Nikt jeszcze nie zagrał.", Modifier.padding(16.dp)) }
+        if (ranking.isEmpty()) item { Text(tr("Nikt jeszcze nie zagrał."), Modifier.padding(16.dp)) }
     }
 }
 
@@ -547,8 +548,8 @@ fun ChatTotalsTable(info: GameCatalog.Info, chatId: String) {
     val hasScore = info.score.has && info.score.kind != GameCatalog.Score.Kind.WDL && rows.any { it.best != null }
     LazyColumn(Modifier.fillMaxSize()) {
         item {
-            Text("Rozegrane w tej rozmowie: $count", Modifier.padding(12.dp), style = MaterialTheme.typography.titleSmall)
-            val head = buildList { add("Osoba"); add("Gry"); add("Wygr."); if (versus) { add("Rem."); add("Przegr.") }; if (hasScore) add("Najlepszy") }
+            Text(tr("Rozegrane w tej rozmowie: {0}", count), Modifier.padding(12.dp), style = MaterialTheme.typography.titleSmall)
+            val head = buildList { add(tr("Osoba")); add("Gry"); add(tr("Wygr.")); if (versus) { add(tr("Rem.")); add(tr("Przegr.")) }; if (hasScore) add(tr("Najlepszy")) }
             TableRow(head, head.mapIndexed { i, _ -> if (i == 0) 1.6f else if (i == head.lastIndex && hasScore) 1.3f else 0.7f }, header = true)
         }
         items(rows.size) { i ->
@@ -560,7 +561,7 @@ fun ChatTotalsTable(info: GameCatalog.Info, chatId: String) {
             }
             TableRow(cells, cells.mapIndexed { j, _ -> if (j == 0) 1.6f else if (j == cells.lastIndex && hasScore) 1.3f else 0.7f }, highlight = r.pk == App.core.myPub, odd = i % 2 == 1)
         }
-        if (rows.isEmpty()) item { Text("Brak zakończonych gier.", Modifier.padding(16.dp)) }
+        if (rows.isEmpty()) item { Text(tr("Brak zakończonych gier."), Modifier.padding(16.dp)) }
     }
 }
 
@@ -658,7 +659,7 @@ fun BubbleActions(content: @Composable RowScope.() -> Unit) {
 
 @Composable
 fun TotalsButton(onClick: () -> Unit) {
-    TextButton(onClick = onClick) { Icon(Icons.Default.Leaderboard, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Łącznie") }
+    TextButton(onClick = onClick) { Icon(Icons.Default.Leaderboard, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Łącznie")) }
 }
 
 @Suppress("unused")

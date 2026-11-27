@@ -14,6 +14,8 @@ import pl.szept.service.SyncWorker
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        // język aplikacji: wybrany w kreatorze/ustawieniach albo język telefonu
+        I18n.init(this)
         pl.szept.core.CrashLog.init(this)
         resetDecoy()
         real = newCore()

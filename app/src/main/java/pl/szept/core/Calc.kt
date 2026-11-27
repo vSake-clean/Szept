@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
@@ -14,10 +15,10 @@ object Calc {
         var pos = 0
         fun peek() = tokens.getOrNull(pos)
         fun number(): BigDecimal {
-            val t = peek() ?: throw CalcException("Błąd")
+            val t = peek() ?: throw CalcException(tr("Błąd"))
             if (t == "−") { pos++; return number().negate() }
             pos++
-            var v = t.toBigDecimalOrNull() ?: throw CalcException("Błąd")
+            var v = t.toBigDecimalOrNull() ?: throw CalcException(tr("Błąd"))
             if (peek() == "%") { pos++; v = v.divide(BigDecimal(100)) }
             return v
         }
@@ -27,7 +28,7 @@ object Calc {
                 val op = tokens[pos++]
                 val r = number()
                 v = if (op == "×") v.multiply(r) else {
-                    if (r.signum() == 0) throw CalcException("Nie dziel przez 0")
+                    if (r.signum() == 0) throw CalcException(tr("Nie dziel przez 0"))
                     v.divide(r, MathContext(16, RoundingMode.HALF_UP))
                 }
             }
@@ -39,7 +40,7 @@ object Calc {
             val r = term()
             v = if (op == "+") v.add(r) else v.subtract(r)
         }
-        if (pos != tokens.size) throw CalcException("Błąd")
+        if (pos != tokens.size) throw CalcException(tr("Błąd"))
         return format(v)
     }
 
@@ -61,7 +62,7 @@ object Calc {
                 out += when (ch) { '-' -> "−"; '*' -> "×"; '/' -> "÷"; else -> ch.toString() }
             }
             ' ' -> {}
-            else -> throw CalcException("Błąd")
+            else -> throw CalcException(tr("Błąd"))
         }
         flush()
         // operator na końcu (np. „12+”) — pomijamy

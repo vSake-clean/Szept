@@ -1,5 +1,6 @@
 package pl.szept.ui.style
 
+import pl.szept.tr
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -84,31 +85,31 @@ import kotlin.math.sin
 
 /** Grupy w „Animacjach zaawansowanych”. */
 enum class AnimGroup(val title: String) {
-    MOTION("Ruch i przejścia"), TOUCH("Dotyk i przyciski"), APPEAR("Pojawianie się"), EFFECTS("Efekty"), CHAT("Rozmowy"),
+    MOTION(tr("Ruch i przejścia")), TOUCH(tr("Dotyk i przyciski")), APPEAR(tr("Pojawianie się")), EFFECTS(tr("Efekty")), CHAT(tr("Rozmowy")),
 }
 
 /** Animacje, które można osobno włączać i wyłączać. [continuous] — trwają cały czas (wyłączane przy oszczędzaniu baterii). */
 enum class Anim(val key: String, val title: String, val desc: String, val group: AnimGroup, val continuous: Boolean = false, val defaultOn: Boolean = true) {
-    SCREENS("screens", "Przejścia między ekranami", "Ekrany wsuwają się, przenikają albo powiększają — tak jak w wybranym stylu", AnimGroup.MOTION),
-    MENUS("menus", "Otwieranie i zamykanie menu", "Menu wyrasta z przycisku, wysuwa się albo pojawia — zależnie od stylu", AnimGroup.MOTION),
-    PANELS("panels", "Okna i panele", "Okna dialogowe pojawiają się z powiększeniem, od dołu albo z odbiciem", AnimGroup.MOTION),
-    COLORS("colors", "Zmiana stylu i kolorów", "Kolory i tło przechodzą płynnie przy zmianie stylu i motywu", AnimGroup.MOTION),
-    PRESS("press", "Efekty kliknięcia", "Ugięcie, podświetlenie, fala albo „wciśnięcie” w ramkę — jak w oryginale stylu", AnimGroup.TOUCH),
-    HOVER("hover", "Efekty najechania", "Podświetlenie pod kursorem myszy albo rysikiem", AnimGroup.TOUCH),
-    BUTTONS("buttons", "Animowane przyciski", "Przycisk wysyłania, pływający przycisk, liczniki i ptaszki ✓✓", AnimGroup.TOUCH),
-    APPEAR("appear", "Płynne pojawianie się elementów", "Elementy list wsuwają się po kolei i płynnie zmieniają miejsce", AnimGroup.APPEAR),
-    MSG_IN("msgin", "Wjazd nowych wiadomości", "Sprężyna, wyskok albo pisanie znak po znaku — zależnie od stylu", AnimGroup.APPEAR),
-    BLUR("blur", "Rozmycie i przezroczystość", "Szkło rozmywa i załamuje to, co pod nim; wyłączone — matowe i szybsze", AnimGroup.EFFECTS),
-    BG("bg", "Animowane tło", "Gradient przesuwający się przy wysłaniu wiadomości, płynące chmury", AnimGroup.EFFECTS, continuous = true),
-    TILT("tilt", "Odblaski i paralaksa", "Szkło łapie światło, gdy przechylasz telefon (żyroskop)", AnimGroup.EFFECTS, continuous = true),
-    SHIMMER("shimmer", "Połysk wczytywania", "Migoczące zaślepki, zanim pojawią się rozmowy i zdjęcia", AnimGroup.EFFECTS, continuous = true),
-    TITLE("title", "Animowany tytuł", "Błysk, kursor terminala albo kropki — zależnie od stylu", AnimGroup.EFFECTS, continuous = true),
-    CHAT_FX("chatfx", "Efekty w rozmowie", "🎉 konfetti, ❤️ serca, 🎈 balony, ❄️ śnieg, 🎆 fajerwerki, ⭐ gwiazdy po takiej wiadomości", AnimGroup.CHAT),
-    GAME_FX("gamefx", "Konfetti w grach", "Przy wygranej i nowym rekordzie", AnimGroup.CHAT),
-    TYPING("typing", "Animowane „pisze…”", "Skaczące kropki, gdy rozmówca pisze", AnimGroup.CHAT, continuous = true),
-    PRESENCE("presence", "Pulsujący status online", "Kropka przy aktywnych osobach pulsuje", AnimGroup.CHAT, continuous = true),
-    STORIES("stories", "Obracająca się obwódka relacji", "Kolorowy pierścień wokół nowych relacji", AnimGroup.CHAT, continuous = true),
-    REACTIONS("reactions", "Animowane reakcje", "Reakcje wyskakują, a nowa emotka wylatuje w górę", AnimGroup.CHAT),
+    SCREENS("screens", tr("Przejścia między ekranami"), tr("Ekrany wsuwają się, przenikają albo powiększają — tak jak w wybranym stylu"), AnimGroup.MOTION),
+    MENUS("menus", tr("Otwieranie i zamykanie menu"), tr("Menu wyrasta z przycisku, wysuwa się albo pojawia — zależnie od stylu"), AnimGroup.MOTION),
+    PANELS("panels", tr("Okna i panele"), tr("Okna dialogowe pojawiają się z powiększeniem, od dołu albo z odbiciem"), AnimGroup.MOTION),
+    COLORS("colors", tr("Zmiana stylu i kolorów"), tr("Kolory i tło przechodzą płynnie przy zmianie stylu i motywu"), AnimGroup.MOTION),
+    PRESS("press", tr("Efekty kliknięcia"), tr("Ugięcie, podświetlenie, fala albo „wciśnięcie” w ramkę — jak w oryginale stylu"), AnimGroup.TOUCH),
+    HOVER("hover", tr("Efekty najechania"), tr("Podświetlenie pod kursorem myszy albo rysikiem"), AnimGroup.TOUCH),
+    BUTTONS("buttons", tr("Animowane przyciski"), tr("Przycisk wysyłania, pływający przycisk, liczniki i ptaszki ✓✓"), AnimGroup.TOUCH),
+    APPEAR("appear", tr("Płynne pojawianie się elementów"), tr("Elementy list wsuwają się po kolei i płynnie zmieniają miejsce"), AnimGroup.APPEAR),
+    MSG_IN("msgin", tr("Wjazd nowych wiadomości"), tr("Sprężyna, wyskok albo pisanie znak po znaku — zależnie od stylu"), AnimGroup.APPEAR),
+    BLUR("blur", tr("Rozmycie i przezroczystość"), tr("Szkło rozmywa i załamuje to, co pod nim; wyłączone — matowe i szybsze"), AnimGroup.EFFECTS),
+    BG("bg", tr("Animowane tło"), tr("Gradient przesuwający się przy wysłaniu wiadomości, płynące chmury"), AnimGroup.EFFECTS, continuous = true),
+    TILT("tilt", tr("Odblaski i paralaksa"), tr("Szkło łapie światło, gdy przechylasz telefon (żyroskop)"), AnimGroup.EFFECTS, continuous = true),
+    SHIMMER("shimmer", tr("Połysk wczytywania"), tr("Migoczące zaślepki, zanim pojawią się rozmowy i zdjęcia"), AnimGroup.EFFECTS, continuous = true),
+    TITLE("title", tr("Animowany tytuł"), tr("Błysk, kursor terminala albo kropki — zależnie od stylu"), AnimGroup.EFFECTS, continuous = true),
+    CHAT_FX("chatfx", tr("Efekty w rozmowie"), tr("🎉 konfetti, ❤️ serca, 🎈 balony, ❄️ śnieg, 🎆 fajerwerki, ⭐ gwiazdy po takiej wiadomości"), AnimGroup.CHAT),
+    GAME_FX("gamefx", tr("Konfetti w grach"), tr("Przy wygranej i nowym rekordzie"), AnimGroup.CHAT),
+    TYPING("typing", tr("Animowane „pisze…”"), tr("Skaczące kropki, gdy rozmówca pisze"), AnimGroup.CHAT, continuous = true),
+    PRESENCE("presence", tr("Pulsujący status online"), tr("Kropka przy aktywnych osobach pulsuje"), AnimGroup.CHAT, continuous = true),
+    STORIES("stories", tr("Obracająca się obwódka relacji"), tr("Kolorowy pierścień wokół nowych relacji"), AnimGroup.CHAT, continuous = true),
+    REACTIONS("reactions", tr("Animowane reakcje"), tr("Reakcje wyskakują, a nowa emotka wylatuje w górę"), AnimGroup.CHAT),
 }
 
 /**

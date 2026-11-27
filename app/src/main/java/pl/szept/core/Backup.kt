@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONArray
@@ -38,7 +39,7 @@ object Backup {
     const val ITERATIONS = 300_000
     private const val CHUNK = 64 * 1024
 
-    class BadPassword : IOException("Błędne hasło albo to nie jest kopia Szepta")
+    class BadPassword : IOException(tr("Błędne hasło albo to nie jest kopia Szepta"))
     data class Info(val name: String, val created: Long, val app: String, val files: Int)
 
     private fun deriveKey(password: CharArray, salt: ByteArray, iter: Int): ByteArray =
@@ -97,13 +98,13 @@ object Backup {
 
         private fun next(): Boolean {
             if (done) return false
-            val len = try { data.readInt() } catch (e: EOFException) { throw IOException("Plik kopii jest niekompletny") }
-            if (len < 16 || len > CHUNK + 16) throw IOException("Uszkodzony plik kopii")
+            val len = try { data.readInt() } catch (e: EOFException) { throw IOException(tr("Plik kopii jest niekompletny")) }
+            if (len < 16 || len > CHUNK + 16) throw IOException(tr("Uszkodzony plik kopii"))
             val ct = ByteArray(len)
-            try { data.readFully(ct) } catch (e: EOFException) { throw IOException("Plik kopii jest niekompletny") }
+            try { data.readFully(ct) } catch (e: EOFException) { throw IOException(tr("Plik kopii jest niekompletny")) }
             buf = try { dec(ct, false) } catch (e: AEADBadTagException) {
                 try { dec(ct, true).also { done = true } } catch (e2: AEADBadTagException) {
-                    if (counter == 0) throw BadPassword() else throw IOException("Uszkodzony plik kopii")
+                    if (counter == 0) throw BadPassword() else throw IOException(tr("Uszkodzony plik kopii"))
                 }
             }
             counter++
@@ -249,10 +250,10 @@ object Backup {
         try { d.readFully(magic) } catch (e: EOFException) { throw BadPassword() }
         if (!magic.contentEquals(MAGIC)) throw BadPassword()
         val ver = d.readUnsignedByte()
-        if (ver != FORMAT) throw IOException("Kopia z nowszej wersji Szepta — zaktualizuj aplikację")
+        if (ver != FORMAT) throw IOException(tr("Kopia z nowszej wersji Szepta — zaktualizuj aplikację"))
         val salt = ByteArray(16).also { d.readFully(it) }
         val iter = d.readInt()
-        if (iter !in 10_000..10_000_000) throw IOException("Uszkodzony plik kopii")
+        if (iter !in 10_000..10_000_000) throw IOException(tr("Uszkodzony plik kopii"))
         val base = ByteArray(8).also { d.readFully(it) }
         return ZipInputStream(DecIn(input, deriveKey(password, salt, iter), base))
     }
@@ -272,7 +273,7 @@ object Backup {
                     val e = zip.nextEntry ?: break
                     val name = e.name
                     // ochrona przed ścieżkami typu „../”
-                    if (name.contains("..") || name.startsWith("/")) throw IOException("Uszkodzony plik kopii")
+                    if (name.contains("..") || name.startsWith("/")) throw IOException(tr("Uszkodzony plik kopii"))
                     val dest = File(stage, name)
                     dest.parentFile?.mkdirs()
                     dest.outputStream().use { zip.copyTo(it) }
@@ -281,11 +282,11 @@ object Backup {
                     if (files % 20 == 0) progress(min(90, files / 20))
                 }
             }
-            val m = meta ?: throw IOException("Uszkodzony plik kopii (brak opisu)")
+            val m = meta ?: throw IOException(tr("Uszkodzony plik kopii (brak opisu)"))
             val dbFile = File(stage, "db.sqlite")
-            if (!dbFile.exists()) throw IOException("Uszkodzony plik kopii (brak bazy)")
+            if (!dbFile.exists()) throw IOException(tr("Uszkodzony plik kopii (brak bazy)"))
             val prefsJson = JSONObject(File(stage, "prefs.json").readText())
-            if (!prefsJson.has("priv")) throw IOException("Kopia nie zawiera klucza konta")
+            if (!prefsJson.has("priv")) throw IOException(tr("Kopia nie zawiera klucza konta"))
 
             // --- podmiana danych (od tej chwili stare dane są zastępowane) ---
             core.stop()
@@ -334,6 +335,6 @@ object Backup {
                 }
             }
         }
-        throw IOException("Uszkodzony plik kopii")
+        throw IOException(tr("Uszkodzony plik kopii"))
     }
 }

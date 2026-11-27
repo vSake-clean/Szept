@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -270,6 +271,15 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+/** Koniec kreatora (po instalacji albo aktualizacji): zapamiętuje wybór; nowy język — Szept rusza od nowa. */
+private fun finishWizard(act: MainActivity) {
+    UiPrefs.wizard = pl.szept.ui.style.WIZARD_VERSION
+    UiPrefs.save(act)
+    act.getSharedPreferences("ui", Context.MODE_PRIVATE).edit().putString("seen_version", pl.szept.BuildConfig.VERSION_NAME).apply()
+    pl.szept.I18n.set(act, pl.szept.I18n.lang)
+    if (languageNeedsRestart()) restartApp(act)
+}
+
 @Composable
 fun Root(act: MainActivity) {
     var hasId by remember { mutableStateOf(App.core.hasIdentity) }
@@ -280,6 +290,15 @@ fun Root(act: MainActivity) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { App.core.wipeByAdmin() }
             act.onWiped()
         }
+    }
+    // pierwsze uruchomienie: najpierw kreator (język, wygląd), potem zakładanie konta
+    var firstWizard by remember { mutableStateOf(!hasId && (pl.szept.ui.style.shouldShowWizard() || pl.szept.ui.style.wizardResumePending(act))) }
+    if (firstWizard) {
+        pl.szept.ui.style.AppearanceWizard {
+            finishWizard(act)
+            firstWizard = false
+        }
+        return
     }
     if (!hasId) {
         OnboardingScreen {
@@ -314,12 +333,10 @@ fun Root(act: MainActivity) {
     }
     val nav = act.nav
     // kreator wyglądu: po instalacji i raz po aktualizacji do wersji z nowymi stylami (zastępuje wtedy „Co nowego”)
-    var wizard by remember { mutableStateOf(pl.szept.ui.style.shouldShowWizard()) }
+    var wizard by remember { mutableStateOf(pl.szept.ui.style.shouldShowWizard() || pl.szept.ui.style.wizardResumePending(act)) }
     if (wizard) {
         pl.szept.ui.style.AppearanceWizard {
-            UiPrefs.wizard = pl.szept.ui.style.WIZARD_VERSION
-            UiPrefs.save(act)
-            act.getSharedPreferences("ui", Context.MODE_PRIVATE).edit().putString("seen_version", pl.szept.BuildConfig.VERSION_NAME).apply()
+            finishWizard(act)
             wizard = false
         }
         return
@@ -333,32 +350,32 @@ fun Root(act: MainActivity) {
     var crashNotice by remember { mutableStateOf(pl.szept.core.CrashLog.takeCrashNotice()) }
     if (crashNotice && !whatsNew) StyleAlertDialog(
         onDismissRequest = { crashNotice = false },
-        title = { androidx.compose.material3.Text("Szept zamknął się przez błąd") },
+        title = { androidx.compose.material3.Text(tr("Szept zamknął się przez błąd")) },
         text = {
             androidx.compose.material3.Text(
-                "Przepraszamy! Szczegóły zapisały się w dzienniku błędów (bez treści wiadomości i kontaktów). " +
-                    "Wyślij go twórcy aplikacji — pomoże to naprawić błąd. Dziennik jest też w Ustawienia → Pomoc.",
+                tr("Przepraszamy! Szczegóły zapisały się w dzienniku błędów (bez treści wiadomości i kontaktów). ") +
+                    tr("Wyślij go twórcy aplikacji — pomoże to naprawić błąd. Dziennik jest też w Ustawienia → Pomoc."),
             )
         },
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = { crashNotice = false; shareText(act, pl.szept.core.CrashLog.read()) }) {
-                androidx.compose.material3.Text("Wyślij dziennik")
+                androidx.compose.material3.Text(tr("Wyślij dziennik"))
             }
         },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { crashNotice = false }) { androidx.compose.material3.Text("Nie teraz") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { crashNotice = false }) { androidx.compose.material3.Text(tr("Nie teraz")) } },
     )
     if (whatsNew) {
         fun done() { whatsNew = false; uiPrefs.edit().putString("seen_version", pl.szept.BuildConfig.VERSION_NAME).apply() }
         if (notes == null) done()
         else StyleAlertDialog(
             onDismissRequest = { done() },
-            title = { androidx.compose.material3.Text("Co nowego w wersji ${pl.szept.BuildConfig.VERSION_NAME}") },
+            title = { androidx.compose.material3.Text(tr("Co nowego w wersji {0}", pl.szept.BuildConfig.VERSION_NAME)) },
             text = {
                 androidx.compose.foundation.layout.Column(Modifier.verticalScroll(rememberScrollState())) {
                     notes.forEach { androidx.compose.material3.Text("• $it", Modifier.padding(vertical = 2.dp)) }
                 }
             },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { done() }) { androidx.compose.material3.Text("Super!") } },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { done() }) { androidx.compose.material3.Text(tr("Super!")) } },
         )
     }
     val s = nav.current
@@ -427,6 +444,11 @@ private fun RouteContent(s: Screen, nav: Nav, act: MainActivity) {
         Screen.Games -> pl.szept.ui.games.GamesScreen(nav)
         Screen.Styles -> pl.szept.ui.style.StylesScreen(nav)
         Screen.Animations -> pl.szept.ui.style.AnimationsScreen(nav)
-        Screen.Wizard -> pl.szept.ui.style.AppearanceWizard { nav.back() }
+        Screen.Wizard -> pl.szept.ui.style.AppearanceWizard {
+            pl.szept.I18n.set(act, pl.szept.I18n.lang)
+            nav.back()
+            if (languageNeedsRestart()) restartApp(act)
+        }
+        Screen.Language -> LanguageScreen(nav)
     }
 }

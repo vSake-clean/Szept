@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import kotlinx.coroutines.launch
 
 import androidx.compose.ui.semantics.contentDescription
@@ -79,7 +80,7 @@ val ACCENTS = listOf(
     Brand, Color(0xFF0B8A6F), Color(0xFF2F6FDE), Color(0xFFD14D72),
     Color(0xFFE65100), Color(0xFF7B3FB5), Color(0xFF00838F), Color(0xFFC0392B),
 )
-val ACCENT_NAMES = listOf("Fiolet", "Zieleń", "Błękit", "Róż", "Pomarańcz", "Śliwka", "Morski", "Czerwień")
+val ACCENT_NAMES = listOf(tr("Fiolet"), tr("Zieleń"), tr("Błękit"), tr("Róż"), tr("Pomarańcz"), tr("Śliwka"), tr("Morski"), tr("Czerwień"))
 
 /** Tapety czatów: gradienty (bez pobierania czegokolwiek z sieci). */
 val WALLPAPERS = listOf(
@@ -308,7 +309,7 @@ fun openMap(ctx: Context, lat: Double, lon: Double, label: String) {
     } catch (e: Exception) {
         try {
             ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.openstreetmap.org/?mlat=$l&mlon=$o#map=16/$l/$o")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (_: Exception) { toast(ctx, "Brak aplikacji map") }
+        } catch (_: Exception) { toast(ctx, tr("Brak aplikacji map")) }
     }
 }
 
@@ -350,6 +351,7 @@ sealed class Screen {
     data object Styles : Screen()
     data object Animations : Screen()
     data object Wizard : Screen()
+    data object Language : Screen()
 }
 
 class Nav {
@@ -405,8 +407,8 @@ fun Avatar(name: String, key: String, size: Dp = 46.dp, group: Boolean = false, 
 fun ContactAvatar(c: pl.szept.data.Contact?, size: Dp = 46.dp) =
     Avatar(c?.display ?: "", c?.pk ?: "", size, false, c?.avatar?.ifBlank { null })
 
-private val timeFmt = SimpleDateFormat("HH:mm", Locale("pl"))
-private val dayFmt = SimpleDateFormat("d MMM", Locale("pl"))
+private val timeFmt = SimpleDateFormat("HH:mm", pl.szept.I18n.locale)
+private val dayFmt = SimpleDateFormat("d MMM", pl.szept.I18n.locale)
 
 fun formatTime(ts: Long): String = timeFmt.format(Date(ts))
 
@@ -432,7 +434,7 @@ fun formatTtl(sec: Int): String = when {
 fun formatSize(b: Long): String = when {
     b < 1024 -> "$b B"
     b < 1024 * 1024 -> "${b / 1024} KB"
-    else -> "%.1f MB".format(b / 1024.0 / 1024.0)
+    else -> tr("%.1f MB").format(b / 1024.0 / 1024.0)
 }
 
 fun toast(ctx: Context, text: String) {
@@ -441,14 +443,14 @@ fun toast(ctx: Context, text: String) {
 }
 
 fun copyText(ctx: Context, text: String) {
-    ctx.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Szept", text))
-    toast(ctx, "Skopiowano")
+    ctx.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(tr("Szept"), text))
+    toast(ctx, tr("Skopiowano"))
 }
 
 fun shareText(ctx: Context, text: String) {
     ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text)
-    }, "Udostępnij"))
+    }, tr("Udostępnij")))
 }
 
 fun fileUri(ctx: Context, f: File) = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
@@ -457,7 +459,7 @@ fun fileUri(ctx: Context, f: File) = FileProvider.getUriForFile(ctx, ctx.package
 fun openUrl(ctx: Context, url: String) {
     try {
         ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (e: Exception) { toast(ctx, "Nie można otworzyć przeglądarki") }
+    } catch (e: Exception) { toast(ctx, tr("Nie można otworzyć przeglądarki")) }
 }
 
 /** Otwiera instalator Androida dla pliku APK (użytkownik sam potwierdza instalację). */
@@ -467,7 +469,7 @@ fun installApk(ctx: Context, path: String) {
             setDataAndType(fileUri(ctx, File(path)), "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         })
-    } catch (e: Exception) { toast(ctx, "Nie można otworzyć instalatora") }
+    } catch (e: Exception) { toast(ctx, tr("Nie można otworzyć instalatora")) }
 }
 
 /** Porównuje wersje typu „1.5” / „1.10”. Zwraca true, gdy a > b. */
@@ -487,7 +489,7 @@ fun openFile(ctx: Context, path: String, mime: String) {
             setDataAndType(fileUri(ctx, File(path)), mime.ifEmpty { "*/*" })
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         })
-    } catch (e: Exception) { toast(ctx, "Brak aplikacji do otwarcia tego pliku") }
+    } catch (e: Exception) { toast(ctx, tr("Brak aplikacji do otwarcia tego pliku")) }
 }
 
 fun shareFile(ctx: Context, path: String, mime: String) {
@@ -496,8 +498,8 @@ fun shareFile(ctx: Context, path: String, mime: String) {
             type = mime.ifEmpty { "*/*" }
             putExtra(Intent.EXTRA_STREAM, fileUri(ctx, File(path)))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }, "Udostępnij / zapisz"))
-    } catch (e: Exception) { toast(ctx, "Nie można udostępnić") }
+        }, tr("Udostępnij / zapisz")))
+    } catch (e: Exception) { toast(ctx, tr("Nie można udostępnić")) }
 }
 
 /** Udostępnia zainstalowaną aplikację (plik APK) — np. przez Quick Share, Bluetooth, komunikator. */
@@ -506,15 +508,15 @@ fun shareApp(ctx: Context) = pl.szept.App.work.launch {
         // kopiowanie ~20 MB poza wątkiem interfejsu
         val out = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             ctx.cacheDir.listFiles()?.filter { it.name.startsWith("Szept") && it.name.endsWith(".apk") }?.forEach { it.delete() }
-            File(ctx.cacheDir, "Szept-${pl.szept.BuildConfig.VERSION_NAME}.apk").also { File(ctx.applicationInfo.sourceDir).copyTo(it, overwrite = true) }
+            File(ctx.cacheDir, tr("Szept-{0}.apk", pl.szept.BuildConfig.VERSION_NAME)).also { File(ctx.applicationInfo.sourceDir).copyTo(it, overwrite = true) }
         }
         ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.android.package-archive"
             putExtra(Intent.EXTRA_STREAM, fileUri(ctx, out))
             putExtra(Intent.EXTRA_TEXT, "Zainstaluj Szept ${pl.szept.BuildConfig.VERSION_NAME} — prywatny komunikator bez serwera. Potem dodaj mnie: " + pl.szept.App.core.myCode())
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }, "Wyślij aplikację Szept"))
-    } catch (e: Exception) { toast(ctx, "Nie udało się udostępnić aplikacji: ${e.message}") }
+        }, tr("Wyślij aplikację Szept")))
+    } catch (e: Exception) { toast(ctx, tr("Nie udało się udostępnić aplikacji: {0}", e.message)) }
 }
 
 /** Pamięć podręczna miniatur i obrazów. */
@@ -561,7 +563,7 @@ fun BitmapImage(bmp: ImageBitmap, modifier: Modifier, crop: Boolean = true) {
 @androidx.compose.runtime.Composable
 fun VerifiedBadge(size: androidx.compose.ui.unit.Dp = 16.dp) {
     androidx.compose.material3.Icon(
-        androidx.compose.material.icons.Icons.Filled.Verified, "Zweryfikowane",
+        androidx.compose.material.icons.Icons.Filled.Verified, tr("Zweryfikowane"),
         androidx.compose.ui.Modifier.padding(start = 4.dp).size(size), tint = Color(0xFF1E88E5),
     )
 }
@@ -575,15 +577,15 @@ fun presenceColor(s: pl.szept.core.Core.Seen): Color = when (s) {
 }
 
 fun presenceText(s: pl.szept.core.Core.Seen, at: Long, now: Long = System.currentTimeMillis()): String = when (s) {
-    pl.szept.core.Core.Seen.ACTIVE -> "aktywny(-a) teraz"
-    pl.szept.core.Core.Seen.IDLE -> "w tle — aplikacja działa"
-    pl.szept.core.Core.Seen.AWAY -> "zaraz wraca"
+    pl.szept.core.Core.Seen.ACTIVE -> tr("aktywny(-a) teraz")
+    pl.szept.core.Core.Seen.IDLE -> tr("w tle — aplikacja działa")
+    pl.szept.core.Core.Seen.AWAY -> tr("zaraz wraca")
     pl.szept.core.Core.Seen.INACTIVE -> {
         val min = ((now - at) / 60_000).coerceAtLeast(1)
-        "nieaktywny(-a) · " + when {
-            min < 60 -> "$min min temu"
-            min < 24 * 60 -> "${min / 60} godz. temu"
-            else -> "${min / 1440} dni temu"
+        tr("nieaktywny(-a) · ") + when {
+            min < 60 -> tr("{0} min temu", min)
+            min < 24 * 60 -> tr("{0} godz. temu", min / 60)
+            else -> tr("{0} dni temu", min / 1440)
         }
     }
 }
@@ -605,7 +607,7 @@ fun PresenceDot(s: pl.szept.core.Core.Seen, modifier: Modifier = Modifier, size:
             .size(size).clip(androidx.compose.foundation.shape.CircleShape)
             .background(MaterialTheme.colorScheme.surface).padding(2.dp).clip(androidx.compose.foundation.shape.CircleShape)
             .background(presenceColor(s))
-            .semantics { contentDescription = "Status: " + presenceText(s, 0L).substringBefore(" ·") },
+            .semantics { contentDescription = tr("Status: ") + presenceText(s, 0L).substringBefore(" ·") },
     )
 }
 
@@ -627,9 +629,9 @@ fun rememberFastSend(): androidx.compose.runtime.MutableState<FastSendState> {
 
 /** Opis stanu szybkiej wysyłki, np. „włączona automatycznie (Wi-Fi)”. */
 fun fastSendLabel(s: FastSendState): String = when (s.mode) {
-    1 -> "włączona"
-    2 -> "wyłączona"
-    else -> if (s.active) "włączona automatycznie (Wi-Fi)" else "wyłączona automatycznie (dane komórkowe)"
+    1 -> tr("włączona")
+    2 -> tr("wyłączona")
+    else -> if (s.active) tr("włączona automatycznie (Wi-Fi)") else tr("wyłączona automatycznie (dane komórkowe)")
 }
 
 /**
@@ -646,7 +648,7 @@ fun FastSendChip(modifier: Modifier = Modifier) {
             core.setFastSendMode(if (st.active) 2 else 1)
             st = FastSendState(core.fastSendMode, core.fastSendActive(), core.onWifi())
         },
-        label = { androidx.compose.material3.Text(if (st.active) "⚡ Szybko" else "⚡ Szybko: wył.") },
-        modifier = modifier.semantics { contentDescription = "Szybka wysyłka: " + fastSendLabel(st) },
+        label = { androidx.compose.material3.Text(if (st.active) tr("⚡ Szybko") else tr("⚡ Szybko: wył.")) },
+        modifier = modifier.semantics { contentDescription = tr("Szybka wysyłka: ") + fastSendLabel(st) },
     )
 }

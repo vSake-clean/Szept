@@ -2,6 +2,12 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.4
+- Wybór języka: polski 🇵🇱 albo English (flaga Anglii) — cały Szept, łącznie z grami i powiadomieniami. Po instalacji kreator startuje w języku telefonu.
+- Kreator pierwszego uruchomienia zaczyna się od języka, a potem prowadzi przez wygląd. Po tej aktualizacji każdy zobaczy go jeszcze raz — konto, nazwa, ID, rozmowy i grupy zostają bez zmian.
+- Ustawienia → „Kreator: język i wygląd” otwiera ten sam ekran co przy pierwszym uruchomieniu, a „Język / Language” zmienia język od razu.
+- Przy nowej instalacji najpierw wybierasz język i wygląd, a dopiero potem zakładasz konto.
+
 ## 3.3.5
 - Aktualizacje i duże pliki pobierają się do końca. Wcześniej przekaźnik oddawał najwyżej 500 kawałków pliku naraz, więc aktualizacja 3.3.4 (ponad 1100 kawałków) stawała w połowie i nie dało się jej zainstalować.
 - Plik jest teraz rozkładany na kilka przekaźników tak, żeby każdy oddał swoją część w całości — działa to także u osób, które mają jeszcze starszą wersję Szepta.

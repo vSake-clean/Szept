@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -92,7 +93,7 @@ val MORE_REACTIONS = listOf(
     "🥳", "😬", "👀", "✅", "❌", "🍕", "⚽", "🎮", "☕", "🍺", "💔", "🤣", "😇", "🙈",
 )
 
-private val whenFmt = SimpleDateFormat("d MMM, HH:mm", Locale("pl"))
+private val whenFmt = SimpleDateFormat("d MMM, HH:mm", pl.szept.I18n.locale)
 
 /** „dziś 18:30”, „jutro 08:00”, „12 paź, 09:15”. */
 fun formatWhen(ts: Long): String {
@@ -101,7 +102,7 @@ fun formatWhen(ts: Long): String {
     val tomorrow = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
     fun same(a: Calendar, b: Calendar) = a.get(Calendar.YEAR) == b.get(Calendar.YEAR) && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
     return when {
-        same(c, today) -> "dziś " + formatTime(ts)
+        same(c, today) -> tr("dziś ") + formatTime(ts)
         same(c, tomorrow) -> "jutro " + formatTime(ts)
         else -> whenFmt.format(Date(ts))
     }
@@ -134,10 +135,10 @@ fun MessageActionsDialog(
     if (confirmAll) {
         StyleAlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Usunąć u wszystkich?") },
-            text = { Text("Wiadomość zniknie u wszystkich uczestników rozmowy (także tych, którzy są teraz offline — gdy się połączą).") },
-            confirmButton = { TextButton(onClick = { core.deleteForEveryone(m.id); onDismiss() }) { Text("Usuń") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+            title = { Text(tr("Usunąć u wszystkich?")) },
+            text = { Text(tr("Wiadomość zniknie u wszystkich uczestników rozmowy (także tych, którzy są teraz offline — gdy się połączą).")) },
+            confirmButton = { TextButton(onClick = { core.deleteForEveryone(m.id); onDismiss() }) { Text(tr("Usuń")) } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
         )
         return
     }
@@ -145,7 +146,7 @@ fun MessageActionsDialog(
     val canReact = interact && m.kind != Kind.SYSTEM && !(m.xmode == XMode.AFTER_OPEN)
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Wiadomość") },
+        title = { Text(tr("Wiadomość")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (canReact) {
@@ -159,7 +160,7 @@ fun MessageActionsDialog(
                                     .clickable { core.react(m.id, e); onDismiss() }.padding(4.dp),
                             )
                         }
-                        IconButton(onClick = { moreEmoji = !moreEmoji }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Add, "Więcej reakcji") }
+                        IconButton(onClick = { moreEmoji = !moreEmoji }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Add, tr("Więcej reakcji")) }
                     }
                     if (moreEmoji) FlowRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         MORE_REACTIONS.forEach { e ->
@@ -168,38 +169,38 @@ fun MessageActionsDialog(
                     }
                     HorizontalDivider()
                 }
-                if (onReply != null && m.kind != Kind.SYSTEM) DialogItem("Odpowiedz") { onReply() }
-                if (core.canEdit(m)) DialogItem("Edytuj") { onEdit() }
-                if (m.kind == Kind.TEXT && !ephemeral && m.body.isNotEmpty()) DialogItem("Kopiuj tekst") { copyText(ctx, m.body); onDismiss() }
-                if (core.canForward(m)) DialogItem("Przekaż dalej") { onForward() }
+                if (onReply != null && m.kind != Kind.SYSTEM) DialogItem(tr("Odpowiedz")) { onReply() }
+                if (core.canEdit(m)) DialogItem(tr("Edytuj")) { onEdit() }
+                if (m.kind == Kind.TEXT && !ephemeral && m.body.isNotEmpty()) DialogItem(tr("Kopiuj tekst")) { copyText(ctx, m.body); onDismiss() }
+                if (core.canForward(m)) DialogItem(tr("Przekaż dalej")) { onForward() }
                 if (m.kind != Kind.SYSTEM && !ephemeral && core.canPin(m.chat)) {
-                    DialogItem(if (pinned) "Odepnij" else if (m.chat.startsWith("g:")) "Przypnij (ogłoszenie)" else "Przypnij") {
+                    DialogItem(if (pinned) tr("Odepnij") else if (m.chat.startsWith("g:")) tr("Przypnij (ogłoszenie)") else tr("Przypnij")) {
                         core.pinMessage(m.id, !pinned); onDismiss()
                     }
                 }
-                if (m.kind == Kind.POLL) DialogItem("Kto głosował") { onVoters() }
-                if (onTranslate != null && m.kind == Kind.TEXT && m.ex.game == null && m.body.isNotBlank() && !ephemeral) DialogItem("🌐 Przetłumacz (w telefonie)") { onTranslate() }
+                if (m.kind == Kind.POLL) DialogItem(tr("Kto głosował")) { onVoters() }
+                if (onTranslate != null && m.kind == Kind.TEXT && m.ex.game == null && m.body.isNotBlank() && !ephemeral) DialogItem(tr("🌐 Przetłumacz (w telefonie)")) { onTranslate() }
                 if (onTranscribe != null && m.kind == Kind.VOICE && m.path != null && !ephemeral) {
-                    DialogItem(if (m.body.isBlank()) "📝 Zamień na tekst (w telefonie)" else "📝 Zamień na tekst ponownie") { onTranscribe() }
+                    DialogItem(if (m.body.isBlank()) tr("📝 Zamień na tekst (w telefonie)") else tr("📝 Zamień na tekst ponownie")) { onTranscribe() }
                 }
-                if (onSaveGif != null) DialogItem("Zapisz w moich GIF-ach") { onSaveGif() }
-                if ((m.kind == Kind.IMAGE || m.kind == Kind.VIDEO) && m.path != null && !ephemeral) DialogItem("Zapisz w galerii") { onSave() }
-                if (m.path != null && !ephemeral) DialogItem("Udostępnij") { shareFile(ctx, m.path, m.media?.mime ?: ""); onDismiss() }
-                if (m.mine && group != null && m.kind != Kind.SYSTEM) DialogItem("Informacje (kto przeczytał)") { onInfo() }
-                if (m.mine && m.status == St.FAILED) DialogItem("Ponów wysyłanie") { core.retry(m.id); onDismiss() }
+                if (onSaveGif != null) DialogItem(tr("Zapisz w moich GIF-ach")) { onSaveGif() }
+                if ((m.kind == Kind.IMAGE || m.kind == Kind.VIDEO) && m.path != null && !ephemeral) DialogItem(tr("Zapisz w galerii")) { onSave() }
+                if (m.path != null && !ephemeral) DialogItem(tr("Udostępnij")) { shareFile(ctx, m.path, m.media?.mime ?: ""); onDismiss() }
+                if (m.mine && group != null && m.kind != Kind.SYSTEM) DialogItem(tr("Informacje (kto przeczytał)")) { onInfo() }
+                if (m.mine && m.status == St.FAILED) DialogItem(tr("Ponów wysyłanie")) { core.retry(m.id); onDismiss() }
                 HorizontalDivider()
-                DialogItem("Usuń u mnie", MaterialTheme.colorScheme.error) { core.deleteForMe(m.id); onDismiss() }
+                DialogItem(tr("Usuń u mnie"), MaterialTheme.colorScheme.error) { core.deleteForMe(m.id); onDismiss() }
                 if (core.canDeleteForOthers(m) && m.kind != Kind.SYSTEM) {
                     if (group == null) {
-                        DialogItem("Usuń u rozmówcy (u mnie zostaje)", MaterialTheme.colorScheme.error) {
-                            core.deleteFor(m.id, core.participants(m.chat), false); toast(ctx, "Usunięto u rozmówcy"); onDismiss()
+                        DialogItem(tr("Usuń u rozmówcy (u mnie zostaje)"), MaterialTheme.colorScheme.error) {
+                            core.deleteFor(m.id, core.participants(m.chat), false); toast(ctx, tr("Usunięto u rozmówcy")); onDismiss()
                         }
-                    } else DialogItem("Usuń u wybranych osób…", MaterialTheme.colorScheme.error) { onPickPeople() }
-                    DialogItem("Usuń u wszystkich", MaterialTheme.colorScheme.error) { confirmAll = true }
+                    } else DialogItem(tr("Usuń u wybranych osób…"), MaterialTheme.colorScheme.error) { onPickPeople() }
+                    DialogItem(tr("Usuń u wszystkich"), MaterialTheme.colorScheme.error) { confirmAll = true }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Zamknij")) } },
     )
 }
 
@@ -209,7 +210,7 @@ fun ReactionsDialog(m: Message, list: List<Reaction>, onDismiss: () -> Unit) {
     val core = App.core
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Reakcje (${list.size})") },
+        title = { Text(tr("Reakcje ({0})", list.size)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 list.sortedWith(compareBy({ it.pk != core.myPub }, { it.emoji })).forEach { r ->
@@ -222,13 +223,13 @@ fun ReactionsDialog(m: Message, list: List<Reaction>, onDismiss: () -> Unit) {
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(if (me) "Ty" else core.db.nameOf(r.pk), style = MaterialTheme.typography.bodyLarge)
-                            if (me) Text("Dotknij, aby usunąć", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (me) Text(tr("Dotknij, aby usunąć"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Zamknij")) } },
     )
 }
 
@@ -243,24 +244,24 @@ fun ReadByDialog(m: Message, g: Group, onDismiss: () -> Unit) {
     val notYet = others.filter { it !in read }
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Informacje o wiadomości") },
+        title = { Text(tr("Informacje o wiadomości")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Wysłano: ${formatWhen(m.ts)}", style = MaterialTheme.typography.bodyMedium)
+                Text(tr("Wysłano: {0}", formatWhen(m.ts)), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(10.dp))
-                Text("✓✓ Przeczytali (${read.size})", fontWeight = FontWeight.Bold, color = Color(0xFF2F8CFF))
+                Text(tr("✓✓ Przeczytali ({0})", read.size), fontWeight = FontWeight.Bold, color = Color(0xFF2F8CFF))
                 read.forEach { mem -> PersonLine(mem, formatTime(r[mem.pk]?.second ?: 0)) }
                 Spacer(Modifier.height(10.dp))
-                Text("Jeszcze nie (${notYet.size})", fontWeight = FontWeight.Bold)
+                Text(tr("Jeszcze nie ({0})", notYet.size), fontWeight = FontWeight.Bold)
                 notYet.forEach { mem -> PersonLine(mem, "") }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Osoby, które wyłączyły potwierdzenia odczytu, zawsze są na liście „jeszcze nie”.",
+                    tr("Osoby, które wyłączyły potwierdzenia odczytu, zawsze są na liście „jeszcze nie”."),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Zamknij")) } },
     )
 }
 
@@ -282,18 +283,18 @@ fun VotersDialog(m: Message, votes: List<Vote>, onDismiss: () -> Unit) {
     val poll = remember(m.body) { Poll.parse(m.body) }
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(poll?.q ?: "Ankieta") },
+        title = { Text(poll?.q ?: tr("Ankieta")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 poll?.opts?.forEachIndexed { i, o ->
                     val who = votes.filter { i in it.sel }
                     Text("$o — ${who.size}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-                    if (who.isEmpty()) Text("nikt", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (who.isEmpty()) Text(tr("nikt"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     who.forEach { v -> Text("• " + if (v.pk == core.myPub) "Ty" else core.db.nameOf(v.pk), style = MaterialTheme.typography.bodyMedium) }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Zamknij")) } },
     )
 }
 
@@ -307,29 +308,29 @@ fun PollDialog(onDismiss: () -> Unit, onSend: (Poll) -> Unit) {
     val ready = q.isNotBlank() && opts.count { it.isNotBlank() } >= 2
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nowa ankieta") },
+        title = { Text(tr("Nowa ankieta")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(q, { q = it.take(300) }, Modifier.fillMaxWidth(), label = { Text("Pytanie") })
+                OutlinedTextField(q, { q = it.take(300) }, Modifier.fillMaxWidth(), label = { Text(tr("Pytanie")) })
                 Spacer(Modifier.height(6.dp))
                 opts.forEachIndexed { i, o ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(o, { v -> opts[i] = v.take(100) }, Modifier.weight(1f), label = { Text("Odpowiedź ${i + 1}") }, singleLine = true)
-                        if (opts.size > 2) IconButton(onClick = { opts.removeAt(i) }) { Icon(Icons.Default.Close, "Usuń odpowiedź") }
+                        OutlinedTextField(o, { v -> opts[i] = v.take(100) }, Modifier.weight(1f), label = { Text(tr("Odpowiedź {0}", i + 1)) }, singleLine = true)
+                        if (opts.size > 2) IconButton(onClick = { opts.removeAt(i) }) { Icon(Icons.Default.Close, tr("Usuń odpowiedź")) }
                     }
                 }
-                if (opts.size < 10) TextButton(onClick = { opts.add("") }) { Text("+ Dodaj odpowiedź") }
+                if (opts.size < 10) TextButton(onClick = { opts.add("") }) { Text(tr("+ Dodaj odpowiedź")) }
                 Row(Modifier.fillMaxWidth().clickable { multi = !multi }, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Można wybrać kilka odpowiedzi", Modifier.weight(1f))
+                    Text(tr("Można wybrać kilka odpowiedzi"), Modifier.weight(1f))
                     Switch(multi, { multi = it })
                 }
-                Text("Wszyscy w rozmowie widzą, kto jak zagłosował.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Wszyscy w rozmowie widzą, kto jak zagłosował."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {
-            TextButton(enabled = ready, onClick = { onSend(Poll(q.trim(), opts.map { it.trim() }.filter { it.isNotEmpty() }, multi)) }) { Text("Wyślij") }
+            TextButton(enabled = ready, onClick = { onSend(Poll(q.trim(), opts.map { it.trim() }.filter { it.isNotEmpty() }, multi)) }) { Text(tr("Wyślij")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -340,24 +341,24 @@ fun PollDialog(onDismiss: () -> Unit, onSend: (Poll) -> Unit) {
 fun LocationDialog(onDismiss: () -> Unit, onPick: (liveMs: Long) -> Unit) {
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lokalizacja") },
+        title = { Text(tr("Lokalizacja")) },
         text = {
             Column {
-                DialogItem("📍 Tylko teraz — wyślij, gdzie jestem") { onPick(0) }
-                Text("Na żywo — pozycja aktualizuje się przez:", Modifier.padding(top = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.labelLarge)
+                DialogItem(tr("📍 Tylko teraz — wyślij, gdzie jestem")) { onPick(0) }
+                Text(tr("Na żywo — pozycja aktualizuje się przez:"), Modifier.padding(top = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(15 to "15 min", 30 to "30 min", 60 to "1 godz.", 120 to "2 godz.", 480 to "8 godz.").forEach { (min, t) ->
+                    listOf(15 to tr("15 min"), 30 to tr("30 min"), 60 to tr("1 godz."), 120 to tr("2 godz."), 480 to tr("8 godz.")).forEach { (min, t) ->
                         AssistChip(onClick = { onPick(min * 60_000L) }, label = { Text("🟢 $t") })
                     }
                 }
                 Text(
-                    "Pozycję ustala Twój telefon (GPS lub sieć) i trafia ona — zaszyfrowana — tylko do uczestników tej rozmowy. " +
-                        "Udostępnianie na żywo możesz zakończyć w każdej chwili.",
+                    tr("Pozycję ustala Twój telefon (GPS lub sieć) i trafia ona — zaszyfrowana — tylko do uczestników tej rozmowy. ") +
+                        tr("Udostępnianie na żywo możesz zakończyć w każdej chwili."),
                     Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -374,15 +375,15 @@ fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
     }.timeInMillis
     val now = System.currentTimeMillis()
     val options = buildList {
-        add("Za godzinę" to now + 3600_000L)
-        at(0, 20).takeIf { it > now + 5 * 60_000 }?.let { add("Dziś wieczorem" to it) }
-        add("Jutro rano" to at(1, 8))
-        add("Jutro w południe" to at(1, 12))
-        add("Jutro wieczorem" to at(1, 18))
+        add(tr("Za godzinę") to now + 3600_000L)
+        at(0, 20).takeIf { it > now + 5 * 60_000 }?.let { add(tr("Dziś wieczorem") to it) }
+        add(tr("Jutro rano") to at(1, 8))
+        add(tr("Jutro w południe") to at(1, 12))
+        add(tr("Jutro wieczorem") to at(1, 18))
     }
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Zaplanuj wysłanie") },
+        title = { Text(tr("Zaplanuj wysłanie")) },
         text = {
             Column {
                 options.forEach { (label, t) ->
@@ -391,14 +392,14 @@ fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
                         Text(formatWhen(t), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                DialogItem("📅 Wybierz datę i godzinę…") { custom = true }
+                DialogItem(tr("📅 Wybierz datę i godzinę…")) { custom = true }
                 Text(
-                    "Telefon wyśle wiadomość sam, także przy zamkniętej aplikacji. Gdy telefon głęboko śpi, może się spóźnić o kilka minut.",
+                    tr("Telefon wyśle wiadomość sam, także przy zamkniętej aplikacji. Gdy telefon głęboko śpi, może się spóźnić o kilka minut."),
                     Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -424,13 +425,13 @@ private fun DateTimeDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
     if (step == 0) {
         DatePickerDialog(
             onDismissRequest = onDismiss,
-            confirmButton = { TextButton(onClick = { step = 1 }) { Text("Dalej") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+            confirmButton = { TextButton(onClick = { step = 1 }) { Text(tr("Dalej")) } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
         ) { DatePicker(dateState) }
     } else {
         StyleAlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Godzina") },
+            title = { Text(tr("Godzina")) },
             text = { TimePicker(timeState) },
             confirmButton = {
                 TextButton(onClick = {
@@ -439,19 +440,19 @@ private fun DateTimeDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
                         set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH), timeState.hour, timeState.minute, 0)
                         set(Calendar.MILLISECOND, 0)
                     }.timeInMillis
-                    if (local <= System.currentTimeMillis() + 30_000) toast(ctx, "Wybierz godzinę w przyszłości") else onPick(local)
-                }) { Text("Zaplanuj") }
+                    if (local <= System.currentTimeMillis() + 30_000) toast(ctx, tr("Wybierz godzinę w przyszłości")) else onPick(local)
+                }) { Text(tr("Zaplanuj")) }
             },
-            dismissButton = { TextButton(onClick = { step = 0 }) { Text("Wstecz") } },
+            dismissButton = { TextButton(onClick = { step = 0 }) { Text(tr("Wstecz")) } },
         )
     }
 }
 
 fun scheduledPreview(s: Scheduled): String = when (s.kind) {
-    Kind.IMAGE -> "📷 Zdjęcie" + if (s.body.isNotEmpty()) ": " + s.body else ""
-    Kind.VIDEO -> "🎬 Wideo" + if (s.body.isNotEmpty()) ": " + s.body else ""
-    Kind.VOICE -> "🎤 Wiadomość głosowa"
-    Kind.FILE -> "📎 " + (s.att?.optString("name") ?: "Plik")
+    Kind.IMAGE -> tr("📷 Zdjęcie") + if (s.body.isNotEmpty()) ": " + s.body else ""
+    Kind.VIDEO -> tr("🎬 Wideo") + if (s.body.isNotEmpty()) ": " + s.body else ""
+    Kind.VOICE -> tr("🎤 Wiadomość głosowa")
+    Kind.FILE -> "📎 " + (s.att?.optString("name") ?: tr("Plik"))
     else -> s.body
 }
 
@@ -460,30 +461,30 @@ fun ScheduledListDialog(list: List<Scheduled>, onDismiss: () -> Unit) {
     val core = App.core
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Zaplanowane (${list.size})") },
+        title = { Text(tr("Zaplanowane ({0})", list.size)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (list.isEmpty()) Text("Brak zaplanowanych wiadomości.")
+                if (list.isEmpty()) Text(tr("Brak zaplanowanych wiadomości."))
                 list.forEach { s ->
                     Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Column(Modifier.padding(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Schedule, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (App.core.isWhenOnline(s)) "🟢 Gdy będzie online" else formatWhen(s.at), fontWeight = FontWeight.Bold)
+                                Text(if (App.core.isWhenOnline(s)) tr("🟢 Gdy będzie online") else formatWhen(s.at), fontWeight = FontWeight.Bold)
                                 if (s.xmode == XMode.AFTER_OPEN) Text("  ⏱", color = Fire)
                             }
                             Text(scheduledPreview(s), maxLines = 3, overflow = TextOverflow.Ellipsis)
                             Row {
-                                TextButton(onClick = { core.sendScheduledNow(s.id) }) { Text("Wyślij teraz") }
-                                TextButton(onClick = { core.cancelScheduled(s.id) }) { Text("Usuń", color = MaterialTheme.colorScheme.error) }
+                                TextButton(onClick = { core.sendScheduledNow(s.id) }) { Text(tr("Wyślij teraz")) }
+                                TextButton(onClick = { core.cancelScheduled(s.id) }) { Text(tr("Usuń"), color = MaterialTheme.colorScheme.error) }
                             }
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Zamknij")) } },
     )
 }
 
@@ -501,12 +502,12 @@ fun PinnedBar(m: Message, index: Int, count: Int, canUnpin: Boolean, onClick: ()
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                if (count > 1) "Przypięta wiadomość ${index + 1}/$count" else "Przypięta wiadomość",
+                if (count > 1) tr("Przypięta wiadomość {0}/{1}", index + 1, count) else tr("Przypięta wiadomość"),
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold,
             )
             Text(Db.preview(m).replace('\n', ' '), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
         }
-        if (canUnpin) IconButton(onClick = onUnpin) { Icon(Icons.Default.Close, "Odepnij") } else Spacer(Modifier.width(12.dp))
+        if (canUnpin) IconButton(onClick = onUnpin) { Icon(Icons.Default.Close, tr("Odepnij")) } else Spacer(Modifier.width(12.dp))
     }
 }
 
@@ -519,10 +520,10 @@ fun EditBar(m: Message, onCancel: () -> Unit) {
         Icon(Icons.Default.Edit, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            Text("Edytujesz wiadomość", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text(tr("Edytujesz wiadomość"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Text(Db.preview(m).replace('\n', ' '), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
         }
-        IconButton(onClick = onCancel) { Icon(Icons.Default.Close, "Anuluj edycję") }
+        IconButton(onClick = onCancel) { Icon(Icons.Default.Close, tr("Anuluj edycję")) }
     }
 }
 
@@ -539,7 +540,7 @@ fun MentionSuggestions(list: List<Pair<String, String>>, onPick: (pk: String, na
                 ) {
                     if (pk == "all") Text("📣", fontSize = 20.sp) else ContactAvatar(App.core.db.contact(pk), 28.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text(if (pk == "all") "@wszyscy — powiadom całą grupę" else name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (pk == "all") tr("@wszyscy — powiadom całą grupę") else name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -561,7 +562,7 @@ fun AlbumPreviewDialog(
     Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Card(Modifier.fillMaxWidth(0.94f).imePadding()) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp)) {
-                Text("Wyślij ${plural(atts.size, "zdjęcie", "zdjęcia", "zdjęć")}", style = MaterialTheme.typography.titleLarge)
+                Text(tr("Wyślij {0}", plural(atts.size, tr("zdjęcie"), tr("zdjęcia"), tr("zdjęć"))), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     atts.forEachIndexed { i, a ->
@@ -571,21 +572,21 @@ fun AlbumPreviewDialog(
                         }
                     }
                 }
-                if (onEdit != null) Text("Dotknij zdjęcia, aby je edytować.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (onEdit != null) Text(tr("Dotknij zdjęcia, aby je edytować."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(caption, { caption = it.take(2000) }, Modifier.fillMaxWidth(), placeholder = { Text("Dodaj podpis…") }, maxLines = 4)
+                OutlinedTextField(caption, { caption = it.take(2000) }, Modifier.fillMaxWidth(), placeholder = { Text(tr("Dodaj podpis…")) }, maxLines = 4)
                 Spacer(Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(!timed, { timed = false }, { Text("Zwykłe") })
-                    FilterChip(timed, { timed = true }, { Text("⏱ Czasowe") })
+                    FilterChip(!timed, { timed = false }, { Text(tr("Zwykłe")) })
+                    FilterChip(timed, { timed = true }, { Text(tr("⏱ Czasowe")) })
                 }
                 if (timed) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(5, 10, 30, 60, 300).forEach { o -> FilterChip(ttl == o, { ttl = o }, { Text(formatTtl(o)) }) }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onCancel) { Text("Anuluj") }
-                    if (!timed) TextButton(onClick = { onSchedule(caption.trim()) }) { Text("🕓 Zaplanuj") }
+                    TextButton(onClick = onCancel) { Text(tr("Anuluj")) }
+                    if (!timed) TextButton(onClick = { onSchedule(caption.trim()) }) { Text(tr("🕓 Zaplanuj")) }
                     Spacer(Modifier.width(4.dp))
                     Button(onClick = {
                         when {
@@ -593,7 +594,7 @@ fun AlbumPreviewDialog(
                             chatMode == XMode.AFTER_SEND -> onSend(caption.trim(), null, null)
                             else -> onSend(caption.trim(), XMode.OFF, null)
                         }
-                    }) { Icon(Icons.AutoMirrored.Filled.Send, null); Spacer(Modifier.width(6.dp)); Text("Wyślij") }
+                    }) { Icon(Icons.AutoMirrored.Filled.Send, null); Spacer(Modifier.width(6.dp)); Text(tr("Wyślij")) }
                 }
             }
         }
@@ -610,7 +611,7 @@ fun ScheduledBar(count: Int, onClick: () -> Unit) {
     ) {
         Icon(Icons.Default.Schedule, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(6.dp))
-        Text("Zaplanowane: $count — dotknij, aby zobaczyć", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Text(tr("Zaplanowane: {0} — dotknij, aby zobaczyć", count), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     }
 }
 

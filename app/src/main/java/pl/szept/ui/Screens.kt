@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
@@ -214,7 +215,7 @@ fun qrBitmap(text: String, px: Int = 640): ImageBitmap {
 @Composable
 fun QrImage(text: String, size: Dp) {
     val bmp = remember(text) { qrBitmap(text) }
-    Image(bmp, "Kod QR", Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(10.dp))
+    Image(bmp, tr("Kod QR"), Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(10.dp))
 }
 
 @Composable
@@ -222,7 +223,7 @@ fun rememberQrScanner(onResult: (String) -> Unit): () -> Unit {
     val launcher = rememberLauncherForActivityResult(ScanContract()) { r -> r.contents?.let(onResult) }
     return {
         launcher.launch(
-            ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Zeskanuj kod Szept")
+            ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt(tr("Zeskanuj kod Szept"))
                 .setBeepEnabled(false).setOrientationLocked(false),
         )
     }
@@ -256,46 +257,46 @@ fun OnboardingScreen(onDone: () -> Unit) {
                 Text("💬", fontSize = 44.sp)
             }
             Spacer(Modifier.height(16.dp))
-            Text("Szept", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            Text(tr("Szept"), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             // konto usunięte przez administratora — informacja przy zakładaniu nowego
             val notice = remember { ctx.getSharedPreferences("szept_notice", android.content.Context.MODE_PRIVATE).getString("deleted", null) }
             if (notice != null) Card(Modifier.fillMaxWidth().padding(top = 12.dp), colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Text(notice, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)
             }
-            Text("Prywatny komunikator bez serwera", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Prywatny komunikator bez serwera"), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(24.dp))
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("• Bez numeru telefonu, bez e-maila, bez rejestracji")
-                    Text("• Szyfrowanie end-to-end — nikt poza odbiorcą nie przeczyta wiadomości")
-                    Text("• Wiadomości czekają do 21 dni, nawet gdy telefon odbiorcy jest wyłączony")
-                    Text("• Grupy, zdjęcia, głosówki, wideo, wiadomości znikające")
+                    Text(tr("• Bez numeru telefonu, bez e-maila, bez rejestracji"))
+                    Text(tr("• Szyfrowanie end-to-end — nikt poza odbiorcą nie przeczyta wiadomości"))
+                    Text(tr("• Wiadomości czekają do 21 dni, nawet gdy telefon odbiorcy jest wyłączony"))
+                    Text(tr("• Grupy, zdjęcia, głosówki, wideo, wiadomości znikające"))
                 }
             }
             Spacer(Modifier.height(24.dp))
-            OutlinedTextField(name, { name = it.take(40) }, Modifier.fillMaxWidth(), label = { Text("Twoje imię / pseudonim") }, singleLine = true)
+            OutlinedTextField(name, { name = it.take(40) }, Modifier.fillMaxWidth(), label = { Text(tr("Twoje imię / pseudonim")) }, singleLine = true)
             if (restore) {
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(key, { key = it.trim() }, Modifier.fillMaxWidth(), label = { Text("Klucz prywatny (64 znaki)") }, singleLine = true)
+                OutlinedTextField(key, { key = it.trim() }, Modifier.fillMaxWidth(), label = { Text(tr("Klucz prywatny (64 znaki)")) }, singleLine = true)
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
-                    if (name.isBlank()) { error = "Wpisz imię"; return@Button }
+                    if (name.isBlank()) { error = tr("Wpisz imię"); return@Button }
                     if (restore) {
-                        if (!App.core.restoreIdentity(key, name)) { error = "Nieprawidłowy klucz"; return@Button }
+                        if (!App.core.restoreIdentity(key, name)) { error = tr("Nieprawidłowy klucz"); return@Button }
                     } else App.core.createIdentity(name)
                     onDone()
                 },
                 Modifier.fillMaxWidth().height(52.dp),
-            ) { Text(if (restore) "Przywróć konto" else "Zaczynamy") }
+            ) { Text(if (restore) tr("Przywróć konto") else tr("Zaczynamy")) }
             TextButton(onClick = { restore = !restore; error = null }) {
-                Text(if (restore) "Utwórz nowe konto" else "Mam już konto (przywróć z klucza)")
+                Text(if (restore) tr("Utwórz nowe konto") else tr("Mam już konto (przywróć z klucza)"))
             }
-            TextButton(onClick = { pickBackup.launch(arrayOf("*/*")) }) { Text("Przywróć z kopii zapasowej (plik .szept)") }
+            TextButton(onClick = { pickBackup.launch(arrayOf("*/*")) }) { Text(tr("Przywróć z kopii zapasowej (plik .szept)")) }
             Spacer(Modifier.height(12.dp))
-            Text("Wersja ${pl.szept.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Wersja {0}", pl.szept.BuildConfig.VERSION_NAME), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -333,9 +334,9 @@ fun HomeScreen(nav: Nav) {
     }
     val statusLine: @Composable (onBarColors: Boolean) -> Unit = { onBarColors ->
         val (txt, col) = when {
-            connected == 0 -> "Łączenie…" to MaterialTheme.colorScheme.error
-            connected < 3 -> "● Połączono z $connected/${states.size} przekaźnikami" to Fire
-            else -> "● Online · $connected/${states.size} przekaźników" to OkGreen
+            connected == 0 -> tr("Łączenie…") to MaterialTheme.colorScheme.error
+            connected < 3 -> tr("● Połączono z {0}/{1} przekaźnikami", connected, states.size) to Fire
+            else -> tr("● Online · {0}/{1} przekaźników", connected, states.size) to OkGreen
         }
         Text(
             txt, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
@@ -345,10 +346,10 @@ fun HomeScreen(nav: Nav) {
     val compact = compactHomeActions()
     val actions = buildList {
         // w szkle szukanie jest w pływającym pasku na dole
-        if (!glassUi) add(HomeAction(Icons.Default.Search, "Szukaj") { nav.go(Screen.Search) })
+        if (!glassUi) add(HomeAction(Icons.Default.Search, tr("Szukaj")) { nav.go(Screen.Search) })
         if (!compact) {
-            add(HomeAction(Icons.Default.QrCode, "Mój kod") { nav.go(Screen.MyCode) })
-            add(HomeAction(Icons.Default.PersonAdd, "Dodaj kontakt") { nav.go(Screen.AddContact()) })
+            add(HomeAction(Icons.Default.QrCode, tr("Mój kod")) { nav.go(Screen.MyCode) })
+            add(HomeAction(Icons.Default.PersonAdd, tr("Dodaj kontakt")) { nav.go(Screen.AddContact()) })
         }
     }
     val onCompose: (() -> Unit)? = if (st.spec.fab == FabStyle.NONE && !glassUi) ({ nav.go(Screen.NewChat) }) else null
@@ -358,19 +359,19 @@ fun HomeScreen(nav: Nav) {
             menu = {
                 StyleMenu(menu, { menu = false }) {
                     if (compact) {
-                        DropdownMenuItem({ Text("Mój kod") }, { menu = false; nav.go(Screen.MyCode) }, leadingIcon = { Icon(Icons.Default.QrCode, null) })
-                        DropdownMenuItem({ Text("Dodaj kontakt") }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.PersonAdd, null) })
+                        DropdownMenuItem({ Text(tr("Mój kod")) }, { menu = false; nav.go(Screen.MyCode) }, leadingIcon = { Icon(Icons.Default.QrCode, null) })
+                        DropdownMenuItem({ Text(tr("Dodaj kontakt")) }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.PersonAdd, null) })
                     }
-                    DropdownMenuItem({ Text("Mój profil") }, { menu = false; nav.go(Screen.MyProfile) }, leadingIcon = { Icon(Icons.Default.AccountCircle, null) })
-                    DropdownMenuItem({ Text("Osoby") }, { menu = false; nav.go(Screen.People) }, leadingIcon = { Icon(Icons.Default.People, null) })
-                    DropdownMenuItem({ Text("Nowa grupa") }, { menu = false; nav.go(Screen.NewGroup) }, leadingIcon = { Icon(Icons.Default.GroupAdd, null) })
-                    DropdownMenuItem({ Text("Wiadomość do wielu") }, { menu = false; nav.go(Screen.Broadcast) }, leadingIcon = { Icon(Icons.Default.Campaign, null) })
-                    DropdownMenuItem({ Text("Archiwum") }, { menu = false; nav.go(Screen.Archive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
+                    DropdownMenuItem({ Text(tr("Mój profil")) }, { menu = false; nav.go(Screen.MyProfile) }, leadingIcon = { Icon(Icons.Default.AccountCircle, null) })
+                    DropdownMenuItem({ Text(tr("Osoby")) }, { menu = false; nav.go(Screen.People) }, leadingIcon = { Icon(Icons.Default.People, null) })
+                    DropdownMenuItem({ Text(tr("Nowa grupa")) }, { menu = false; nav.go(Screen.NewGroup) }, leadingIcon = { Icon(Icons.Default.GroupAdd, null) })
+                    DropdownMenuItem({ Text(tr("Wiadomość do wielu")) }, { menu = false; nav.go(Screen.Broadcast) }, leadingIcon = { Icon(Icons.Default.Campaign, null) })
+                    DropdownMenuItem({ Text(tr("Archiwum")) }, { menu = false; nav.go(Screen.Archive) }, leadingIcon = { Icon(Icons.Default.Archive, null) })
                     DropdownMenuItem({ Text("Gry") }, { menu = false; nav.go(Screen.Games) }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
-                    DropdownMenuItem({ Text("Styl i animacje") }, { menu = false; nav.go(Screen.Styles) }, leadingIcon = { Icon(Icons.Default.Palette, null) })
-                    DropdownMenuItem({ Text("Dołącz do grupy (link)") }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.Link, null) })
-                    DropdownMenuItem({ Text("Wyślij aplikację znajomym") }, { menu = false; shareApp(ctx) }, leadingIcon = { Icon(Icons.Default.Share, null) })
-                    DropdownMenuItem({ Text("Ustawienia") }, { menu = false; nav.go(Screen.Settings) }, leadingIcon = { Icon(Icons.Default.Settings, null) })
+                    DropdownMenuItem({ Text(tr("Styl i animacje")) }, { menu = false; nav.go(Screen.Styles) }, leadingIcon = { Icon(Icons.Default.Palette, null) })
+                    DropdownMenuItem({ Text(tr("Dołącz do grupy (link)")) }, { menu = false; nav.go(Screen.AddContact()) }, leadingIcon = { Icon(Icons.Default.Link, null) })
+                    DropdownMenuItem({ Text(tr("Wyślij aplikację znajomym")) }, { menu = false; shareApp(ctx) }, leadingIcon = { Icon(Icons.Default.Share, null) })
+                    DropdownMenuItem({ Text(tr("Ustawienia")) }, { menu = false; nav.go(Screen.Settings) }, leadingIcon = { Icon(Icons.Default.Settings, null) })
                 }
             },
         )
@@ -379,14 +380,14 @@ fun HomeScreen(nav: Nav) {
         LazyColumn(mod, state = listState, contentPadding = inner) {
             if (listTitle) item(key = "tytul") { ListTitleBlock({ statusLine(false) }, { nav.go(Screen.Search) }) }
             if (!battery) item {
-                Banner("Zezwól na działanie w tle bez ograniczeń baterii — inaczej wiadomości mogą docierać z opóźnieniem.", "Zezwól") {
+                Banner(tr("Zezwól na działanie w tle bez ograniczeń baterii — inaczej wiadomości mogą docierać z opóźnieniem."), tr("Zezwól")) {
                     MainActivity.askBattery(ctx)
                 }
             }
-            if (!notif) item { Banner("Włącz powiadomienia, aby wiedzieć o nowych wiadomościach.", "Włącz") { act?.askNotifications() } }
+            if (!notif) item { Banner(tr("Włącz powiadomienia, aby wiedzieć o nowych wiadomościach."), tr("Włącz")) { act?.askNotifications() } }
             update?.let { u ->
                 if (u.path != null && versionNewer(u.body, pl.szept.BuildConfig.VERSION_NAME)) item {
-                    Banner("Dostępna nowa wersja Szept ${u.body}.", "Zainstaluj") { installApk(ctx, u.path) }
+                    Banner(tr("Dostępna nowa wersja Szept {0}.", u.body), tr("Zainstaluj")) { installApk(ctx, u.path) }
                 }
             }
             item { StoriesRow(nav) }
@@ -395,7 +396,7 @@ fun HomeScreen(nav: Nav) {
                 val visible = all.filter { !it.archived && (!it.hidden || revealed) }
                 val archived = all.filter { it.archived && (!it.hidden || revealed) }
                 if (revealed) item {
-                    Banner("Widzisz ukryte czaty 🔒. Znikną z listy po wyjściu z aplikacji.", "Schowaj") { App.core.hiddenRevealed.value = false }
+                    Banner(tr("Widzisz ukryte czaty 🔒. Znikną z listy po wyjściu z aplikacji."), tr("Schowaj")) { App.core.hiddenRevealed.value = false }
                 }
                 if (archived.isNotEmpty()) item { ArchiveEntry(archived) { nav.go(Screen.Archive) } }
                 if (visible.isEmpty() && archived.isEmpty()) item { EmptyHome(nav) }
@@ -448,7 +449,7 @@ private fun ArchiveEntry(archived: List<Chat>, onClick: () -> Unit) {
             Icon(Icons.Default.Archive, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.width(12.dp))
-        Text("Zarchiwizowane (${archived.size})", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+        Text(tr("Zarchiwizowane ({0})", archived.size), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
         if (unread > 0) Badge(containerColor = MaterialTheme.colorScheme.outline) { Text(unread.toString()) }
     }
 }
@@ -462,20 +463,20 @@ fun ChatMenuDialog(c: Chat, nav: Nav, onDismiss: () -> Unit) {
     if (confirmDelete) {
         StyleAlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Usunąć rozmowę „${c.name}” z telefonu?") },
-            text = { Text("Wiadomości znikną tylko u Ciebie.") },
-            confirmButton = { TextButton(onClick = { core.deleteChat(c.id); onDismiss() }) { Text("Usuń") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+            title = { Text(tr("Usunąć rozmowę „{0}” z telefonu?", c.name)) },
+            text = { Text(tr("Wiadomości znikną tylko u Ciebie.")) },
+            confirmButton = { TextButton(onClick = { core.deleteChat(c.id); onDismiss() }) { Text(tr("Usuń")) } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
         )
         return
     }
     if (needPin) {
         StyleAlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Najpierw ustaw PIN ukrytych czatów") },
-            text = { Text("Ukryte czaty znikają z listy. Pokażesz je, wpisując ten PIN w wyszukiwarce (lupa na górze) albo w „Prywatność i blokada”.") },
-            confirmButton = { TextButton(onClick = { onDismiss(); nav.go(Screen.Security) }) { Text("Ustaw PIN") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+            title = { Text(tr("Najpierw ustaw PIN ukrytych czatów")) },
+            text = { Text(tr("Ukryte czaty znikają z listy. Pokażesz je, wpisując ten PIN w wyszukiwarce (lupa na górze) albo w „Prywatność i blokada”.")) },
+            confirmButton = { TextButton(onClick = { onDismiss(); nav.go(Screen.Security) }) { Text(tr("Ustaw PIN")) } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
         )
         return
     }
@@ -488,18 +489,18 @@ fun ChatMenuDialog(c: Chat, nav: Nav, onDismiss: () -> Unit) {
                 fun item(t: String, color: Color = MaterialTheme.colorScheme.onSurface, f: () -> Unit) {
                     Text(t, Modifier.fillMaxWidth().clickable { f() }.padding(vertical = 11.dp), color = color, style = MaterialTheme.typography.bodyLarge)
                 }
-                item(if (c.pinned > 0) "📌 Odepnij" else "📌 Przypnij na górze") { core.setChatPinned(c.id, c.pinned == 0L); onDismiss() }
-                item(if (c.archived) "Przywróć z archiwum" else "Archiwizuj") { core.setArchived(c.id, !c.archived); onDismiss() }
-                item(if (c.muted) "Włącz powiadomienia" else "Wycisz") { core.setMuted(c.id, !c.muted); onDismiss() }
-                if (c.unread > 0) item("Oznacz jako przeczytane") { core.markChatRead(c.id); onDismiss() }
-                item(if (c.hidden) "Pokazuj normalnie (odkryj)" else "🔒 Ukryj czat") {
+                item(if (c.pinned > 0) tr("📌 Odepnij") else tr("📌 Przypnij na górze")) { core.setChatPinned(c.id, c.pinned == 0L); onDismiss() }
+                item(if (c.archived) tr("Przywróć z archiwum") else tr("Archiwizuj")) { core.setArchived(c.id, !c.archived); onDismiss() }
+                item(if (c.muted) tr("Włącz powiadomienia") else tr("Wycisz")) { core.setMuted(c.id, !c.muted); onDismiss() }
+                if (c.unread > 0) item(tr("Oznacz jako przeczytane")) { core.markChatRead(c.id); onDismiss() }
+                item(if (c.hidden) tr("Pokazuj normalnie (odkryj)") else tr("🔒 Ukryj czat")) {
                     if (!c.hidden && !core.hasHiddenPin) needPin = true else { core.setHidden(c.id, !c.hidden); onDismiss() }
                 }
                 HorizontalDivider()
-                item("Usuń rozmowę", MaterialTheme.colorScheme.error) { confirmDelete = true }
+                item(tr("Usuń rozmowę"), MaterialTheme.colorScheme.error) { confirmDelete = true }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Zamknij")) } },
     )
 }
 
@@ -508,24 +509,24 @@ private fun EmptyHome(nav: Nav) {
     Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("👋", fontSize = 48.sp)
         Spacer(Modifier.height(12.dp))
-        Text("Nie masz jeszcze rozmów", style = MaterialTheme.typography.titleLarge)
+        Text(tr("Nie masz jeszcze rozmów"), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Pokaż znajomemu swój kod QR albo wyślij mu link. Gdy go zeskanuje, możecie pisać. " +
-                "Możesz też utworzyć grupę i rozesłać link zaproszenia — każdy w grupie może potem pisać do każdego.",
+            tr("Pokaż znajomemu swój kod QR albo wyślij mu link. Gdy go zeskanuje, możecie pisać. ") +
+                tr("Możesz też utworzyć grupę i rozesłać link zaproszenia — każdy w grupie może potem pisać do każdego."),
             textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
-        Button(onClick = { nav.go(Screen.MyCode) }, Modifier.fillMaxWidth()) { Text("Pokaż mój kod") }
-        OutlinedButton(onClick = { nav.go(Screen.AddContact()) }, Modifier.fillMaxWidth()) { Text("Dodaj kontakt / dołącz do grupy") }
-        OutlinedButton(onClick = { nav.go(Screen.NewGroup) }, Modifier.fillMaxWidth()) { Text("Utwórz grupę") }
+        Button(onClick = { nav.go(Screen.MyCode) }, Modifier.fillMaxWidth()) { Text(tr("Pokaż mój kod")) }
+        OutlinedButton(onClick = { nav.go(Screen.AddContact()) }, Modifier.fillMaxWidth()) { Text(tr("Dodaj kontakt / dołącz do grupy")) }
+        OutlinedButton(onClick = { nav.go(Screen.NewGroup) }, Modifier.fillMaxWidth()) { Text(tr("Utwórz grupę")) }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Znajomi nie mają jeszcze Szepta? Wyślij im aplikację (Quick Share, Bluetooth, komunikator, e-mail).",
+            tr("Znajomi nie mają jeszcze Szepta? Wyślij im aplikację (Quick Share, Bluetooth, komunikator, e-mail)."),
             textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         val ctx = LocalContext.current
-        TextButton(onClick = { shareApp(ctx) }) { Text("Wyślij aplikację znajomym") }
+        TextButton(onClick = { shareApp(ctx) }) { Text(tr("Wyślij aplikację znajomym")) }
     }
 }
 
@@ -570,7 +571,7 @@ fun ChatRow(c: Chat, onLong: () -> Unit = {}, modifier: Modifier = Modifier, pos
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (iosList) Box(Modifier.width(18.dp), contentAlignment = Alignment.Center) {
-            if (c.unread > 0) Box(Modifier.pop(c.unread).size(10.dp).clip(CircleShape).background(if (c.muted) cs.outline else st.pal.primary).semantics { contentDescription = "Nieprzeczytane: ${c.unread}" })
+            if (c.unread > 0) Box(Modifier.pop(c.unread).size(10.dp).clip(CircleShape).background(if (c.muted) cs.outline else st.pal.primary).semantics { contentDescription = tr("Nieprzeczytane: {0}", c.unread) })
         }
         Box {
             Avatar(c.name, c.peer ?: c.id, avatarSize, c.isGroup, image)
@@ -582,9 +583,9 @@ fun ChatRow(c: Chat, onLong: () -> Unit = {}, modifier: Modifier = Modifier, pos
                 Text(c.name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     fontWeight = if (c.unread > 0 || iosList) FontWeight.SemiBold.takeIf { c.unread == 0 } ?: FontWeight.Bold else FontWeight.Normal)
                 if (!c.isGroup && App.core.isVerified(c.peer)) VerifiedBadge()
-                if (c.muted) Icon(Icons.Default.NotificationsOff, "Wyciszony", Modifier.padding(start = 4.dp).size(16.dp), tint = cs.onSurfaceVariant)
-                if (c.hidden) Icon(Icons.Default.Lock, "Ukryty", Modifier.padding(start = 4.dp).size(16.dp), tint = cs.onSurfaceVariant)
-                if (c.pinned > 0) Icon(Icons.Default.PushPin, "Przypięty", Modifier.padding(start = 4.dp).size(16.dp), tint = cs.primary)
+                if (c.muted) Icon(Icons.Default.NotificationsOff, tr("Wyciszony"), Modifier.padding(start = 4.dp).size(16.dp), tint = cs.onSurfaceVariant)
+                if (c.hidden) Icon(Icons.Default.Lock, tr("Ukryty"), Modifier.padding(start = 4.dp).size(16.dp), tint = cs.onSurfaceVariant)
+                if (c.pinned > 0) Icon(Icons.Default.PushPin, tr("Przypięty"), Modifier.padding(start = 4.dp).size(16.dp), tint = cs.primary)
                 Spacer(Modifier.weight(1f))
                 if (!messengerList) Text(formatListTime(c.lastTs), style = MaterialTheme.typography.labelSmall,
                     color = if (c.unread > 0 && !iosList) unreadColor() else cs.onSurfaceVariant)
@@ -592,10 +593,10 @@ fun ChatRow(c: Chat, onLong: () -> Unit = {}, modifier: Modifier = Modifier, pos
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (c.draft.isNotBlank()) Text(
-                    "Szkic: " + c.draft.replace('\n', ' '), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    tr("Szkic: ") + c.draft.replace('\n', ' '), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium, color = cs.error,
                 ) else Text(
-                    (if (c.xmode != 0) "🔥 " else "") + c.lastText.ifEmpty { if (c.isGroup) "Grupa" else "Nowa rozmowa" } +
+                    (if (c.xmode != 0) "🔥 " else "") + c.lastText.ifEmpty { if (c.isGroup) tr("Grupa") else tr("Nowa rozmowa") } +
                         (if (messengerList) " · " + formatListTime(c.lastTs) else ""),
                     Modifier.weight(1f), maxLines = if (iosList) 2 else 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
@@ -604,7 +605,7 @@ fun ChatRow(c: Chat, onLong: () -> Unit = {}, modifier: Modifier = Modifier, pos
                 )
                 when {
                     c.unread <= 0 || iosList -> {}
-                    messengerList -> Box(Modifier.padding(start = 8.dp).pop(c.unread).size(12.dp).clip(CircleShape).background(st.pal.primary).semantics { contentDescription = "Nieprzeczytane: ${c.unread}" })
+                    messengerList -> Box(Modifier.padding(start = 8.dp).pop(c.unread).size(12.dp).clip(CircleShape).background(st.pal.primary).semantics { contentDescription = tr("Nieprzeczytane: {0}", c.unread) })
                     else -> Badge(
                         Modifier.pop(c.unread),
                         containerColor = if (c.muted) cs.outline else unreadColor(),
@@ -654,18 +655,18 @@ private fun LoadingRow() {
 fun NewChatScreen(nav: Nav) {
     val people by rememberDb { App.core.knownPeople().filter { !it.blocked } }
     var query by remember { mutableStateOf("") }
-    Scaffold(topBar = { BackBar("Nowa rozmowa", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Nowa rozmowa"), nav) }) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize()) {
-            item { ActionRow(Icons.Default.Group, "Nowa grupa") { nav.replace(Screen.NewGroup) } }
-            item { ActionRow(Icons.Default.PersonAdd, "Dodaj kontakt", "Skanuj kod QR lub wklej link") { nav.replace(Screen.AddContact()) } }
-            item { ActionRow(Icons.Default.Link, "Dołącz do grupy", "Wklej link zaproszenia") { nav.replace(Screen.AddContact()) } }
+            item { ActionRow(Icons.Default.Group, tr("Nowa grupa")) { nav.replace(Screen.NewGroup) } }
+            item { ActionRow(Icons.Default.PersonAdd, tr("Dodaj kontakt"), tr("Skanuj kod QR lub wklej link")) { nav.replace(Screen.AddContact()) } }
+            item { ActionRow(Icons.Default.Link, tr("Dołącz do grupy"), tr("Wklej link zaproszenia")) { nav.replace(Screen.AddContact()) } }
             item {
                 OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Szukaj osoby") }, singleLine = true)
+                    placeholder = { Text(tr("Szukaj osoby")) }, singleLine = true)
             }
             val list = people?.filter { query.isBlank() || it.name.contains(query, true) } ?: emptyList()
             if (people?.isEmpty() == true) item {
-                Text("Nie znasz jeszcze nikogo. Dodaj kontakt albo dołącz do grupy — członkowie grup pojawią się tutaj.",
+                Text(tr("Nie znasz jeszcze nikogo. Dodaj kontakt albo dołącz do grupy — członkowie grup pojawią się tutaj."),
                     Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(list, key = { it.pk }) { p -> PersonRow(p) { nav.replace(Screen.Chat(App.core.openDm(p.pk))) } }
@@ -686,7 +687,7 @@ fun PersonRow(p: Contact, trailing: @Composable () -> Unit = {}, onClick: () -> 
                 Text(p.name, style = MaterialTheme.typography.titleMedium)
                 if (p.verified || pl.szept.core.Admin.isAdmin(p.pk)) VerifiedBadge()
             }
-            Text(if (p.isContact) "Kontakt" else "Z grupy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if (p.isContact) tr("Kontakt") else tr("Z grupy"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         trailing()
     }
@@ -702,35 +703,35 @@ fun PickPeopleScreen(nav: Nav, gid: String?) {
     val selected = remember { mutableStateListOf<String>() }
     var name by remember { mutableStateOf("") }
     Scaffold(
-        topBar = { BackBar(if (gid == null) "Nowa grupa" else "Dodaj członków", nav) },
+        topBar = { BackBar(if (gid == null) tr("Nowa grupa") else tr("Dodaj członków"), nav) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
                     scope.launch {
                         if (gid == null) {
-                            val chat = App.core.createGroup(name.ifBlank { "Grupa" }, selected.toList())
+                            val chat = App.core.createGroup(name.ifBlank { tr("Grupa") }, selected.toList())
                             nav.replace(Screen.Chat(chat))
                         } else {
-                            if (App.core.addMembers(gid, selected.toList())) nav.back() else toast(ctx, "Tylko administrator może dodawać")
+                            if (App.core.addMembers(gid, selected.toList())) nav.back() else toast(ctx, tr("Tylko administrator może dodawać"))
                         }
                     }
                 },
                 icon = { Icon(Icons.Default.Check, null) },
-                text = { Text(if (gid == null) "Utwórz" else "Dodaj (${selected.size})") },
+                text = { Text(if (gid == null) tr("Utwórz") else tr("Dodaj ({0})", selected.size)) },
             )
         },
     ) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize().imePadding()) {
             if (gid == null) item {
-                OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth().padding(16.dp), label = { Text("Nazwa grupy") }, singleLine = true)
+                OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth().padding(16.dp), label = { Text(tr("Nazwa grupy")) }, singleLine = true)
                 Text(
-                    "Wybierz osoby teraz albo później udostępnij link zaproszenia (Informacje o grupie → Link). Grupa nie ma limitu osób.",
+                    tr("Wybierz osoby teraz albo później udostępnij link zaproszenia (Informacje o grupie → Link). Grupa nie ma limitu osób."),
                     Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             val list = people?.filter { p -> group?.isMember(p.pk) != true } ?: emptyList()
             if (people != null && list.isEmpty()) item {
-                Text("Brak osób do wybrania. Dodaj kontakty kodem QR albo rozešlij link zaproszenia.", Modifier.padding(16.dp))
+                Text(tr("Brak osób do wybrania. Dodaj kontakty kodem QR albo rozešlij link zaproszenia."), Modifier.padding(16.dp))
             }
             items(list, key = { it.pk }) { p ->
                 PersonRow(p, trailing = { Checkbox(p.pk in selected, { on -> if (on) selected.add(p.pk) else selected.remove(p.pk) }) }) {
@@ -753,22 +754,22 @@ fun AddContactScreen(nav: Nav, prefill: String?) {
     fun submit(text: String) {
         when (val p = Links.parse(text)) {
             is Links.Parsed.ContactCode -> {
-                if (p.pk == App.core.myPub) { error = "To Twój własny kod 🙂"; return }
+                if (p.pk == App.core.myPub) { error = tr("To Twój własny kod 🙂"); return }
                 App.core.addContact(p.pk, p.name)?.let { nav.replace(Screen.Chat(it)) }
-                toast(ctx, "Dodano kontakt ${p.name}")
+                toast(ctx, tr("Dodano kontakt {0}", p.name))
             }
             is Links.Parsed.GroupInvite -> scope.launch { nav.replace(Screen.Chat(App.core.joinGroup(p))) }
             is Links.Parsed.Relays -> {
                 val cur = App.core.configuredRelays()
                 val added = p.urls.filter { it !in cur }
                 App.core.setRelays((cur + added).distinct())
-                toast(ctx, if (added.isEmpty()) "Masz już te przekaźniki" else "Dodano przekaźniki: ${added.size}")
+                toast(ctx, if (added.isEmpty()) tr("Masz już te przekaźniki") else tr("Dodano przekaźniki: {0}", added.size))
                 nav.back()
             }
             is Links.Parsed.Lan -> {
                 App.core.setLanEnabled(true)
                 if (!App.core.lan.joinNetwork(p.ssid, p.pass, p.host, p.port))
-                    toast(ctx, "Połącz się ręcznie z siecią Wi-Fi „${p.ssid}” (hasło: ${p.pass}) — Szept sam znajdzie przekaźnik")
+                    toast(ctx, tr("Połącz się ręcznie z siecią Wi-Fi „{0}” (hasło: {1}) — Szept sam znajdzie przekaźnik", p.ssid, p.pass))
                 nav.replace(Screen.Lan)
             }
             null -> error = "Nie rozpoznano kodu. Wklej link zaczynający się od szept://"
@@ -776,28 +777,28 @@ fun AddContactScreen(nav: Nav, prefill: String?) {
     }
     val scan = rememberQrScanner { code = it; submit(it) }
     val parsed = remember(code) { Links.parse(code) }
-    Scaffold(topBar = { BackBar("Dodaj kontakt / grupę", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Dodaj kontakt / grupę"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Button(onClick = scan, Modifier.fillMaxWidth().height(56.dp)) {
-                Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Skanuj kod QR")
+                Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text(tr("Skanuj kod QR"))
             }
             Spacer(Modifier.height(20.dp))
-            Text("…albo wklej kod / link otrzymany od znajomego:", style = MaterialTheme.typography.bodyMedium)
+            Text(tr("…albo wklej kod / link otrzymany od znajomego:"), style = MaterialTheme.typography.bodyMedium)
             OutlinedTextField(
                 code, { code = it; error = null }, Modifier.fillMaxWidth(), placeholder = { Text("szept://…") }, minLines = 2,
                 trailingIcon = {
                     IconButton(onClick = {
                         val clip = ctx.getSystemService(android.content.ClipboardManager::class.java).primaryClip
                         val t = clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()
-                        if (t.isNullOrBlank()) toast(ctx, "Schowek jest pusty") else { code = t.trim(); error = null }
-                    }) { Icon(Icons.Default.ContentPaste, "Wklej") }
+                        if (t.isNullOrBlank()) toast(ctx, tr("Schowek jest pusty")) else { code = t.trim(); error = null }
+                    }) { Icon(Icons.Default.ContentPaste, tr("Wklej")) }
                 },
             )
             when (parsed) {
-                is Links.Parsed.ContactCode -> Text("Kontakt: ${parsed.name.ifBlank { parsed.pk.take(12) }}", Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
-                is Links.Parsed.GroupInvite -> Text("Zaproszenie do grupy „${parsed.name}”", Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
-                is Links.Parsed.Relays -> Text("Przekaźniki: " + parsed.urls.joinToString { it.removePrefix("wss://") }, Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
-                is Links.Parsed.Lan -> Text("Sieć bez internetu: „${parsed.ssid}”", Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
+                is Links.Parsed.ContactCode -> Text(tr("Kontakt: {0}", parsed.name.ifBlank { parsed.pk.take(12) }), Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
+                is Links.Parsed.GroupInvite -> Text(tr("Zaproszenie do grupy „{0}”", parsed.name), Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
+                is Links.Parsed.Relays -> Text(tr("Przekaźniki: ") + parsed.urls.joinToString { it.removePrefix("wss://") }, Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
+                is Links.Parsed.Lan -> Text(tr("Sieć bez internetu: „{0}”", parsed.ssid), Modifier.padding(top = 6.dp), color = MaterialTheme.colorScheme.primary)
                 null -> {}
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp)) }
@@ -805,22 +806,22 @@ fun AddContactScreen(nav: Nav, prefill: String?) {
             Button(onClick = { submit(code) }, Modifier.fillMaxWidth(), enabled = code.isNotBlank()) {
                 Text(
                     when (parsed) {
-                        is Links.Parsed.GroupInvite -> "Dołącz do grupy"
-                        is Links.Parsed.Relays -> "Dodaj przekaźniki"
-                        is Links.Parsed.Lan -> "Dołącz do sieci"
-                        else -> "Dodaj kontakt"
+                        is Links.Parsed.GroupInvite -> tr("Dołącz do grupy")
+                        is Links.Parsed.Relays -> tr("Dodaj przekaźniki")
+                        is Links.Parsed.Lan -> tr("Dołącz do sieci")
+                        else -> tr("Dodaj kontakt")
                     },
                 )
             }
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))
-            Text("Twój kod", style = MaterialTheme.typography.titleMedium)
-            Text("Znajomy może zeskanować Twój kod lub otworzyć link — wtedy oboje będziecie mieli się w kontaktach.",
+            Text(tr("Twój kod"), style = MaterialTheme.typography.titleMedium)
+            Text(tr("Znajomy może zeskanować Twój kod lub otworzyć link — wtedy oboje będziecie mieli się w kontaktach."),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { nav.replace(Screen.MyCode) }, Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(8.dp)); Text("Pokaż mój kod QR")
+                Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(8.dp)); Text(tr("Pokaż mój kod QR"))
             }
         }
     }
@@ -831,7 +832,7 @@ fun MyCodeScreen(nav: Nav) {
     val ctx = LocalContext.current
     val link = App.core.myCode()
     val scan = rememberQrScanner { code -> nav.replace(Screen.AddContact(code)) }
-    Scaffold(topBar = { BackBar("Mój kod", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Mój kod"), nav) }) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -842,22 +843,22 @@ fun MyCodeScreen(nav: Nav) {
             Spacer(Modifier.height(16.dp))
             QrImage(link, 280.dp)
             Spacer(Modifier.height(16.dp))
-            Text("Pokaż ten kod znajomemu do zeskanowania (Szept → Dodaj kontakt → Skanuj) albo wyślij mu link dowolnym komunikatorem/SMS-em.",
+            Text(tr("Pokaż ten kod znajomemu do zeskanowania (Szept → Dodaj kontakt → Skanuj) albo wyślij mu link dowolnym komunikatorem/SMS-em."),
                 textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = { shareText(ctx, "Dodaj mnie w Szept: $link") }, Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Share, null); Spacer(Modifier.width(8.dp)); Text("Wyślij link")
+            Button(onClick = { shareText(ctx, tr("Dodaj mnie w Szept: {0}", link)) }, Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Share, null); Spacer(Modifier.width(8.dp)); Text(tr("Wyślij link"))
             }
             OutlinedButton(onClick = { copyText(ctx, link) }, Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(8.dp)); Text("Kopiuj link")
+                Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(8.dp)); Text(tr("Kopiuj link"))
             }
             Spacer(Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))
-            Text("Masz kod znajomego?", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Masz kod znajomego?"), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             Button(onClick = scan, Modifier.fillMaxWidth().height(56.dp)) {
-                Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Skanuj kod QR")
+                Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text(tr("Skanuj kod QR"))
             }
         }
     }

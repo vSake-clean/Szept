@@ -1,5 +1,6 @@
 package pl.szept.service
 
+import pl.szept.tr
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.PendingIntent
@@ -98,9 +99,9 @@ class MessengerService : Service() {
             .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setContentIntent(AndroidNotifier.openChatIntent(this, null))
-        if (live) return b.setContentTitle("Szept: udostępniasz lokalizację na żywo").setContentText("Dotknij, aby otworzyć Szept").build()
-        return b.setContentTitle("Szept działa w tle")
-            .setContentText("Wiadomości i rozmowy przychodzą od razu. To powiadomienie możesz ukryć.")
+        if (live) return b.setContentTitle(tr("Szept: udostępniasz lokalizację na żywo")).setContentText(tr("Dotknij, aby otworzyć Szept")).build()
+        return b.setContentTitle(tr("Szept działa w tle"))
+            .setContentText(tr("Wiadomości i rozmowy przychodzą od razu. To powiadomienie możesz ukryć."))
             .addAction(0, "Ukryj", PendingIntent.getActivity(this, 11, hideIntent(this), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
             .build()
     }

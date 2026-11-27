@@ -1,5 +1,6 @@
 package pl.szept.service
 
+import pl.szept.tr
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -34,16 +35,16 @@ class AndroidNotifier(private val ctx: Context) : Notifier {
 
         fun createChannels(ctx: Context) {
             val nm = ctx.getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(NotificationChannel(CH_MSG, "Wiadomości", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Nowe wiadomości"
+            nm.createNotificationChannel(NotificationChannel(CH_MSG, tr("Wiadomości"), NotificationManager.IMPORTANCE_HIGH).apply {
+                description = tr("Nowe wiadomości")
                 enableVibration(true)
             })
-            nm.createNotificationChannel(NotificationChannel(CH_SERVICE, "Działanie w tle", NotificationManager.IMPORTANCE_MIN).apply {
-                description = "Stałe powiadomienie, dzięki któremu Szept odbiera wiadomości w tle"
+            nm.createNotificationChannel(NotificationChannel(CH_SERVICE, tr("Działanie w tle"), NotificationManager.IMPORTANCE_MIN).apply {
+                description = tr("Stałe powiadomienie, dzięki któremu Szept odbiera wiadomości w tle")
                 setShowBadge(false)
             })
-            nm.createNotificationChannel(NotificationChannel(CH_LIVE, "Lokalizacja na żywo", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Widać je, gdy udostępniasz komuś swoją lokalizację na żywo"
+            nm.createNotificationChannel(NotificationChannel(CH_LIVE, tr("Lokalizacja na żywo"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = tr("Widać je, gdy udostępniasz komuś swoją lokalizację na żywo")
                 setShowBadge(false)
             })
         }
@@ -76,8 +77,8 @@ class AndroidNotifier(private val ctx: Context) : Notifier {
             val nm = ctx.getSystemService(NotificationManager::class.java)
             val id = chatChannelId(chatId)
             if (nm.getNotificationChannel(id) == null) {
-                nm.createNotificationChannel(NotificationChannel(id, "Rozmowa: $name", NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Osobne powiadomienia tej rozmowy"
+                nm.createNotificationChannel(NotificationChannel(id, tr("Rozmowa: {0}", name), NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = tr("Osobne powiadomienia tej rozmowy")
                     enableVibration(true)
                     if (android.os.Build.VERSION.SDK_INT >= 30) setConversationId(CH_MSG, chatId)
                 })
@@ -132,17 +133,17 @@ class AndroidNotifier(private val ctx: Context) : Notifier {
         }
         val code = chatId.hashCode()
         val reply = NotificationCompat.Action.Builder(
-            R.drawable.ic_stat_msg, "Odpowiedz",
+            R.drawable.ic_stat_msg, tr("Odpowiedz"),
             PendingIntent.getBroadcast(
                 ctx, code, Intent(ctx, NotificationActionReceiver::class.java).setAction(ACTION_REPLY).putExtra("chat", chatId),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
             ),
-        ).addRemoteInput(RemoteInput.Builder(KEY_REPLY).setLabel("Odpowiedz…").build())
+        ).addRemoteInput(RemoteInput.Builder(KEY_REPLY).setLabel(tr("Odpowiedz…")).build())
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
             .setShowsUserInterface(false)
             .build()
         val read = NotificationCompat.Action.Builder(
-            R.drawable.ic_stat_msg, "Przeczytane",
+            R.drawable.ic_stat_msg, tr("Przeczytane"),
             PendingIntent.getBroadcast(
                 ctx, code + 1, Intent(ctx, NotificationActionReceiver::class.java).setAction(ACTION_READ).putExtra("chat", chatId),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -192,7 +193,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         App.real.markChatRead(chatId)
                         App.real.keepalive()
                     } catch (e: Core.SendException) {
-                        App.real.notifier?.onMessage(chatId, App.real.db.chat(chatId)?.name ?: "", "Szept", "Nie wysłano: ${e.message}", false)
+                        App.real.notifier?.onMessage(chatId, App.real.db.chat(chatId)?.name ?: "", tr("Szept"), tr("Nie wysłano: {0}", e.message), false)
                     } finally {
                         pending.finish()
                     }

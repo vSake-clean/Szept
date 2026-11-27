@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -130,16 +131,16 @@ fun HomeTopBar(
             // jak w oryginale: menu w kółku po lewej, akcje w szklanej kapsułce po prawej, mały tytuł na środku
             // (szukanie i nowa rozmowa są na dole, w pływającym szklanym pasku)
             Box(Modifier.align(Alignment.CenterStart)) {
-                GlassIconButton(Icons.Default.MoreHoriz, "Menu", onMenu)
+                GlassIconButton(Icons.Default.MoreHoriz, tr("Menu"), onMenu)
                 menu()
             }
             Text(
-                "Szept", Modifier.align(Alignment.Center).graphicsLayer { alpha = smallTitle },
+                tr("Szept"), Modifier.align(Alignment.Center).graphicsLayer { alpha = smallTitle },
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), color = st.pal.onBase,
             )
             Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (actions.isNotEmpty()) GlassActions { actions.forEach { a -> IconButton(onClick = a.onClick) { Icon(a.icon, a.label) } } }
-                if (onCompose != null) GlassIconButton(Icons.Default.EditNote, "Nowa rozmowa", onCompose)
+                if (onCompose != null) GlassIconButton(Icons.Default.EditNote, tr("Nowa rozmowa"), onCompose)
             }
         }
         spec.homeHeader == HomeHeader.WORDMARK -> Row(
@@ -151,10 +152,10 @@ fun HomeTopBar(
                 fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.04).em,
             )
             Spacer(Modifier.weight(1f))
-            if (onCompose != null) RoundBarButton(Icons.Default.Edit, "Nowa rozmowa", onCompose)
+            if (onCompose != null) RoundBarButton(Icons.Default.Edit, tr("Nowa rozmowa"), onCompose)
             actions.forEach { a -> RoundBarButton(a.icon, a.label, a.onClick) }
             Box {
-                RoundBarButton(Icons.Default.MoreHoriz, "Menu", onMenu)
+                RoundBarButton(Icons.Default.MoreHoriz, tr("Menu"), onMenu)
                 menu()
             }
         }
@@ -162,15 +163,15 @@ fun HomeTopBar(
             colors = styleBarColors(), modifier = Modifier.styleTopBar(st),
             title = {
                 Text(
-                    "Szept", Modifier.graphicsLayer { alpha = smallTitle; translationY = (1f - smallTitle) * 12.dp.toPx() },
+                    tr("Szept"), Modifier.graphicsLayer { alpha = smallTitle; translationY = (1f - smallTitle) * 12.dp.toPx() },
                     fontWeight = spec.headWeight ?: FontWeight.SemiBold, fontFamily = spec.titleFont, maxLines = 1,
                 )
             },
             actions = {
-                if (onCompose != null) IconButton(onClick = onCompose) { Icon(Icons.Default.EditNote, "Nowa rozmowa") }
+                if (onCompose != null) IconButton(onClick = onCompose) { Icon(Icons.Default.EditNote, tr("Nowa rozmowa")) }
                 actions.forEach { a -> IconButton(onClick = a.onClick) { Icon(a.icon, a.label) } }
                 Box {
-                    IconButton(onClick = onMenu) { Icon(Icons.Default.MoreVert, "Menu") }
+                    IconButton(onClick = onMenu) { Icon(Icons.Default.MoreVert, tr("Menu")) }
                     menu()
                 }
             },
@@ -182,17 +183,17 @@ fun HomeTopBar(
                 Column {
                     if (spec.chrome == Chrome.TERMINAL) TerminalTitle()
                     else Text(
-                        "Szept", fontWeight = FontWeight.Bold, modifier = Modifier.titleFx(),
+                        tr("Szept"), fontWeight = FontWeight.Bold, modifier = Modifier.titleFx(),
                         style = if (spec.homeHeader == HomeHeader.COMPACT) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold) else androidx.compose.material3.LocalTextStyle.current,
                     )
                     status()
                 }
             },
             actions = {
-                if (onCompose != null) IconButton(onClick = onCompose) { Icon(Icons.Default.Edit, "Nowa rozmowa") }
+                if (onCompose != null) IconButton(onClick = onCompose) { Icon(Icons.Default.Edit, tr("Nowa rozmowa")) }
                 actions.forEach { a -> IconButton(onClick = a.onClick) { Icon(a.icon, a.label) } }
                 Box {
-                    IconButton(onClick = onMenu) { Icon(Icons.Default.MoreVert, "Menu") }
+                    IconButton(onClick = onMenu) { Icon(Icons.Default.MoreVert, tr("Menu")) }
                     menu()
                 }
             },
@@ -221,7 +222,7 @@ private fun TerminalTitle() {
         if (!on) { blink.snapTo(1f); return@LaunchedEffect }
         while (true) { blink.snapTo(1f); kotlinx.coroutines.delay(500); blink.snapTo(0f); kotlinx.coroutines.delay(500) }
     }
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Szept" }) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = tr("Szept") }) {
         Text("szept@telefon:~$ ", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = st.pal.primary, fontSize = 18.sp)
         Box(Modifier.size(width = 10.dp, height = 18.dp).graphicsLayer { alpha = blink.value }.background(st.pal.primary))
     }
@@ -237,7 +238,7 @@ fun ListTitleBlock(status: @Composable () -> Unit, onSearch: () -> Unit, topPadd
         val h = (LocalConfiguration.current.screenHeightDp * 0.26f).dp.coerceIn(150.dp, 260.dp)
         Column(Modifier.fillMaxWidth().height(h).padding(top = topPadding), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                "Szept", Modifier.titleFx().semantics { heading() }, color = st.pal.onBase,
+                tr("Szept"), Modifier.titleFx().semantics { heading() }, color = st.pal.onBase,
                 fontSize = 38.sp, fontWeight = spec.headWeight ?: FontWeight.Normal, fontFamily = spec.titleFont,
             )
             Spacer(Modifier.height(4.dp))
@@ -249,7 +250,7 @@ fun ListTitleBlock(status: @Composable () -> Unit, onSearch: () -> Unit, topPadd
     Column(Modifier.fillMaxWidth().padding(top = topPadding).padding(horizontal = 16.dp).padding(top = 2.dp, bottom = 6.dp)) {
         if (spec.dotTitle) DotTitle("SZEPT", st.pal.onBase, Modifier.padding(top = 6.dp, bottom = 6.dp))
         else Text(
-            "Szept", Modifier.titleFx().semantics { heading() }, color = st.pal.onBase,
+            tr("Szept"), Modifier.titleFx().semantics { heading() }, color = st.pal.onBase,
             fontSize = if (spec.chrome == Chrome.HYPER) 32.sp else 34.sp,
             fontWeight = spec.headWeight ?: FontWeight.Bold, fontFamily = spec.titleFont, letterSpacing = (-0.01).em,
         )
@@ -278,16 +279,16 @@ fun GlassBottomBar(onSearch: () -> Unit, onCompose: () -> Unit, modifier: Modifi
             Modifier.weight(1f).height(50.dp).pressScale(src, LocalAnim.current[Anim.PRESS])
                 .liquidGlass(currentGlass(), 25.dp).clip(RoundedCornerShape(25.dp))
                 .clickable(src, null, onClick = onSearch)
-                .semantics { role = Role.Button; contentDescription = "Szukaj" }
+                .semantics { role = Role.Button; contentDescription = tr("Szukaj") }
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Default.Search, null, Modifier.size(21.dp), tint = st.pal.muted)
             Spacer(Modifier.width(8.dp))
-            Text("Szukaj", color = st.pal.muted, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp))
+            Text(tr("Szukaj"), color = st.pal.muted, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp))
         }
         Spacer(Modifier.width(10.dp))
-        GlassIconButton(Icons.Default.EditNote, "Nowa rozmowa", onCompose, size = 50.dp)
+        GlassIconButton(Icons.Default.EditNote, tr("Nowa rozmowa"), onCompose, size = 50.dp)
     }
 }
 
@@ -309,12 +310,12 @@ fun SearchPill(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
     Row(
         modifier.fillMaxWidth().height(h).clip(shape).background(fill).clickable(onClick = onClick)
-            .semantics { role = Role.Button; contentDescription = "Szukaj" }.padding(horizontal = 12.dp),
+            .semantics { role = Role.Button; contentDescription = tr("Szukaj") }.padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Default.Search, null, Modifier.size(20.dp), tint = st.pal.muted)
         Spacer(Modifier.width(8.dp))
-        Text("Szukaj", color = st.pal.muted, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(tr("Szukaj"), color = st.pal.muted, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -371,7 +372,7 @@ fun HomeFab(onClick: () -> Unit) {
             onClick = onClick, interactionSource = src,
             modifier = Modifier.graphicsLayer { scaleX = enter.value; scaleY = enter.value },
             icon = { Icon(Icons.AutoMirrored.Filled.Chat, null) },
-            text = { Text("Nowa rozmowa") },
+            text = { Text(tr("Nowa rozmowa")) },
             shape = if (st.spec.chrome == Chrome.EXPRESSIVE) RoundedCornerShape(20.dp) else RoundedCornerShape(16.dp),
         )
         FabStyle.SQUARE -> {
@@ -390,10 +391,10 @@ fun HomeFab(onClick: () -> Unit) {
             FloatingActionButton(
                 onClick = onClick, interactionSource = src, shape = shape, containerColor = color, contentColor = content,
                 modifier = grow.then(frame),
-            ) { Icon(Icons.Default.Edit, "Nowa rozmowa", Modifier.graphicsLayer { rotationZ = turn }) }
+            ) { Icon(Icons.Default.Edit, tr("Nowa rozmowa"), Modifier.graphicsLayer { rotationZ = turn }) }
         }
         FabStyle.CIRCLE -> FloatingActionButton(onClick = onClick, interactionSource = src, modifier = grow) {
-            Icon(Icons.Default.Edit, "Nowa rozmowa", Modifier.graphicsLayer { rotationZ = turn })
+            Icon(Icons.Default.Edit, tr("Nowa rozmowa"), Modifier.graphicsLayer { rotationZ = turn })
         }
     }
 }

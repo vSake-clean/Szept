@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -823,11 +824,11 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     /** Opis sankcji dla ukaranej osoby (null = może pisać). */
     fun mySanctionText(now: Long = System.currentTimeMillis()): String? = sanctionOf(myPub, now)?.let { s ->
-        val why = if (s.reason.isNotBlank()) " Powód: ${s.reason}" else ""
+        val why = if (s.reason.isNotBlank()) tr(" Powód: {0}", s.reason) else ""
         when (s.mode) {
-            "mute" -> "Administrator wyciszył Twoje konto" + (if (s.until > 0) " do " + java.text.SimpleDateFormat("d.MM HH:mm", java.util.Locale("pl")).format(java.util.Date(s.until)) else "") + "." + why
-            "ban" -> "Administrator zablokował Twoje konto — nie możesz pisać." + why
-            else -> "Twoje konto zostało usunięte przez administratora." + why
+            "mute" -> "Administrator wyciszył Twoje konto" + (if (s.until > 0) " do " + java.text.SimpleDateFormat("d.MM HH:mm", pl.szept.I18n.locale).format(java.util.Date(s.until)) else "") + "." + why
+            "ban" -> tr("Administrator zablokował Twoje konto — nie możesz pisać.") + why
+            else -> tr("Twoje konto zostało usunięte przez administratora.") + why
         }
     }
 
@@ -839,7 +840,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val s = sanctionOf(myPub) ?: return
         if (s.mode == "del") {
             ctx.getSharedPreferences("szept_notice", android.content.Context.MODE_PRIVATE).edit()
-                .putString("deleted", "Twoje poprzednie konto zostało usunięte przez administratora." + if (s.reason.isNotBlank()) " Powód: ${s.reason}" else "").apply()
+                .putString("deleted", tr("Twoje poprzednie konto zostało usunięte przez administratora.") + if (s.reason.isNotBlank()) tr(" Powód: {0}", s.reason) else "").apply()
             adminDeleted.value = true
         }
     }
@@ -855,8 +856,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      */
     suspend fun adminSanction(pk: String, mode: String, until: Long, reason: String) {
         stateLock.withLock {
-            if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
-            if (!pk.isPubKey() || Admin.isAdmin(pk)) throw SendException("Nieprawidłowe konto")
+            if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
+            if (!pk.isPubKey() || Admin.isAdmin(pk)) throw SendException(tr("Nieprawidłowe konto"))
             val content = policy.value?.let { JSONObject(it.toString()) } ?: JSONObject().put("min", 0)
             val old = content.optJSONArray("ban") ?: JSONArray()
             val now = System.currentTimeMillis()
@@ -872,11 +873,11 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             publishPolicy(content)
         }
         val text = when (mode) {
-            "mute" -> "Twoje konto zostało wyciszone" + (if (until > 0) " do " + java.text.SimpleDateFormat("d.MM.yyyy HH:mm", java.util.Locale("pl")).format(java.util.Date(until)) else "") + "."
-            "ban" -> "Twoje konto zostało zablokowane — nie możesz wysyłać wiadomości."
-            "del" -> "Twoje konto zostało usunięte przez administratora."
-            else -> "Ograniczenia Twojego konta zostały zdjęte. Możesz znowu pisać."
-        } + if (reason.isNotBlank() && mode != "none") " Powód: ${reason.trim()}" else ""
+            "mute" -> "Twoje konto zostało wyciszone" + (if (until > 0) " do " + java.text.SimpleDateFormat("d.MM.yyyy HH:mm", pl.szept.I18n.locale).format(java.util.Date(until)) else "") + "."
+            "ban" -> tr("Twoje konto zostało zablokowane — nie możesz wysyłać wiadomości.")
+            "del" -> tr("Twoje konto zostało usunięte przez administratora.")
+            else -> tr("Ograniczenia Twojego konta zostały zdjęte. Możesz znowu pisać.")
+        } + if (reason.isNotBlank() && mode != "none") tr(" Powód: {0}", reason.trim()) else ""
         try { adminSend(listOf(pk), text) } catch (_: SendException) {}
     }
 
@@ -900,8 +901,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * Kod działa raz — po użyciu znika z listy. Zwraca kod do przekazania (np. „K7QM-…”).
      */
     suspend fun adminCreateOtp(validMs: Long, label: String): String = stateLock.withLock {
-        val k = adminKey ?: throw SendException("Panel administratora jest zablokowany")
-        if (adminViaOtp) throw SendException("Kody może tworzyć tylko administrator zalogowany hasłem")
+        val k = adminKey ?: throw SendException(tr("Panel administratora jest zablokowany"))
+        if (adminViaOtp) throw SendException(tr("Kody może tworzyć tylko administrator zalogowany hasłem"))
         val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         val raw = Crypto.randomBytes(16).map { alphabet[(it.toInt() and 0xff) % alphabet.length] }.joinToString("")
         val code = raw.chunked(4).joinToString("-")
@@ -964,7 +965,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             val g = db.group(chatId.removePrefix("g:")) ?: return null
             if (!g.isAdmin(myPub) && g.isMuted(myPub, now)) {
                 val u = g.muted[myPub] ?: 0L
-                return "Administrator grupy wyciszył Cię" + (if (u < Long.MAX_VALUE) " do " + java.text.SimpleDateFormat("d.MM HH:mm", java.util.Locale("pl")).format(java.util.Date(u)) else "") + "."
+                return "Administrator grupy wyciszył Cię" + (if (u < Long.MAX_VALUE) " do " + java.text.SimpleDateFormat("d.MM HH:mm", pl.szept.I18n.locale).format(java.util.Date(u)) else "") + "."
             }
         }
         return null
@@ -985,20 +986,20 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * a odbiorcy nie mogą na nią odpowiedzieć. Plik aplikacji jest wysyłany raz, niezależnie od liczby osób.
      */
     suspend fun adminSend(recipients: List<String>, text: String, apk: File? = null, versionName: String? = null): Int = stateLock.withLock {
-        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
         val to = recipients.filter { it.isPubKey() && it != myPub && it != Admin.PUB }.distinct()
-        if (to.isEmpty()) throw SendException("Nie wybrano odbiorców")
+        if (to.isEmpty()) throw SendException(tr("Nie wybrano odbiorców"))
         val id = "admin:" + newId()
         val payload = JSONObject().put("t", "msg").put("id", newId()).put("ts", Clock.now())
         if (apk != null) {
-            val media = prepareAdminUpload(id, apk, "Szept-${versionName ?: "nowa"}.apk", "application/vnd.android.package-archive")
+            val media = prepareAdminUpload(id, apk, tr("Szept-{0}.apk", versionName ?: "nowa"), "application/vnd.android.package-archive")
             payload.put("k", Kind.UPDATE).put("txt", versionName ?: "").put("m", media.toJson())
             if (text.isNotBlank()) payload.put("note", text.trim())
             db.addPending(id, payload.toString(), to)
-            adminJobs.update { it + (id to "Aktualizacja ${versionName ?: ""} → ${to.size} os.") }
+            adminJobs.update { it + (id to tr("Aktualizacja {0} → {1} os.", versionName ?: "", to.size)) }
             kickUploads()
         } else {
-            if (text.isBlank()) throw SendException("Pusta wiadomość")
+            if (text.isBlank()) throw SendException(tr("Pusta wiadomość"))
             payload.put("k", Kind.TEXT).put("txt", text.trim().take(20_000))
             dispatch(payload, to, null, EXPIRE_SEC, asAdmin = true, sync = false)
         }
@@ -1054,7 +1055,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * ([apk] — plik nowej wersji, wysyłany raz dla wszystkich).
      */
     suspend fun adminPolicy(minCode: Int, msg: String, apk: File?, versionName: String, versionCode: Int) = stateLock.withLock {
-        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
         val content = JSONObject().put("min", minCode).put("msg", msg.trim().take(500)).put("v", versionName).put("code", versionCode)
         policy.value?.optString("gk")?.takeIf { it.isNotEmpty() }?.let { content.put("gk", it) }
         // sankcje i kody jednorazowe zostają
@@ -1065,17 +1066,17 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         policy.value?.optJSONArray("pyg")?.let { content.put("pyg", it) }
         if (apk != null) {
             val id = "admin:pol:" + newId()
-            val media = prepareAdminUpload(id, apk, "Szept-$versionName.apk", "application/vnd.android.package-archive")
+            val media = prepareAdminUpload(id, apk, tr("Szept-{0}.apk", versionName), "application/vnd.android.package-archive")
             content.put("m", media.toJson())
             db.addPending(id, content.toString(), emptyList())
-            adminJobs.update { it + (id to "Wymuszenie aktualizacji (od $versionName)") }
+            adminJobs.update { it + (id to tr("Wymuszenie aktualizacji (od {0})", versionName)) }
             kickUploads()
         } else publishPolicy(content)
     }
 
     /** Klucz KLIPY dla wszystkich (GIF-y) — rozsyłany razem z polityką wersji. */
     suspend fun adminSetGifKey(key: String) = stateLock.withLock {
-        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
         val content = policy.value?.let { JSONObject(it.toString()) } ?: JSONObject().put("min", 0)
         if (key.isBlank()) content.remove("gk") else content.put("gk", key.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(128))
         publishPolicy(content)
@@ -1100,10 +1101,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * Plik idzie w zaszyfrowanych paczkach, a opis gry — w podpisanej polityce administratora.
      */
     suspend fun adminPublishPyGame(src: File, zip: Boolean, id: String?, name: String, desc: String, sk: String, unit: String, higher: Boolean, decimals: Int, args: String) = stateLock.withLock {
-        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
-        if (!src.isFile || src.length() == 0L) throw SendException("Nie wybrano pliku gry")
-        if (src.length() > 8L * 1024 * 1024) throw SendException("Plik gry może mieć najwyżej 8 MB")
-        if (name.isBlank()) throw SendException("Podaj nazwę gry")
+        if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
+        if (!src.isFile || src.length() == 0L) throw SendException(tr("Nie wybrano pliku gry"))
+        if (src.length() > 8L * 1024 * 1024) throw SendException(tr("Plik gry może mieć najwyżej 8 MB"))
+        if (name.isBlank()) throw SendException(tr("Podaj nazwę gry"))
         val gid = id?.removePrefix("py:")?.takeIf { it.matches(Regex("[a-z0-9]{3,24}")) } ?: ("g" + newId().take(10))
         val jobId = "admin:pyg:" + newId()
         val media = prepareAdminUpload(jobId, src, "$gid." + (if (zip) "zip" else "py"), if (zip) "application/zip" else "text/x-python")
@@ -1112,7 +1113,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         // u administratora gra jest od razu (bez pobierania)
         if (profile == "main") PyGames.addLocal(entry, src, media.sha)
         db.addPending(jobId, entry.toJson().put("id", gid).toString(), emptyList())
-        adminJobs.update { it + (jobId to "Gra „${entry.name}” dla wszystkich") }
+        adminJobs.update { it + (jobId to tr("Gra „{0}” dla wszystkich", entry.name)) }
         kickUploads()
     }
 
@@ -1133,7 +1134,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     /** Usuwa grę z listy u wszystkich. */
     suspend fun adminRemovePyGame(id: String) = stateLock.withLock {
-        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
         val content = policy.value?.let { JSONObject(it.toString()) } ?: return@withLock
         val raw = id.removePrefix("py:")
         val arr = JSONArray()
@@ -1147,8 +1148,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * Opis gry zostaje ten sam.
      */
     suspend fun adminRefreshPyGame(id: String) {
-        val g = adminPyGames().firstOrNull { it.id == id } ?: throw SendException("Nie ma takiej gry")
-        val f = PyGames.fileOf(g) ?: throw SendException("Tej gry nie ma w tym telefonie — wybierz plik jeszcze raz")
+        val g = adminPyGames().firstOrNull { it.id == id } ?: throw SendException(tr("Nie ma takiej gry"))
+        val f = PyGames.fileOf(g) ?: throw SendException(tr("Tej gry nie ma w tym telefonie — wybierz plik jeszcze raz"))
         val copy = File(ctx.cacheDir, "pyg_refresh_${System.nanoTime()}").also { f.copyTo(it, overwrite = true) }
         try { adminPublishPyGame(copy, g.zip, g.id, g.name, g.desc, g.sk, g.unit, g.higher, g.decimals, g.args) } finally { copy.delete() }
     }
@@ -1214,7 +1215,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             val chatId = dmChatId(peer)
             db.ensureChat(chatId, false, peer, db.nameOf(peer))
             systemMessage(chatId, id, text)
-            if (missed) notifyMessage(chatId, peer, "📞 Nieodebrane połączenie", false)
+            if (missed) notifyMessage(chatId, peer, tr("📞 Nieodebrane połączenie"), false)
         }
         override fun canCall(pk: String): Boolean = pk.isPubKey() && pk != this@Core.myPub && db.contact(pk)?.blocked == false
         override fun iceServers(): List<IceServer> = callIceServers()
@@ -1237,14 +1238,14 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         }
         override fun groupMembers(gid: String): List<String>? =
             db.group(gid)?.takeIf { it.state == GroupState.ACTIVE && it.isMember(this@Core.myPub) }?.members?.map { it.pk }?.filter { it != this@Core.myPub }
-        override fun groupName(gid: String): String = db.group(gid)?.name ?: "Grupa"
+        override fun groupName(gid: String): String = db.group(gid)?.name ?: tr("Grupa")
         override fun callLog(gid: String, peer: String?, id: String, text: String) {
             if (gid.startsWith("r:")) {
                 val pk = peer ?: return
                 val chatId = dmChatId(pk)
                 db.ensureChat(chatId, false, pk, db.nameOf(pk))
                 systemMessage(chatId, id, text)
-                if (text.endsWith("nieodebrana")) notifyMessage(chatId, pk, "📞 Nieodebrane połączenie", false)
+                if (text.endsWith("nieodebrana") || text.endsWith(tr(" · nieodebrana").trim())) notifyMessage(chatId, pk, tr("📞 Nieodebrane połączenie"), false)
             } else systemMessage(groupChatId(gid), id, text)
         }
         override fun canCall(pk: String): Boolean = callHost.canCall(pk)
@@ -1261,7 +1262,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      */
     fun startCall(peer: String, video: Boolean, onError: (String) -> Unit) {
         scope.launch {
-            try { groupCalls.startRoom(listOf(peer), video) } catch (e: IllegalStateException) { onError(e.message ?: "Nie udało się zadzwonić") }
+            try { groupCalls.startRoom(listOf(peer), video) } catch (e: IllegalStateException) { onError(e.message ?: tr("Nie udało się zadzwonić")) }
         }
     }
 
@@ -1320,7 +1321,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     /** Administrator rozsyła serwery TURN wszystkim (pusta lista = usunięcie). */
     suspend fun adminSetTurns(servers: List<TurnServer>) = stateLock.withLock {
-        if (adminKey == null) throw SendException("Panel administratora jest zablokowany")
+        if (adminKey == null) throw SendException(tr("Panel administratora jest zablokowany"))
         val ok = servers.mapNotNull { s ->
             val urls = s.urls.mapNotNull { turnUrl(it) }.take(6)
             if (urls.isEmpty()) null else JSONObject().put("u", JSONArray(urls)).put("n", s.user.trim().take(200)).put("p", s.pass.trim().take(200))
@@ -1350,7 +1351,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val o = try { JSONObject(prefs.getString("devices", "{}")!!) } catch (e: Exception) { JSONObject() }
         val others = o.keys().asSequence().filter { it != deviceId }.map { k ->
             val d = o.optJSONObject(k) ?: JSONObject()
-            Device(k, d.optString("n").ifBlank { "Inne urządzenie" }, d.optLong("s"), false)
+            Device(k, d.optString("n").ifBlank { tr("Inne urządzenie") }, d.optLong("s"), false)
         }.sortedByDescending { it.seen }.toList()
         return listOf(Device(deviceId, deviceName(), System.currentTimeMillis(), true)) + others
     }
@@ -1554,7 +1555,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 val g = db.group(p.optString("g")) ?: return
                 if (g.state == GroupState.LEFT) return
                 db.saveGroup(g.copy(state = GroupState.LEFT))
-                systemMessage(groupChatId(g.id), "sys:${g.id}:left:${p.optLong("ts", Clock.now())}", "Opuściłeś(-aś) grupę (na innym urządzeniu).")
+                systemMessage(groupChatId(g.id), "sys:${g.id}:left:${p.optLong("ts", Clock.now())}", tr("Opuściłeś(-aś) grupę (na innym urządzeniu)."))
             }
             "prof" -> {
                 val to = p.optString("to")
@@ -1733,7 +1734,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
      * (ten sam układ planszy dla wszystkich w wyzwaniu) dopisuje [Games.newGame].
      */
     suspend fun startGame(chatId: String, type: String, extra: JSONObject? = null): Message {
-        val info = GameCatalog.byId(type)?.takeIf { it.inChat } ?: throw SendException("Nieznana gra")
+        val info = GameCatalog.byId(type)?.takeIf { it.inChat } ?: throw SendException(tr("Nieznana gra"))
         val members = participants(chatId) + myPub
         val game = Games.newGame(info, extra, members.distinct())
         val body = Games.fallbackText(info, game)
@@ -1779,10 +1780,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 val player = side >= 0 && (played.pkOf(side) == myPub || (side == 1 && played.b == null && m.chat.startsWith("d:")))
                 if (!player) return
                 when (played.winner) {
-                    null -> if (duel.canMove(played.state, side)) "Twój ruch" else return
-                    2 -> "koniec gry — remis"
-                    side -> "koniec gry — wygrywasz! 🏆"
-                    else -> "koniec gry — przegrana"
+                    null -> if (duel.canMove(played.state, side)) tr("Twój ruch") else return
+                    2 -> tr("koniec gry — remis")
+                    side -> tr("koniec gry — wygrywasz! 🏆")
+                    else -> tr("koniec gry — przegrana")
                 }
             }
             GameCatalog.Chat.CHALLENGE -> {
@@ -1793,7 +1794,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 val before = info.score.best(theirs.dropLast(1))
                 // tylko gdy ten wynik właśnie przeskoczył Twój
                 if (!info.score.better(now, mine) || (before != null && info.score.better(before, mine))) return
-                "lepszy wynik niż Twój — " + info.score.fmt(now)
+                tr("lepszy wynik niż Twój — ") + info.score.fmt(now)
             }
             else -> return
         }
@@ -1913,7 +1914,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (gid != null) {
             var g = db.group(gid)
             if (g == null) {
-                g = Group(gid, p.optString("gn").ifEmpty { "Grupa" }, 0, emptyList(), listOf(Member(from, db.nameOf(from)), Member(myPub, myName)), "", false, GroupState.ACTIVE)
+                g = Group(gid, p.optString("gn").ifEmpty { tr("Grupa") }, 0, emptyList(), listOf(Member(from, db.nameOf(from)), Member(myPub, myName)), "", false, GroupState.ACTIVE)
                 db.saveGroup(g)
             }
             if (g.state != GroupState.ACTIVE && g.state != GroupState.PENDING) return
@@ -1972,10 +1973,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val n = notifier ?: return
         val chat = db.chat(chatId) ?: return
         if (chat.muted && !mentioned) return
-        if (chat.hidden || notifPrivacy == NOTIF_NONE) { n.onMessage(chatId, "Szept", "Szept", "Nowa wiadomość", false); return }
+        if (chat.hidden || notifPrivacy == NOTIF_NONE) { n.onMessage(chatId, tr("Szept"), tr("Szept"), tr("Nowa wiadomość"), false); return }
         val sender = db.nameOf(from)
         val body = when {
-            notifPrivacy == NOTIF_SENDER -> if (mentioned) "Wspomina o Tobie" else "Nowa wiadomość"
+            notifPrivacy == NOTIF_SENDER -> if (mentioned) tr("Wspomina o Tobie") else tr("Nowa wiadomość")
             mentioned -> "@ $text"
             else -> text
         }
@@ -2048,8 +2049,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             db.upsertContact(from, p.optString("n").ifBlank { null }, true)
             val chatId = dmChatId(from)
             db.ensureChat(chatId, false, from, db.nameOf(from))
-            systemMessage(chatId, "sys:prof:$from", "${db.nameOf(from)} dodał(a) Cię do kontaktów. Możecie pisać.")
-            notifyMessage(chatId, from, "Nowy kontakt", false)
+            systemMessage(chatId, "sys:prof:$from", tr("{0} dodał(a) Cię do kontaktów. Możecie pisać.", db.nameOf(from)))
+            notifyMessage(chatId, from, tr("Nowy kontakt"), false)
         }
     }
 
@@ -2145,14 +2146,14 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     private fun recipientsFor(chat: Chat): Pair<List<String>, Group?> {
         if (!chat.isGroup) return listOf(chat.peer!!) to null
-        val g = db.group(chat.id.removePrefix("g:")) ?: throw SendException("Nieznana grupa")
+        val g = db.group(chat.id.removePrefix("g:")) ?: throw SendException(tr("Nieznana grupa"))
         when (g.state) {
-            GroupState.PENDING -> throw SendException("Czekasz na akceptację administratora")
-            GroupState.REMOVED -> throw SendException("Nie jesteś już członkiem tej grupy")
-            GroupState.LEFT -> throw SendException("Opuściłeś(-aś) tę grupę")
-            GroupState.CLOSED -> throw SendException("Grupa została rozwiązana")
+            GroupState.PENDING -> throw SendException(tr("Czekasz na akceptację administratora"))
+            GroupState.REMOVED -> throw SendException(tr("Nie jesteś już członkiem tej grupy"))
+            GroupState.LEFT -> throw SendException(tr("Opuściłeś(-aś) tę grupę"))
+            GroupState.CLOSED -> throw SendException(tr("Grupa została rozwiązana"))
         }
-        if (g.adminsOnly && !g.isAdmin(myPub)) throw SendException("Tylko administratorzy mogą pisać w tej grupie")
+        if (g.adminsOnly && !g.isAdmin(myPub)) throw SendException(tr("Tylko administratorzy mogą pisać w tej grupie"))
         return g.members.map { it.pk }.filter { it != myPub } to g
     }
 
@@ -2181,9 +2182,9 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         chatId: String, kind: String, body: String, att: Attachment?,
         xmodeOverride: Int?, ttlOverride: Int?, replyTo: Message?, extra: Extra,
     ) = stateLock.withLock {
-        val chat0 = db.chat(chatId) ?: throw SendException("Brak czatu")
+        val chat0 = db.chat(chatId) ?: throw SendException(tr("Brak czatu"))
         canWrite(chatId)?.let { throw SendException(it) }
-        if (chat0.peer != null && Admin.isAdmin(chat0.peer)) throw SendException("Na wiadomości od Szept nie można odpowiadać")
+        if (chat0.peer != null && Admin.isAdmin(chat0.peer)) throw SendException(tr("Na wiadomości od Szept nie można odpowiadać"))
         val mode = xmodeOverride ?: chat0.xmode
         var ttl = (ttlOverride ?: chat0.ttl).coerceIn(1, 7 * 86400)
         // wiadomość czasowa z głosem/wideo nie może zniknąć w trakcie odtwarzania
@@ -2193,7 +2194,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val chat = chat0.copy(xmode = mode, ttl = ttl)
         val (recipients, group) = recipientsFor(chat)
         val reply = replyTo?.let { replyOf(it) }
-        if (att != null && att.file.length() > MAX_MEDIA) throw SendException("Plik za duży (max ${MAX_MEDIA / 1024 / 1024} MB)")
+        if (att != null && att.file.length() > MAX_MEDIA) throw SendException(tr("Plik za duży (max {0} MB)", MAX_MEDIA / 1024 / 1024))
         val msgId = newId()
         val now = Clock.now()
         var media: MediaMeta? = null
@@ -2462,10 +2463,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     /** Edycja własnej wiadomości (tekst albo podpis zdjęcia/wideo/pliku). */
     suspend fun editMessage(msgId: String, newText: String) {
-        val m = db.message(msgId) ?: throw SendException("Wiadomość nie istnieje")
-        if (!canEdit(m)) throw SendException("Tej wiadomości nie można edytować")
+        val m = db.message(msgId) ?: throw SendException(tr("Wiadomość nie istnieje"))
+        if (!canEdit(m)) throw SendException(tr("Tej wiadomości nie można edytować"))
         val text = newText.trim().take(20_000)
-        if (text.isEmpty() && m.kind == Kind.TEXT) throw SendException("Wiadomość nie może być pusta")
+        if (text.isEmpty() && m.kind == Kind.TEXT) throw SendException(tr("Wiadomość nie może być pusta"))
         val now = Clock.now()
         db.editMessage(msgId, text, now)
         db.refreshChatPreview(m.chat)
@@ -2482,7 +2483,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     /** Ankieta. Głosy są jawne dla uczestników rozmowy. */
     suspend fun sendPoll(chatId: String, poll: Poll): Message {
-        val chat = db.chat(chatId) ?: throw SendException("Brak czatu")
+        val chat = db.chat(chatId) ?: throw SendException(tr("Brak czatu"))
         return send(chatId, Kind.POLL, poll.toJson(), null, if (chat.xmode == XMode.AFTER_SEND) null else XMode.OFF)
     }
 
@@ -2526,7 +2527,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val on = p.optBoolean("on")
         val ts = p.optLong("ts", Clock.now())
         db.setPin(chatId, m.id, from, on, ts)
-        if (on) systemMessage(chatId, "sys:pin:${m.id}:$ts", "📌 ${db.nameOf(from)} przypiął(-ęła) wiadomość: ${Db.preview(m).replace('\n', ' ').take(60)}")
+        if (on) systemMessage(chatId, "sys:pin:${m.id}:$ts", tr("📌 {0} przypiął(-ęła) wiadomość: {1}", db.nameOf(from), Db.preview(m).replace('\n', ' ').take(60)))
     }
 
     // ================= „pisze…” i zrzuty ekranu =================
@@ -2583,7 +2584,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         scope.launch {
             if (db.chat(chatId) == null) return@launch
             val now = Clock.now()
-            systemMessage(chatId, "sys:shot:me:$now", "📸 Zrobiłeś(-aś) zrzut ekranu rozmowy.")
+            systemMessage(chatId, "sys:shot:me:$now", tr("📸 Zrobiłeś(-aś) zrzut ekranu rozmowy."))
             val to = participants(chatId)
             if (to.isNotEmpty()) dispatch(target(JSONObject().put("t", "shot").put("ts", now), chatId), to, null, 3 * 86400, sync = false)
         }
@@ -2593,8 +2594,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val chatId = chatOf(from, gid) ?: return
         if (db.chat(chatId) == null) return
         val ts = p.optLong("ts", Clock.now())
-        systemMessage(chatId, "sys:shot:$from:$ts", "📸 ${db.nameOf(from)} zrobił(a) zrzut ekranu rozmowy.")
-        notifyMessage(chatId, from, "📸 zrobił(a) zrzut ekranu rozmowy", gid != null)
+        systemMessage(chatId, "sys:shot:$from:$ts", tr("📸 {0} zrobił(a) zrzut ekranu rozmowy.", db.nameOf(from)))
+        notifyMessage(chatId, from, tr("📸 zrobił(a) zrzut ekranu rozmowy"), gid != null)
     }
 
     // ================= przekazywanie =================
@@ -2603,12 +2604,12 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     suspend fun forward(m: Message, chatIds: List<String>): Int = withContext(Dispatchers.IO) { forwardIo(m, chatIds) }
 
     private suspend fun forwardIo(m: Message, chatIds: List<String>): Int {
-        if (!canForward(m)) throw SendException("Tej wiadomości nie można przekazać")
+        if (!canForward(m)) throw SendException(tr("Tej wiadomości nie można przekazać"))
         var n = 0
         for (chatId in chatIds.distinct()) {
             try {
                 val att = m.media?.let { meta ->
-                    val src = File(m.path ?: throw SendException("Plik nie jest jeszcze pobrany"))
+                    val src = File(m.path ?: throw SendException(tr("Plik nie jest jeszcze pobrany")))
                     val tmp = File(ctx.cacheDir, "fwd_${newId()}." + meta.name.substringAfterLast('.', "bin").take(5))
                     src.copyTo(tmp, overwrite = true)
                     Attachment(tmp, meta.mime, meta.name, meta.thumb, meta.w, meta.h, meta.dur, meta.wave)
@@ -2633,7 +2634,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     /** Wysyła lokalizację: jednorazową ([liveMs] = 0) albo udostępnianą na żywo przez [liveMs]. */
     suspend fun sendLocation(chatId: String, lat: Double, lon: Double, acc: Float, liveMs: Long = 0): Message {
         val now = Clock.now()
-        val chat = db.chat(chatId) ?: throw SendException("Brak czatu")
+        val chat = db.chat(chatId) ?: throw SendException(tr("Brak czatu"))
         val loc = Loc(lat, lon, acc, if (liveMs > 0) now + liveMs else 0, now)
         val xm = if (liveMs > 0 || chat.xmode != XMode.AFTER_SEND) XMode.OFF else null
         val m = send(chatId, Kind.LOCATION, loc.toJson(), null, xm)
@@ -2718,7 +2719,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         var path: String? = null
         val audience = storyAudience()
         if (att != null) {
-            if (att.file.length() > MAX_MEDIA) throw SendException("Plik za duży (max ${MAX_MEDIA / 1024 / 1024} MB)")
+            if (att.file.length() > MAX_MEDIA) throw SendException(tr("Plik za duży (max {0} MB)", MAX_MEDIA / 1024 / 1024))
             val dest = File(mediaDir, "story_$id." + att.name.substringAfterLast('.', "jpg").take(5))
             att.file.copyTo(dest, overwrite = true)
             if (att.file.absolutePath.startsWith(ctx.cacheDir.absolutePath)) att.file.delete()
@@ -2849,7 +2850,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             }
             var keep = false
             try {
-                if (att != null && !att.file.exists()) throw SendException("brak załącznika")
+                if (att != null && !att.file.exists()) throw SendException(tr("brak załącznika"))
                 send(s.chat, s.kind, s.body, att, s.xmode, s.ttl, s.reply?.let { db.message(it) }, Extra.from(a?.optJSONObject("ex")))
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -2857,7 +2858,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     // chwilowy błąd (np. brak miejsca) — spróbujemy za 5 minut, załącznik zostaje
                     keep = true
                     db.addScheduled(s.copy(at = now + 5 * 60_000L))
-                } else systemMessage(s.chat, "sys:sched:${s.id}", "Nie wysłano zaplanowanej wiadomości: ${e.message}")
+                } else systemMessage(s.chat, "sys:sched:${s.id}", tr("Nie wysłano zaplanowanej wiadomości: {0}", e.message))
             } finally {
                 if (!keep) att?.file?.delete()
             }
@@ -3069,11 +3070,11 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     suspend fun createGroup(name: String, memberPks: List<String>): String = stateLock.withLock {
         val gid = Crypto.randomBytes(12).hex()
         val members = listOf(Member(myPub, myName)) + memberPks.distinct().filter { it != myPub }.map { Member(it, db.nameOf(it)) }
-        val g = Group(gid, name.trim().ifEmpty { "Grupa" }, 1, listOf(myPub), members, Crypto.randomBytes(8).hex(), false, GroupState.ACTIVE)
+        val g = Group(gid, name.trim().ifEmpty { tr("Grupa") }, 1, listOf(myPub), members, Crypto.randomBytes(8).hex(), false, GroupState.ACTIVE)
         db.saveGroup(g)
         val chatId = groupChatId(gid)
         db.ensureChat(chatId, true, null, g.name)
-        systemMessage(chatId, "sys:$gid:create", "Utworzono grupę „${g.name}”.")
+        systemMessage(chatId, "sys:$gid:create", tr("Utworzono grupę „{0}”.", g.name))
         broadcastGroup(g)
         chatId
     }
@@ -3137,7 +3138,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             if (!g.isAdmin(myPub)) return
             val n = g.copy(ver = g.ver + 1, state = GroupState.CLOSED)
             db.saveGroup(n)
-            systemMessage(groupChatId(gid), "sys:$gid:closed", "Rozwiązałeś(-aś) grupę.")
+            systemMessage(groupChatId(gid), "sys:$gid:closed", tr("Rozwiązałeś(-aś) grupę."))
             broadcastGroup(n, closed = true)
         }
     }
@@ -3156,7 +3157,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 }
             }
             db.saveGroup(g.copy(state = GroupState.LEFT))
-            systemMessage(groupChatId(gid), "sys:$gid:left:${System.currentTimeMillis()}", "Opuściłeś(-aś) grupę.")
+            systemMessage(groupChatId(gid), "sys:$gid:left:${System.currentTimeMillis()}", tr("Opuściłeś(-aś) grupę."))
         }
     }
 
@@ -3169,7 +3170,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         } else db.saveGroup(existing.copy(state = GroupState.PENDING))
         db.ensureChat(chatId, true, null, inv.name)
         systemMessage(chatId, "sys:${inv.gid}:join:${System.currentTimeMillis()}",
-            "Wysłano prośbę o dołączenie. Zostaniesz dodany(-a), gdy administrator będzie online.")
+            tr("Wysłano prośbę o dołączenie. Zostaniesz dodany(-a), gdy administrator będzie online."))
         inv.admins.forEach { db.upsertContact(it, null, false) }
         dispatch(JSONObject().put("t", "gjoin").put("g", inv.gid).put("tok", inv.token), inv.admins, null, sync = false)
         chatId
@@ -3225,7 +3226,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (!known && !meIn) return false
         val n = cleanRemoved(
             Group(
-                gid, p.optString("name").take(80).ifEmpty { "Grupa" }, ver, admins, members, p.optString("tok"), p.optBoolean("ao"), state, rm,
+                gid, p.optString("name").take(80).ifEmpty { tr("Grupa") }, ver, admins, members, p.optString("tok"), p.optBoolean("ao"), state, rm,
                 p.optString("ic").take(60_000).ifEmpty { old?.icon ?: "" }, if (p.has("col")) p.optInt("col") else (old?.color ?: 0),
                 // starsze wersje nie wysyłają tych pól — wtedy zostawiamy, co było
                 if (p.has("ds")) p.optString("ds").take(1000) else old?.descr ?: "",
@@ -3243,14 +3244,14 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         db.ensureChat(chatId, true, null, n.name)
         db.renameChat(chatId, n.name)
         if (self && (old == null || old.ver == 0)) {
-            systemMessage(chatId, "sys:$gid:added:$ver", "Grupa „${n.name}” (z Twojego innego urządzenia).")
+            systemMessage(chatId, "sys:$gid:added:$ver", tr("Grupa „{0}” (z Twojego innego urządzenia).", n.name))
         } else if (old == null || old.ver == 0 || old.state != GroupState.ACTIVE && state == GroupState.ACTIVE) {
-            systemMessage(chatId, "sys:$gid:added:$ver", "${db.nameOf(from)} dodał(a) Cię do grupy „${n.name}”.")
-            notifyMessage(chatId, from, "Dodano Cię do grupy", true)
+            systemMessage(chatId, "sys:$gid:added:$ver", tr("{0} dodał(a) Cię do grupy „{1}”.", db.nameOf(from), n.name))
+            notifyMessage(chatId, from, tr("Dodano Cię do grupy"), true)
         } else describeGroupChange(old, n)
-        if (closed) systemMessage(chatId, "sys:$gid:closed", "Administrator rozwiązał grupę.")
-        else if (state == GroupState.REMOVED && old?.state == GroupState.ACTIVE) systemMessage(chatId, "sys:$gid:removed:$ver", "Usunięto Cię z grupy.")
-        else if (self && state == GroupState.LEFT && old?.state == GroupState.ACTIVE) systemMessage(chatId, "sys:$gid:left:$ver", "Opuściłeś(-aś) grupę (na innym urządzeniu).")
+        if (closed) systemMessage(chatId, "sys:$gid:closed", tr("Administrator rozwiązał grupę."))
+        else if (state == GroupState.REMOVED && old?.state == GroupState.ACTIVE) systemMessage(chatId, "sys:$gid:removed:$ver", tr("Usunięto Cię z grupy."))
+        else if (self && state == GroupState.LEFT && old?.state == GroupState.ACTIVE) systemMessage(chatId, "sys:$gid:left:$ver", tr("Opuściłeś(-aś) grupę (na innym urządzeniu)."))
         return true
     }
 
@@ -3259,21 +3260,21 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val added = n.members.filter { !old.isMember(it.pk) }
         val removed = old.members.filter { !n.isMember(it.pk) }
         val texts = mutableListOf<String>()
-        if (old.name != n.name) texts += "Zmieniono nazwę grupy na „${n.name}”."
-        added.forEach { texts += "${it.name.ifBlank { db.nameOf(it.pk) }} dołączył(a) do grupy." }
-        removed.forEach { if (it.pk != myPub) texts += "${it.name.ifBlank { db.nameOf(it.pk) }} nie jest już w grupie." }
-        (n.admins - old.admins.toSet()).forEach { texts += "${if (it == myPub) "Jesteś teraz" else db.nameOf(it) + " jest teraz"} administratorem." }
-        if (old.adminsOnly != n.adminsOnly) texts += if (n.adminsOnly) "Teraz tylko administratorzy mogą pisać." else "Wszyscy mogą znowu pisać."
-        if (old.descr != n.descr) texts += if (n.descr.isBlank()) "Usunięto opis grupy." else "Zmieniono opis grupy."
-        if (old.approve != n.approve) texts += if (n.approve) "Nowe osoby z linku czekają na zatwierdzenie przez administratora." else "Nowe osoby z linku dołączają od razu."
+        if (old.name != n.name) texts += tr("Zmieniono nazwę grupy na „{0}”.", n.name)
+        added.forEach { texts += tr("{0} dołączył(a) do grupy.", it.name.ifBlank { db.nameOf(it.pk) }) }
+        removed.forEach { if (it.pk != myPub) texts += tr("{0} nie jest już w grupie.", it.name.ifBlank { db.nameOf(it.pk) }) }
+        (n.admins - old.admins.toSet()).forEach { texts += "${if (it == myPub) tr("Jesteś teraz") else db.nameOf(it) + tr(" jest teraz")} administratorem." }
+        if (old.adminsOnly != n.adminsOnly) texts += if (n.adminsOnly) tr("Teraz tylko administratorzy mogą pisać.") else tr("Wszyscy mogą znowu pisać.")
+        if (old.descr != n.descr) texts += if (n.descr.isBlank()) tr("Usunięto opis grupy.") else tr("Zmieniono opis grupy.")
+        if (old.approve != n.approve) texts += if (n.approve) tr("Nowe osoby z linku czekają na zatwierdzenie przez administratora.") else tr("Nowe osoby z linku dołączają od razu.")
         val now = System.currentTimeMillis()
-        val fmt = java.text.SimpleDateFormat("d.MM HH:mm", java.util.Locale("pl"))
-        fun who(pk: String) = if (pk == myPub) "Ciebie" else db.nameOf(pk)
+        val fmt = java.text.SimpleDateFormat("d.MM HH:mm", pl.szept.I18n.locale)
+        fun who(pk: String) = if (pk == myPub) tr("Ciebie") else db.nameOf(pk)
         n.muted.filter { (pk, u) -> u > now && (old.muted[pk] ?: 0L) != u }.forEach { (pk, u) ->
-            texts += "🔇 Administrator wyciszył: ${who(pk)}" + (if (u < Long.MAX_VALUE) " (do ${fmt.format(java.util.Date(u))})" else "") + "."
+            texts += tr("🔇 Administrator wyciszył: {0}", who(pk)) + (if (u < Long.MAX_VALUE) tr(" (do {0})", fmt.format(java.util.Date(u))) else "") + "."
         }
-        old.muted.filter { (pk, u) -> u > now && !n.isMuted(pk, now) && n.isMember(pk) }.keys.forEach { texts += "🔊 ${if (it == myPub) "Możesz" else db.nameOf(it) + " może"} znowu pisać." }
-        (n.banned - old.banned.toSet()).forEach { texts += "⛔ ${db.nameOf(it)} został(a) zbanowany(-a) w grupie." }
+        old.muted.filter { (pk, u) -> u > now && !n.isMuted(pk, now) && n.isMember(pk) }.keys.forEach { texts += tr("🔊 {0} znowu pisać.", if (it == myPub) tr("Możesz") else db.nameOf(it) + tr(" może")) }
+        (n.banned - old.banned.toSet()).forEach { texts += tr("⛔ {0} został(a) zbanowany(-a) w grupie.", db.nameOf(it)) }
         texts.forEachIndexed { i, t -> systemMessage(chatId, "sys:${n.id}:${n.ver}:$i:${stateHash(n).take(6)}", t) }
     }
 
@@ -3288,7 +3289,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (from in g.banned) return
         if (from in g.removed) {
             // usunięty przez admina nie wraca sam przez stary link
-            systemMessage(groupChatId(gid), "sys:$gid:rejoin:$from", "${db.nameOf(from)} (usunięty z grupy) prosi o ponowne dołączenie. Możesz dodać tę osobę ręcznie.")
+            systemMessage(groupChatId(gid), "sys:$gid:rejoin:$from", tr("{0} (usunięty z grupy) prosi o ponowne dołączenie. Możesz dodać tę osobę ręcznie.", db.nameOf(from)))
             return
         }
         val name = p.optString("n").ifBlank { db.nameOf(from) }
@@ -3296,8 +3297,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             // ręczne zatwierdzanie: prośba czeka w informacjach o grupie
             db.addJoinReq(JoinReq(gid, from, name, tok, Clock.now()))
             val chatId = groupChatId(gid)
-            systemMessage(chatId, "sys:$gid:req:$from", "$name prosi o dołączenie do grupy. Zatwierdź w informacjach o grupie.")
-            notifyMessage(chatId, from, "prosi o dołączenie do grupy", true)
+            systemMessage(chatId, "sys:$gid:req:$from", tr("{0} prosi o dołączenie do grupy. Zatwierdź w informacjach o grupie.", name))
+            notifyMessage(chatId, from, tr("prosi o dołączenie do grupy"), true)
             return
         }
         admit(g, from, name, tok)
@@ -3336,8 +3337,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val g = db.group(gid) ?: return
         if (g.state != GroupState.PENDING || from !in g.admins) return
         db.saveGroup(g.copy(state = GroupState.REMOVED))
-        systemMessage(groupChatId(gid), "sys:$gid:deny:${Clock.now()}", "Administrator odrzucił prośbę o dołączenie.")
-        notifyMessage(groupChatId(gid), from, "Odrzucono prośbę o dołączenie", true)
+        systemMessage(groupChatId(gid), "sys:$gid:deny:${Clock.now()}", tr("Administrator odrzucił prośbę o dołączenie."))
+        notifyMessage(groupChatId(gid), from, tr("Odrzucono prośbę o dołączenie"), true)
     }
 
     suspend fun setGroupDescr(gid: String, d: String) = updateGroup(gid) { it.copy(descr = d.trim().take(1000)) }

@@ -2,6 +2,7 @@
 
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -258,34 +259,34 @@ fun FieldIcon(icon: ImageVector, desc: String, onClick: () -> Unit, modifier: Mo
 fun AttachButton(onClick: () -> Unit) {
     val st = LocalStyle.current
     when (st.spec.input) {
-        InputStyle.GLASS -> GlassIconButton(Icons.Default.Add, "Załącz", onClick, Modifier.padding(end = 8.dp))
+        InputStyle.GLASS -> GlassIconButton(Icons.Default.Add, tr("Załącz"), onClick, Modifier.padding(end = 8.dp))
         InputStyle.IOS6 -> Box(
             Modifier.padding(end = 6.dp, bottom = 1.dp).size(width = 38.dp, height = 30.dp).clip(RoundedCornerShape(6.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFFF4F5F7), Color(0xFFC9CED6))))
                 .border(1.dp, Color(0xFF8F99A8), RoundedCornerShape(6.dp))
-                .clickable(onClick = onClick).semantics { contentDescription = "Załącz"; role = Role.Button },
+                .clickable(onClick = onClick).semantics { contentDescription = tr("Załącz"); role = Role.Button },
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Default.PhotoCamera, null, Modifier.size(19.dp), tint = Color(0xFF59626F)) }
-        InputStyle.MESSENGER -> FieldIcon(Icons.Default.AddCircle, "Załącz", onClick, tint = st.pal.primary)
+        InputStyle.MESSENGER -> FieldIcon(Icons.Default.AddCircle, tr("Załącz"), onClick, tint = st.pal.primary)
         InputStyle.DISCORD -> Box(
             Modifier.padding(end = 8.dp).size(40.dp).clip(CircleShape).background(Color(0xFF383A40))
-                .clickable(onClick = onClick).semantics { contentDescription = "Załącz"; role = Role.Button },
+                .clickable(onClick = onClick).semantics { contentDescription = tr("Załącz"); role = Role.Button },
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Default.Add, null, tint = Color(0xFFB5BAC1)) }
-        InputStyle.WINDOW -> WinButton(onClick, Modifier.padding(end = 6.dp), desc = "Załącz") {
+        InputStyle.WINDOW -> WinButton(onClick, Modifier.padding(end = 6.dp), desc = tr("Załącz")) {
             Icon(Icons.Default.AttachFile, null, Modifier.size(18.dp))
         }
         InputStyle.PILL -> when (st.spec.chrome) {
-            Chrome.ONEUI -> FieldIcon(Icons.Default.Add, "Załącz", onClick, tint = st.pal.onBase)
+            Chrome.ONEUI -> FieldIcon(Icons.Default.Add, tr("Załącz"), onClick, tint = st.pal.onBase)
             else -> Box(
                 Modifier.padding(end = 8.dp).size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer)
-                    .clickable(onClick = onClick).semantics { contentDescription = "Załącz"; role = Role.Button },
+                    .clickable(onClick = onClick).semantics { contentDescription = tr("Załącz"); role = Role.Button },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSecondaryContainer) }
         }
         // BAR i klasyczny: ikona spinacza
         else -> IconButton(onClick = onClick) {
-            Icon(Icons.Default.AttachFile, "Załącz", Modifier.rotate(if (st.spec.chrome == Chrome.TELEGRAM) 45f else 0f))
+            Icon(Icons.Default.AttachFile, tr("Załącz"), Modifier.rotate(if (st.spec.chrome == Chrome.TELEGRAM) 45f else 0f))
         }
     }
 }
@@ -294,7 +295,7 @@ fun AttachButton(onClick: () -> Unit) {
 @Composable
 fun SendButton(editing: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     val st = LocalStyle.current
-    val desc = if (editing) "Zapisz zmianę" else "Wyślij (przytrzymaj: czasowa lub zaplanuj)"
+    val desc = if (editing) tr("Zapisz zmianę") else tr("Wyślij (przytrzymaj: czasowa lub zaplanuj)")
     val icon = if (editing) Icons.Default.Check else Icons.AutoMirrored.Filled.Send
     val src = remember { MutableInteractionSource() }
     val press = LocalAnim.current[Anim.PRESS]
@@ -305,7 +306,7 @@ fun SendButton(editing: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
                 .semantics { contentDescription = desc; role = Role.Button },
             contentAlignment = Alignment.Center,
         ) { Icon(if (editing) Icons.Default.Check else Icons.Default.ArrowUpward, null, Modifier.size(20.dp), tint = Color.White) }
-        InputStyle.IOS6 -> pl.szept.ui.style.Ios6Button(if (editing) "Zapisz" else "Wyślij", onClick, Modifier.padding(start = 2.dp, bottom = 1.dp), onLongClick)
+        InputStyle.IOS6 -> pl.szept.ui.style.Ios6Button(if (editing) tr("Zapisz") else tr("Wyślij"), onClick, Modifier.padding(start = 2.dp, bottom = 1.dp), onLongClick)
         InputStyle.BAR, InputStyle.MESSENGER -> Box(
             Modifier.size(44.dp).pressScale(src, press).clip(CircleShape)
                 .combinedClickable(src, androidx.compose.material3.ripple(bounded = false), onClick = onClick, onLongClick = onLongClick)
@@ -313,7 +314,7 @@ fun SendButton(editing: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) { Icon(icon, null, Modifier.size(26.dp), tint = st.pal.primary) }
         InputStyle.WINDOW -> WinButton(onClick, Modifier.padding(start = 2.dp), primary = true, desc = desc, onLongClick = onLongClick) {
-            Text(if (editing) "Zapisz" else "Wyślij", fontSize = 14.sp)
+            Text(if (editing) tr("Zapisz") else tr("Wyślij"), fontSize = 14.sp)
         }
         else -> {
             val color = when (st.spec.chrome) {
@@ -380,7 +381,7 @@ fun LikeButton(onClick: () -> Unit) {
     Box(
         Modifier.size(44.dp).pressScale(src, LocalAnim.current[Anim.PRESS]).clip(CircleShape)
             .clickable(src, androidx.compose.material3.ripple(bounded = false), onClick = onClick)
-            .semantics { contentDescription = "Wyślij kciuk w górę"; role = Role.Button },
+            .semantics { contentDescription = tr("Wyślij kciuk w górę"); role = Role.Button },
         contentAlignment = Alignment.Center,
     ) { Icon(Icons.Default.ThumbUp, null, Modifier.size(26.dp), tint = st.pal.primary) }
 }
@@ -457,7 +458,7 @@ fun GlassChatHeader(
             .statusBarsPadding().padding(horizontal = 14.dp).padding(top = 4.dp, bottom = 8.dp),
     ) {
         // przyciski na wysokości środka awatara (52 dp), jak w oryginale
-        GlassIconButton(backIcon(), "Wstecz", onBack, Modifier.align(Alignment.TopStart).padding(top = 4.dp))
+        GlassIconButton(backIcon(), tr("Wstecz"), onBack, Modifier.align(Alignment.TopStart).padding(top = 4.dp))
         Column(
             Modifier.align(Alignment.TopCenter).padding(horizontal = 64.dp)
                 .clickable(remember { MutableInteractionSource() }, null, onClick = onTitle),

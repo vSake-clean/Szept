@@ -16,6 +16,10 @@
 Każda wersja ma numer w nazwie pliku (`Szept-1.9.apk`, potem `Szept-2.2.apk`…). Numer zainstalowanej wersji widać w Ustawieniach → „O aplikacji” i na ekranie powitalnym. Nowszą wersję instalujesz tak samo, otwierając plik na telefonie. Zainstaluje się „na” starą wersję i zachowa konto, kontakty, grupy i wiadomości.
 
 ## Funkcje
+### Nowe w 3.4
+- **Wybór języka**: polski albo English — cały Szept, także gry i powiadomienia. Kreator po instalacji startuje w języku telefonu, z flagami do wyboru.
+- **Kreator od nowa**: po aktualizacji każdy zobaczy go jeszcze raz (konto, nazwa, ID, rozmowy i grupy zostają). W Ustawieniach: „Kreator: język i wygląd” oraz „Język / Language”.
+
 ### Nowe w 3.3.5
 - **Aktualizacje znów się instalują**: duże pliki (np. aktualizacja) są rozkładane na kilka przekaźników i pobierane po kawałkach, więc nie stają w połowie — także u osób ze starszą wersją. Zapasowo przycisk „Pobierz ze strony”.
 - **⚡ Szybka wysyłka**: zdjęcia, filmy, GIF-y, pliki i aktualizacje idą naraz na wszystkie przekaźniki. Domyślnie włączona na Wi-Fi, wyłączona na danych komórkowych; raz włączona zostaje włączona (Ustawienia → Połączenie i bateria albo „⚡ Szybko” przy wysyłaniu).

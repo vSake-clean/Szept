@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.annotation.SuppressLint
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
@@ -124,7 +125,7 @@ fun VideoNoteDialog(onDismiss: () -> Unit, onRecorded: (File, Long) -> Unit) {
                 capture = vc
                 cameraError = null
             } catch (e: Exception) {
-                cameraError = "Nie można uruchomić kamery: ${e.message}"
+                cameraError = tr("Nie można uruchomić kamery: {0}", e.message)
             }
         }, main)
         onDispose {
@@ -159,8 +160,8 @@ fun VideoNoteDialog(onDismiss: () -> Unit, onRecorded: (File, Long) -> Unit) {
                     when {
                         cancelled -> out.delete()
                         ok && out.length() > 0 && dur >= 700 -> onRecorded(out, dur)
-                        ok -> { out.delete(); toast(ctx, "Za krótko — dotknij, aby zacząć, i jeszcze raz, aby zakończyć") }
-                        else -> { out.delete(); toast(ctx, "Nie udało się nagrać (błąd ${ev.error})") }
+                        ok -> { out.delete(); toast(ctx, tr("Za krótko — dotknij, aby zacząć, i jeszcze raz, aby zakończyć")) }
+                        else -> { out.delete(); toast(ctx, tr("Nie udało się nagrać (błąd {0})", ev.error)) }
                     }
                 }
             }
@@ -169,7 +170,7 @@ fun VideoNoteDialog(onDismiss: () -> Unit, onRecorded: (File, Long) -> Unit) {
     Dialog(onDismissRequest = { cancelled = true; recording?.stop(); onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(color = Color.Black.copy(alpha = 0.92f), modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text("Notatka wideo", color = Color.White, style = MaterialTheme.typography.titleLarge)
+                Text(tr("Notatka wideo"), color = Color.White, style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
                 Box(Modifier.size(290.dp), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(270.dp).clip(CircleShape).background(Color.DarkGray), contentAlignment = Alignment.Center) {
@@ -185,12 +186,12 @@ fun VideoNoteDialog(onDismiss: () -> Unit, onRecorded: (File, Long) -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    if (recording != null) "● " + formatDuration(elapsed) + " / 1:00" else "Dotknij czerwony przycisk, aby nagrywać (maks. 1 min)",
+                    if (recording != null) "● " + formatDuration(elapsed) + " / 1:00" else tr("Dotknij czerwony przycisk, aby nagrywać (maks. 1 min)"),
                     color = Color.White, fontWeight = if (recording != null) FontWeight.Bold else FontWeight.Normal,
                 )
                 Spacer(Modifier.height(20.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { cancelled = true; recording?.stop(); onDismiss() }) { Icon(Icons.Default.Close, "Anuluj", tint = Color.White) }
+                    IconButton(onClick = { cancelled = true; recording?.stop(); onDismiss() }) { Icon(Icons.Default.Close, tr("Anuluj"), tint = Color.White) }
                     FilledIconButton(
                         onClick = { if (recording == null) start() else recording?.stop() },
                         enabled = capture != null,
@@ -198,10 +199,10 @@ fun VideoNoteDialog(onDismiss: () -> Unit, onRecorded: (File, Long) -> Unit) {
                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFE53935)),
                     ) {
                         Icon(if (recording == null) Icons.Default.FiberManualRecord else Icons.Default.Stop,
-                            if (recording == null) "Nagrywaj" else "Zakończ i wyślij", tint = Color.White, modifier = Modifier.size(36.dp))
+                            if (recording == null) tr("Nagrywaj") else tr("Zakończ i wyślij"), tint = Color.White, modifier = Modifier.size(36.dp))
                     }
                     IconButton(onClick = { front = !front }, enabled = recording == null) {
-                        Icon(Icons.Default.Cameraswitch, "Przełącz kamerę", tint = Color.White)
+                        Icon(Icons.Default.Cameraswitch, tr("Przełącz kamerę"), tint = Color.White)
                     }
                 }
             }
@@ -277,7 +278,7 @@ fun RoundVideoContent(m: Message) {
                 if (thumb != null) BitmapImage(thumb, Modifier.fillMaxSize())
                 if (m.path == null) CircularProgressIndicator(Modifier.size(36.dp))
                 else Box(Modifier.size(48.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.PlayArrow, "Odtwórz notatkę", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.PlayArrow, tr("Odtwórz notatkę"), tint = Color.White, modifier = Modifier.size(32.dp))
                 }
             }
         }

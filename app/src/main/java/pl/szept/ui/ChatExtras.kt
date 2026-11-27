@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.material3.Surface
 
 import androidx.compose.material.icons.filled.Edit
@@ -96,8 +97,8 @@ import java.util.Locale
 data class DayHeader(val key: String, val label: String)
 
 private val dayKeyFmt = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
-private val dayLabelFmt = SimpleDateFormat("EEEE, d MMMM", Locale("pl"))
-private val dayLabelYearFmt = SimpleDateFormat("d MMMM yyyy", Locale("pl"))
+private val dayLabelFmt = SimpleDateFormat("EEEE, d MMMM", pl.szept.I18n.locale)
+private val dayLabelYearFmt = SimpleDateFormat("d MMMM yyyy", pl.szept.I18n.locale)
 
 fun dayLabel(ts: Long, now: Long = System.currentTimeMillis()): String {
     val c = Calendar.getInstance().apply { timeInMillis = ts }
@@ -105,8 +106,8 @@ fun dayLabel(ts: Long, now: Long = System.currentTimeMillis()): String {
     val yesterday = Calendar.getInstance().apply { timeInMillis = now; add(Calendar.DAY_OF_YEAR, -1) }
     fun same(a: Calendar, b: Calendar) = a.get(Calendar.YEAR) == b.get(Calendar.YEAR) && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
     return when {
-        same(c, today) -> "Dzisiaj"
-        same(c, yesterday) -> "Wczoraj"
+        same(c, today) -> tr("Dzisiaj")
+        same(c, yesterday) -> tr("Wczoraj")
         c.get(Calendar.YEAR) == today.get(Calendar.YEAR) -> dayLabelFmt.format(Date(ts)).replaceFirstChar { it.uppercase() }
         else -> dayLabelYearFmt.format(Date(ts))
     }
@@ -156,7 +157,7 @@ fun QuoteBox(reply: Reply, name: String, onClick: () -> Unit) {
         Box(Modifier.width(4.dp).height(42.dp).background(avatarColor(reply.sender)))
         Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
             Text(name, style = MaterialTheme.typography.labelMedium, color = avatarColor(reply.sender), fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(reply.text.ifEmpty { "Wiadomość" }, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            Text(reply.text.ifEmpty { tr("Wiadomość") }, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -171,10 +172,10 @@ fun ReplyBar(reply: Reply, name: String, onClose: () -> Unit) {
     ) {
         Box(Modifier.width(4.dp).height(36.dp).background(avatarColor(reply.sender)))
         Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-            Text("Odpowiadasz: $name", style = MaterialTheme.typography.labelMedium, color = avatarColor(reply.sender), fontWeight = FontWeight.Bold)
+            Text(tr("Odpowiadasz: {0}", name), style = MaterialTheme.typography.labelMedium, color = avatarColor(reply.sender), fontWeight = FontWeight.Bold)
             Text(reply.text, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Anuluj odpowiedź") }
+        IconButton(onClick = onClose) { Icon(Icons.Default.Close, tr("Anuluj odpowiedź")) }
     }
 }
 
@@ -206,7 +207,7 @@ fun MediaPreviewDialog(
     Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Card(Modifier.fillMaxWidth(0.94f).imePadding()) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp)) {
-                Text(if (kind == Kind.VIDEO) "Wyślij wideo" else "Wyślij zdjęcie", style = MaterialTheme.typography.titleLarge)
+                Text(if (kind == Kind.VIDEO) tr("Wyślij wideo") else tr("Wyślij zdjęcie"), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(10.dp))
                 val ratio = if (att.w > 0 && att.h > 0) (att.w.toFloat() / att.h).coerceIn(0.5f, 2f) else 1f
                 Box(
@@ -223,7 +224,7 @@ fun MediaPreviewDialog(
                             Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Edytuj / przytnij", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                                Text(tr("Edytuj / przytnij"), color = Color.White, style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     } else {
@@ -240,34 +241,34 @@ fun MediaPreviewDialog(
                     )
                 }
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(caption, { caption = it.take(2000) }, Modifier.fillMaxWidth(), placeholder = { Text("Dodaj podpis…") }, maxLines = 4)
+                OutlinedTextField(caption, { caption = it.take(2000) }, Modifier.fillMaxWidth(), placeholder = { Text(tr("Dodaj podpis…")) }, maxLines = 4)
                 Spacer(Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(!timed, { timed = false }, { Text("Zwykłe") })
-                    FilterChip(timed, { timed = true }, { Text("⏱ Czasowe") })
+                    FilterChip(!timed, { timed = false }, { Text(tr("Zwykłe")) })
+                    FilterChip(timed, { timed = true }, { Text(tr("⏱ Czasowe")) })
                     FastSendChip()
                 }
                 if (timed) {
                     Text(
-                        "Odbiorca zobaczy " + (if (kind == Kind.VIDEO) "wideo" else "zdjęcie") +
-                            " dopiero po dotknięciu. Czas liczy się od otwarcia, potem zniknie:",
+                        tr("Odbiorca zobaczy ") + (if (kind == Kind.VIDEO) tr("wideo") else tr("zdjęcie")) +
+                            tr(" dopiero po dotknięciu. Czas liczy się od otwarcia, potem zniknie:"),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         QUICK_TTLS.forEach { o -> FilterChip(ttl == o, { ttl = o }, { Text(formatTtl(o)) }) }
                     }
                     if (kind == Kind.VIDEO && att.dur / 1000 + 5 > ttl) Text(
-                        "Wideo nie zniknie w trakcie oglądania — czas wydłuży się do ${formatTtl((att.dur / 1000 + 5).toInt())}.",
+                        tr("Wideo nie zniknie w trakcie oglądania — czas wydłuży się do {0}.", formatTtl((att.dur / 1000 + 5).toInt())),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else if (chatMode == XMode.AFTER_SEND) {
-                    Text("W tym czacie wiadomości znikają automatycznie ${formatTtl(chatTtl)} po wysłaniu.",
+                    Text(tr("W tym czacie wiadomości znikają automatycznie {0} po wysłaniu.", formatTtl(chatTtl)),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onCancel) { Text("Anuluj") }
-                    if (onSchedule != null && !timed) TextButton(onClick = { onSchedule(caption.trim()) }) { Text("🕓 Zaplanuj") }
+                    TextButton(onClick = onCancel) { Text(tr("Anuluj")) }
+                    if (onSchedule != null && !timed) TextButton(onClick = { onSchedule(caption.trim()) }) { Text(tr("🕓 Zaplanuj")) }
                     Spacer(Modifier.width(4.dp))
                     Button(onClick = {
                         when {
@@ -276,7 +277,7 @@ fun MediaPreviewDialog(
                             else -> onSend(caption.trim(), XMode.OFF, null)
                         }
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.Send, null); Spacer(Modifier.width(6.dp)); Text("Wyślij")
+                        Icon(Icons.AutoMirrored.Filled.Send, null); Spacer(Modifier.width(6.dp)); Text(tr("Wyślij"))
                     }
                 }
             }
@@ -334,7 +335,7 @@ fun HoldRecordingIndicator(elapsed: Long, amps: List<Float>, dragX: Float, cance
         Spacer(Modifier.weight(1f))
         val fade = 1f - (-dragX / cancelDistancePx).coerceIn(0f, 1f) * 0.85f
         Text(
-            "‹ przesuń, aby anulować", Modifier.graphicsLayer { alpha = fade }.padding(end = 6.dp),
+            tr("‹ przesuń, aby anulować"), Modifier.graphicsLayer { alpha = fade }.padding(end = 6.dp),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
         )
     }
@@ -344,16 +345,16 @@ fun HoldRecordingIndicator(elapsed: Long, amps: List<Float>, dragX: Float, cance
 @Composable
 fun LockedRecordingBar(elapsed: Long, amps: List<Float>, timed: Boolean, onTimed: () -> Unit, onCancel: () -> Unit, onSend: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onCancel) { Icon(Icons.Default.Delete, "Anuluj nagranie", tint = MaterialTheme.colorScheme.error) }
+        IconButton(onClick = onCancel) { Icon(Icons.Default.Delete, tr("Anuluj nagranie"), tint = MaterialTheme.colorScheme.error) }
         BlinkingDot()
         Spacer(Modifier.width(6.dp))
         Text(formatDuration(elapsed), fontWeight = FontWeight.Medium)
         Spacer(Modifier.width(8.dp))
         Waveform(liveBars(amps), 1f, Modifier.weight(1f).height(26.dp), Color(0xFFE53935), Color.Transparent)
         Spacer(Modifier.width(6.dp))
-        FilterChip(timed, onTimed, { Text("⏱ Czasowa") })
+        FilterChip(timed, onTimed, { Text(tr("⏱ Czasowa")) })
         Spacer(Modifier.width(6.dp))
-        FilledIconButton(onClick = onSend) { Icon(Icons.AutoMirrored.Filled.Send, "Wyślij nagranie") }
+        FilledIconButton(onClick = onSend) { Icon(Icons.AutoMirrored.Filled.Send, tr("Wyślij nagranie")) }
     }
 }
 
@@ -407,7 +408,7 @@ fun MicButton(
                 }
                 .clip(CircleShape)
                 .background(if (holding) Color(0xFFE53935) else if (filled) color ?: MaterialTheme.colorScheme.primary else Color.Transparent)
-                .semantics { contentDescription = "Nagraj głosówkę"; role = Role.Button }
+                .semantics { contentDescription = tr("Nagraj głosówkę"); role = Role.Button }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)

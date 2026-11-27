@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -78,56 +79,56 @@ fun BackupScreen(nav: Nav) {
         scope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val os = ctx.contentResolver.openOutputStream(uri) ?: throw IOException("Nie można zapisać pliku")
+                    val os = ctx.contentResolver.openOutputStream(uri) ?: throw IOException(tr("Nie można zapisać pliku"))
                     os.buffered().use { Backup.export(core, it, pw, withMedia, pl.szept.BuildConfig.VERSION_NAME) { p -> progress = p } }
                 }
                 last = System.currentTimeMillis()
                 core.prefs.edit().putLong("last_backup", last).apply()
                 pass = ""; pass2 = ""
-                toast(ctx, "Kopia zapisana. Zapamiętaj hasło — bez niego nie da się jej odczytać.")
+                toast(ctx, tr("Kopia zapisana. Zapamiętaj hasło — bez niego nie da się jej odczytać."))
             } catch (e: Exception) {
-                toast(ctx, "Nie udało się zapisać kopii: ${e.message}")
+                toast(ctx, tr("Nie udało się zapisać kopii: {0}", e.message))
             } finally { progress = null; pw.fill(' ') }
         }
     }
-    Scaffold(topBar = { BackBar("Kopia zapasowa", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Kopia zapasowa"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "Kopia zawiera Twoje konto (klucz), kontakty, grupy, całą historię wiadomości i — jeśli chcesz — zdjęcia, filmy i pliki. " +
-                    "Jest zaszyfrowana hasłem, które teraz ustawisz. Zapisz ją np. w Pobranych albo na dysku w chmurze, " +
-                    "a na nowym telefonie wybierz „Przywróć z kopii zapasowej” na ekranie powitalnym.",
+                tr("Kopia zawiera Twoje konto (klucz), kontakty, grupy, całą historię wiadomości i — jeśli chcesz — zdjęcia, filmy i pliki. ") +
+                    tr("Jest zaszyfrowana hasłem, które teraz ustawisz. Zapisz ją np. w Pobranych albo na dysku w chmurze, ") +
+                    tr("a na nowym telefonie wybierz „Przywróć z kopii zapasowej” na ekranie powitalnym."),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            if (last > 0) Text("Ostatnia kopia: " + formatWhen(last), Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.primary)
+            if (last > 0) Text(tr("Ostatnia kopia: ") + formatWhen(last), Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(12.dp))
-            PasswordField(pass, "Hasło do kopii (min. 8 znaków)") { pass = it }
+            PasswordField(pass, tr("Hasło do kopii (min. 8 znaków)")) { pass = it }
             Spacer(Modifier.height(6.dp))
-            PasswordField(pass2, "Powtórz hasło") { pass2 = it }
-            if (pass2.isNotEmpty() && pass != pass2) Text("Hasła się różnią", color = MaterialTheme.colorScheme.error)
+            PasswordField(pass2, tr("Powtórz hasło")) { pass2 = it }
+            if (pass2.isNotEmpty() && pass != pass2) Text(tr("Hasła się różnią"), color = MaterialTheme.colorScheme.error)
             Row(Modifier.fillMaxWidth().clickable { withMedia = !withMedia }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(withMedia, { withMedia = it })
                 Column {
-                    Text("Dołącz zdjęcia, filmy i pliki")
-                    Text("Rozmiar kopii: ok. " + formatSize(if (withMedia) sizes.first else sizes.second), style = MaterialTheme.typography.bodySmall,
+                    Text(tr("Dołącz zdjęcia, filmy i pliki"))
+                    Text(tr("Rozmiar kopii: ok. ") + formatSize(if (withMedia) sizes.first else sizes.second), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             progress?.let {
                 LinearProgressIndicator(progress = { it / 100f }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
-                Text("Zapisywanie… $it%")
+                Text(tr("Zapisywanie… {0}%", it))
             }
             Button(
                 onClick = { create.launch("Szept-kopia-" + SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date()) + ".szept") },
                 enabled = progress == null && pass.length >= 8 && pass == pass2, modifier = Modifier.fillMaxWidth(),
-            ) { Text("Utwórz kopię i zapisz…") }
+            ) { Text(tr("Utwórz kopię i zapisz…")) }
             Spacer(Modifier.height(16.dp))
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Ważne", fontWeight = FontWeight.Bold)
+                    Text(tr("Ważne"), fontWeight = FontWeight.Bold)
                     Text(
-                        "• Bez hasła kopii nie da się odczytać — nikt (także twórcy aplikacji) go nie odzyska.\n" +
-                            "• Kopia zawiera klucz konta: chroń plik tak jak hasło.\n" +
-                            "• Wiadomości z ostatnich 21 dni dotrą na nowy telefon także bez kopii — kopia przenosi całą starszą historię.",
+                        tr("• Bez hasła kopii nie da się odczytać — nikt (także twórcy aplikacji) go nie odzyska.\n") +
+                            tr("• Kopia zawiera klucz konta: chroń plik tak jak hasło.\n") +
+                            tr("• Wiadomości z ostatnich 21 dni dotrą na nowy telefon także bez kopii — kopia przenosi całą starszą historię."),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -147,16 +148,16 @@ fun RestoreBackupDialog(uri: Uri, onDismiss: () -> Unit, onDone: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
     StyleAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text("Przywróć kopię zapasową") },
+        title = { Text(tr("Przywróć kopię zapasową")) },
         text = {
             Column {
-                Text("Wpisz hasło, które ustawiłeś(-aś) przy tworzeniu kopii.", style = MaterialTheme.typography.bodySmall)
+                Text(tr("Wpisz hasło, które ustawiłeś(-aś) przy tworzeniu kopii."), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
-                PasswordField(pass, "Hasło kopii") { pass = it; err = null }
+                PasswordField(pass, tr("Hasło kopii")) { pass = it; err = null }
                 err?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp)) }
                 if (busy) {
                     LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 10.dp))
-                    Text("Przywracanie… (to może chwilę potrwać)", style = MaterialTheme.typography.bodySmall)
+                    Text(tr("Przywracanie… (to może chwilę potrwać)"), style = MaterialTheme.typography.bodySmall)
                 }
             }
         },
@@ -167,21 +168,21 @@ fun RestoreBackupDialog(uri: Uri, onDismiss: () -> Unit, onDone: () -> Unit) {
                 scope.launch {
                     try {
                         val info = withContext(Dispatchers.IO) {
-                            val ins = ctx.contentResolver.openInputStream(uri) ?: throw IOException("Nie można otworzyć pliku")
+                            val ins = ctx.contentResolver.openInputStream(uri) ?: throw IOException(tr("Nie można otworzyć pliku"))
                             ins.buffered().use { Backup.restore(App.core, it, pw) { p -> progress = p } }
                         }
                         (ctx.applicationContext as App).resetCore()
-                        toast(ctx, "Przywrócono konto ${info.name}")
+                        toast(ctx, tr("Przywrócono konto {0}", info.name))
                         onDone()
                     } catch (e: Backup.BadPassword) {
-                        err = "Błędne hasło albo to nie jest kopia Szepta"
+                        err = tr("Błędne hasło albo to nie jest kopia Szepta")
                     } catch (e: Exception) {
-                        err = "Nie udało się: ${e.message}"
+                        err = tr("Nie udało się: {0}", e.message)
                         (ctx.applicationContext as App).resetCore()
                     } finally { busy = false; pw.fill(' ') }
                 }
-            }) { Text("Przywróć") }
+            }) { Text(tr("Przywróć")) }
         },
-        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Anuluj") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }

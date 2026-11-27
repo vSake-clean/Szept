@@ -1,5 +1,6 @@
 package pl.szept.ui.style
 
+import pl.szept.tr
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -89,12 +90,12 @@ fun previewState(spec: StyleSpec): StyleState {
 fun StylesScreen(nav: Nav) {
     val ctx = LocalContext.current
     val current = LocalStyle.current
-    Scaffold(topBar = { BackBar("Styl aplikacji", nav) { TextButton(onClick = { nav.go(Screen.Animations) }) { Text("Animacje") } } }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Styl aplikacji"), nav) { TextButton(onClick = { nav.go(Screen.Animations) }) { Text(tr("Animacje")) } } }) { pad ->
         StyleGrid(current.spec.id, Modifier.padding(pad).fillMaxSize(), header = {
             Text(
-                "${STYLES.size} wyglądów wzorowanych na prawdziwych telefonach, komunikatorach i komputerach — z ich kształtami, kolorami, " +
-                    "paskami, polem wiadomości i własnym charakterem animacji. Dotknij, aby wypróbować: zmiana działa od razu w całej aplikacji. " +
-                    "Jasną albo ciemną wersję wybierzesz w „Wyglądzie”.",
+                tr("{0} wyglądów wzorowanych na prawdziwych telefonach, komunikatorach i komputerach — z ich kształtami, kolorami, ", STYLES.size) +
+                    tr("paskami, polem wiadomości i własnym charakterem animacji. Dotknij, aby wypróbować: zmiana działa od razu w całej aplikacji. ") +
+                    tr("Jasną albo ciemną wersję wybierzesz w „Wyglądzie”."),
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }) { spec ->
@@ -141,15 +142,15 @@ private fun StyleCard(spec: StyleSpec, selected: Boolean, onClick: () -> Unit) {
             Column(Modifier.padding(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(spec.name, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (selected) Icon(Icons.Default.Check, "Wybrany", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    if (selected) Icon(Icons.Default.Check, tr("Wybrany"), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 }
                 Text(spec.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 5, overflow = TextOverflow.Ellipsis)
                 val tags = buildList {
                     if (spec.motion.label.isNotEmpty()) add("ruch: " + spec.motion.label)
-                    if (spec.moving) add("ruchome tło")
-                    if (spec.dynamic) add("kolory z tapety")
-                    when (spec.mode) { Mode.DARK -> add("zawsze ciemny"); Mode.LIGHT -> add("zawsze jasny"); else -> add("jasny i ciemny") }
-                    if (spec.accent && !spec.dynamic) add("Twój kolor")
+                    if (spec.moving) add(tr("ruchome tło"))
+                    if (spec.dynamic) add(tr("kolory z tapety"))
+                    when (spec.mode) { Mode.DARK -> add(tr("zawsze ciemny")); Mode.LIGHT -> add(tr("zawsze jasny")); else -> add(tr("jasny i ciemny")) }
+                    if (spec.accent && !spec.dynamic) add(tr("Twój kolor"))
                 }
                 FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     tags.forEach { t ->
@@ -172,11 +173,11 @@ fun StylePreview(st: StyleState, modifier: Modifier) {
         Column(Modifier.matchParentSize()) {
             MiniBar(st)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalArrangement = Arrangement.Bottom) {
-                MiniBubble(st, false, "Cześć! 👋", first = true, last = false)
+                MiniBubble(st, false, tr("Cześć! 👋"), first = true, last = false)
                 Spacer(Modifier.height(2.dp))
-                MiniBubble(st, false, "Jak leci?", first = false, last = true)
+                MiniBubble(st, false, tr("Jak leci?"), first = false, last = true)
                 Spacer(Modifier.height(5.dp))
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { MiniBubble(st, true, "Super, a u Ciebie? 😄") }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { MiniBubble(st, true, tr("Super, a u Ciebie? 😄")) }
             }
             MiniInput(st)
         }
@@ -191,17 +192,17 @@ private fun MiniBar(st: StyleState) {
         Chrome.GLASS -> Row(Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(20.dp).liquidGlass(glassLookFor(st.dark), backdrop = null))
             Spacer(Modifier.weight(1f))
-            Text("Ania", Modifier.liquidGlass(glassLookFor(st.dark), backdrop = null).padding(horizontal = 8.dp, vertical = 2.dp), color = st.pal.onBase, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(tr("Ania"), Modifier.liquidGlass(glassLookFor(st.dark), backdrop = null).padding(horizontal = 8.dp, vertical = 2.dp), color = st.pal.onBase, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
             Box(Modifier.size(20.dp).liquidGlass(glassLookFor(st.dark), backdrop = null))
         }
         Chrome.IOS6 -> Box(Modifier.fillMaxWidth().height(28.dp).styleTopBar(st), contentAlignment = Alignment.Center) {
-            Text("Ania", style = ios6Title(12))
+            Text(tr("Ania"), style = ios6Title(12))
         }
         else -> Row(Modifier.fillMaxWidth().height(28.dp).styleTopBar(st).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (st.spec.chrome != Chrome.TERMINAL) Box(Modifier.size(16.dp).clip(st.spec.avatar.shape()).background(Color(0xFFE57373)))
             Spacer(Modifier.width(6.dp))
-            Text(if (st.spec.chrome == Chrome.TERMINAL) "> ania" else "Ania", color = text, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = st.spec.font)
+            Text(if (st.spec.chrome == Chrome.TERMINAL) tr("> ania") else tr("Ania"), color = text, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = st.spec.font)
         }
     }
 }
@@ -230,14 +231,14 @@ private fun MiniInput(st: StyleState) {
                 Box(Modifier.weight(1f).height(18.dp).background(Color.White).border(1.dp, Color(0xFF7F9DB9)))
                 Spacer(Modifier.width(4.dp))
                 Box(Modifier.size(width = 34.dp, height = 18.dp).background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDCDCDC)))).border(1.dp, Color(0xFF707070)), contentAlignment = Alignment.Center) {
-                    Text("Wyślij", fontSize = 7.sp, color = Color.Black)
+                    Text(tr("Wyślij"), fontSize = 7.sp, color = Color.Black)
                 }
             }
             InputStyle.IOS6 -> {
                 Box(Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(9.dp)).background(Color.White).border(1.dp, Color(0xFF8F99A8), RoundedCornerShape(9.dp)))
                 Spacer(Modifier.width(4.dp))
                 Box(Modifier.size(width = 30.dp, height = 18.dp).clip(RoundedCornerShape(9.dp)).background(Brush.verticalGradient(listOf(Color(0xFF8CBDFB), Color(0xFF2668D8)))), contentAlignment = Alignment.Center) {
-                    Text("Wyślij", fontSize = 7.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(tr("Wyślij"), fontSize = 7.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
             InputStyle.BAR -> {
@@ -266,7 +267,7 @@ private fun MiniBubble(st: StyleState, mine: Boolean, text: String, first: Boole
             if (first || mine) Box(Modifier.size(14.dp).clip(CircleShape).background(if (mine) st.pal.primary else Color(0xFFE57373))) else Spacer(Modifier.width(14.dp))
             Spacer(Modifier.width(5.dp))
             Column {
-                if (first || mine) Text(if (mine) "Ty" else "Ania", color = st.pal.onBase, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                if (first || mine) Text(if (mine) "Ty" else tr("Ania"), color = st.pal.onBase, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Text(text, color = st.fill(Role.THEIRS).text, fontSize = 10.sp, maxLines = 1)
             }
         }
@@ -292,49 +293,49 @@ fun AnimationsScreen(nav: Nav) {
     val power = rememberPowerSave()
     val cascade = rememberCascade()
     val st = LocalStyle.current
-    Scaffold(topBar = { BackBar("Animacje", nav) { TextButton(onClick = { nav.go(Screen.Styles) }) { Text("Style") } } }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Animacje"), nav) { TextButton(onClick = { nav.go(Screen.Styles) }) { Text(tr("Style")) } } }) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(bottom = 28.dp)) {
             item {
-                SwitchRow("Animacje w Szepcie", "Główny przełącznik. Wyłączony = aplikacja bez żadnego ruchu (szybciej i oszczędniej).", UiPrefs.anim, true) {
+                SwitchRow(tr("Animacje w Szepcie"), tr("Główny przełącznik. Wyłączony = aplikacja bez żadnego ruchu (szybciej i oszczędniej)."), UiPrefs.anim, true) {
                     UiPrefs.anim = it; save()
                 }
             }
             item {
                 if (sysOff) Text(
-                    if (UiPrefs.animFollowSystem) "Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii), więc Szept też ich nie pokazuje — wyłącz przełącznik poniżej, aby je przywrócić."
-                    else "Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii), ale w Szepcie działają — tak, jak ustawisz tutaj.",
+                    if (UiPrefs.animFollowSystem) tr("Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii), więc Szept też ich nie pokazuje — wyłącz przełącznik poniżej, aby je przywrócić.")
+                    else tr("Telefon ma wyłączone animacje (ustawienia lub oszczędzanie energii), ale w Szepcie działają — tak, jak ustawisz tutaj."),
                     Modifier.padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(10.dp))
                         .background(if (UiPrefs.animFollowSystem) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer).padding(10.dp),
                     color = if (UiPrefs.animFollowSystem) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 SwitchRow(
-                    "Wyłączaj razem z telefonem", "Gdy w ustawieniach telefonu animacje są wyłączone (np. „Usuń animacje”), Szept też ich nie pokazuje.",
+                    tr("Wyłączaj razem z telefonem"), tr("Gdy w ustawieniach telefonu animacje są wyłączone (np. „Usuń animacje”), Szept też ich nie pokazuje."),
                     UiPrefs.animFollowSystem, UiPrefs.anim,
                 ) { UiPrefs.animFollowSystem = it; save() }
             }
             item {
-                Section("Charakter ruchu")
+                Section(tr("Charakter ruchu"))
                 Text(
-                    "Każdy styl porusza się inaczej — „${st.spec.name}”: ${st.spec.motion.label}. Możesz też wybrać inny charakter dla wszystkich stylów.",
+                    tr("Każdy styl porusza się inaczej — „{0}”: {1}. Możesz też wybrać inny charakter dla wszystkich stylów.", st.spec.name, st.spec.motion.label),
                     Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 MotionChips(enabled = UiPrefs.anim) { save() }
                 MotionPreview(Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
             item {
-                Section("Tempo")
+                Section(tr("Tempo"))
                 SpeedChips(enabled = UiPrefs.anim) { save() }
             }
             item {
                 SwitchRow(
-                    "Oszczędzaj baterię", "W trybie oszczędzania energii wyłączone są ciągłe animacje (tło, pulsowanie, żyroskop)." +
-                        if (power) " Tryb oszczędzania jest teraz włączony." else "",
+                    tr("Oszczędzaj baterię"), tr("W trybie oszczędzania energii wyłączone są ciągłe animacje (tło, pulsowanie, żyroskop).") +
+                        if (power) tr(" Tryb oszczędzania jest teraz włączony.") else "",
                     UiPrefs.animBattery, UiPrefs.anim,
                 ) { UiPrefs.animBattery = it; save() }
             }
             item {
-                Section("Przejścia między ekranami")
+                Section(tr("Przejścia między ekranami"))
                 FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Trans.NAMES.forEachIndexed { i, t ->
                         FilterChip(UiPrefs.transition == i, { UiPrefs.transition = i; save() }, { Text(t) }, enabled = UiPrefs.anim && Anim.SCREENS.key !in UiPrefs.animOff)
@@ -345,16 +346,16 @@ fun AnimationsScreen(nav: Nav) {
                 HorizontalDivider(Modifier.padding(top = 14.dp))
                 val on = Anim.entries.count { it.key !in UiPrefs.animOff }
                 Text(
-                    "Animacje zaawansowane", Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).semantics { heading() },
+                    tr("Animacje zaawansowane"), Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).semantics { heading() },
                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    "Włącz albo wyłącz każdą animację osobno ($on z ${Anim.entries.size} włączonych).",
+                    tr("Włącz albo wyłącz każdą animację osobno ({0} z {1} włączonych).", on, Anim.entries.size),
                     Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedButton(onClick = { UiPrefs.animOff = emptySet(); save() }, enabled = UiPrefs.anim) { Text("Wszystkie") }
-                    OutlinedButton(onClick = { UiPrefs.animOff = Anim.entries.map { it.key }.toSet(); save() }, enabled = UiPrefs.anim) { Text("Żadne") }
+                    OutlinedButton(onClick = { UiPrefs.animOff = emptySet(); save() }, enabled = UiPrefs.anim) { Text(tr("Wszystkie")) }
+                    OutlinedButton(onClick = { UiPrefs.animOff = Anim.entries.map { it.key }.toSet(); save() }, enabled = UiPrefs.anim) { Text(tr("Żadne")) }
                 }
             }
             AnimGroup.entries.forEach { g ->
@@ -372,19 +373,19 @@ fun AnimationsScreen(nav: Nav) {
             }
             item {
                 Text(
-                    "⟳ — animacja ciągła (wyłączana w trybie oszczędzania baterii).",
+                    tr("⟳ — animacja ciągła (wyłączana w trybie oszczędzania baterii)."),
                     Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                Section("Wypróbuj efekty")
+                Section(tr("Wypróbuj efekty"))
                 Text(
-                    "Takie efekty pojawiają się same, gdy Ty albo rozmówca wyślecie wiadomość z daną emotką lub życzeniami (np. „Wszystkiego najlepszego!”).",
+                    tr("Takie efekty pojawiają się same, gdy Ty albo rozmówca wyślecie wiadomość z daną emotką lub życzeniami (np. „Wszystkiego najlepszego!”)."),
                     Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 FlowRow(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ScreenFx.Kind.entries.forEach { k ->
                         AssistChip(onClick = {
-                            if (!UiPrefs.anim) toast(ctx, "Animacje są wyłączone") else ScreenFx.play(k)
+                            if (!UiPrefs.anim) toast(ctx, tr("Animacje są wyłączone")) else ScreenFx.play(k)
                         }, label = { Text(k.emoji + " " + k.label) })
                     }
                 }
@@ -409,7 +410,7 @@ fun MotionChips(enabled: Boolean, modifier: Modifier = Modifier.padding(horizont
 @Composable
 fun SpeedChips(enabled: Boolean, modifier: Modifier = Modifier.padding(horizontal = 16.dp), onChange: () -> Unit) {
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(1.6f to "Wolniej", 1f to "Normalnie", 0.65f to "Szybciej", 0.4f to "Błyskawicznie").forEach { (v, t) ->
+        listOf(1.6f to tr("Wolniej"), 1f to tr("Normalnie"), 0.65f to tr("Szybciej"), 0.4f to tr("Błyskawicznie")).forEach { (v, t) ->
             FilterChip(UiPrefs.animSpeed == v, { UiPrefs.animSpeed = v; onChange() }, { Text(t) }, enabled = enabled)
         }
     }
@@ -477,9 +478,9 @@ fun MotionPreview(modifier: Modifier = Modifier) {
                 StyleBackground(Modifier.matchParentSize(), st, st.spec.chatBg ?: st.spec.bg, animate = false)
                 androidx.compose.runtime.key(tick) {
                     Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Box(Modifier.appear(false, anim[Anim.MSG_IN])) { MiniBubble(st, false, "Hej! 👋") }
+                        Box(Modifier.appear(false, anim[Anim.MSG_IN])) { MiniBubble(st, false, tr("Hej! 👋")) }
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                            Box(Modifier.appear(true, anim[Anim.MSG_IN])) { MiniBubble(st, true, "Cześć! 😄") }
+                            Box(Modifier.appear(true, anim[Anim.MSG_IN])) { MiniBubble(st, true, tr("Cześć! 😄")) }
                         }
                     }
                 }
@@ -491,10 +492,10 @@ fun MotionPreview(modifier: Modifier = Modifier) {
                     .background(st.pal.primary)
                     .clickable(press, androidx.compose.foundation.LocalIndication.current) { }
                     .padding(horizontal = 18.dp, vertical = 10.dp),
-            ) { Text("Dotknij", color = st.pal.onPrimary, fontWeight = FontWeight.SemiBold) }
+            ) { Text(tr("Dotknij"), color = st.pal.onPrimary, fontWeight = FontWeight.SemiBold) }
             Spacer(Modifier.width(12.dp))
             Text(
-                if (anim.any) "Ruch: " + st.motion.label else "Animacje są wyłączone",
+                if (anim.any) tr("Ruch: ") + st.motion.label else tr("Animacje są wyłączone"),
                 Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -520,8 +521,8 @@ private fun MiniScreen(st: StyleState, chat: Boolean) {
         } else Box(Modifier.fillMaxSize()) {
             StyleBackground(Modifier.matchParentSize(), st, st.spec.chatBg ?: st.spec.bg, animate = false)
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                MiniBubble(st, false, "Co tam?")
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { MiniBubble(st, true, "Super!") }
+                MiniBubble(st, false, tr("Co tam?"))
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { MiniBubble(st, true, tr("Super!")) }
             }
         }
     }

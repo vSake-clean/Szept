@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.ImageDecoder
@@ -177,7 +178,7 @@ fun GifPickerDialog(onDismiss: () -> Unit, onSend: (File) -> Unit) {
     var preview by remember { mutableStateOf<Pair<File, Gifs.Remote?>?>(null) }
     val addFromPhone = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
-            try { Gifs.saveFromUri(ctx, uri); ver++; toast(ctx, "Dodano do Twoich GIF-ów") } catch (e: Exception) { toast(ctx, if (e is Core.SendException) e.message ?: "Błąd" else "Nie udało się odczytać pliku") }
+            try { Gifs.saveFromUri(ctx, uri); ver++; toast(ctx, tr("Dodano do Twoich GIF-ów")) } catch (e: Exception) { toast(ctx, if (e is Core.SendException) e.message ?: tr("Błąd") else tr("Nie udało się odczytać pliku")) }
         }
     }
 
@@ -185,17 +186,17 @@ fun GifPickerDialog(onDismiss: () -> Unit, onSend: (File) -> Unit) {
         Surface(Modifier.fillMaxWidth(0.96f).heightIn(max = 640.dp).imePadding(), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(top = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)) {
-                    Text("GIF-y", Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Zamknij") }
+                    Text(tr("GIF-y"), Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Zamknij")) }
                 }
                 TabRow(tab) {
-                    Tab(tab == 0, { tab = 0 }, text = { Text("Moje (${mine.size})") })
-                    Tab(tab == 1, { tab = 1 }, text = { Text("Szukaj (KLIPY)") })
+                    Tab(tab == 0, { tab = 0 }, text = { Text(tr("Moje ({0})", mine.size)) })
+                    Tab(tab == 1, { tab = 1 }, text = { Text(tr("Szukaj (KLIPY)")) })
                 }
                 when (tab) {
                     0 -> Column(Modifier.padding(8.dp)) {
                         Text(
-                            "Twoje GIF-y są zapisane tylko w tym telefonie. Dotknij, aby zobaczyć i wysłać; przytrzymaj, aby usunąć.",
+                            tr("Twoje GIF-y są zapisane tylko w tym telefonie. Dotknij, aby zobaczyć i wysłać; przytrzymaj, aby usunąć."),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(4.dp),
                         )
                         LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxWidth().heightIn(min = 200.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -207,7 +208,7 @@ fun GifPickerDialog(onDismiss: () -> Unit, onSend: (File) -> Unit) {
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(Icons.Default.Add, null)
-                                        Text("Dodaj z telefonu", style = MaterialTheme.typography.labelSmall)
+                                        Text(tr("Dodaj z telefonu"), style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
@@ -219,9 +220,9 @@ fun GifPickerDialog(onDismiss: () -> Unit, onSend: (File) -> Unit) {
                                 ) { GifImage(f.absolutePath, Modifier.fillMaxSize()) }
                                 if (ask) StyleAlertDialog(
                                     onDismissRequest = { ask = false },
-                                    title = { Text("Usunąć ten GIF z Twoich?") },
-                                    confirmButton = { TextButton(onClick = { Gifs.remove(ctx, f); ask = false; ver++ }) { Text("Usuń") } },
-                                    dismissButton = { TextButton(onClick = { ask = false }) { Text("Anuluj") } },
+                                    title = { Text(tr("Usunąć ten GIF z Twoich?")) },
+                                    confirmButton = { TextButton(onClick = { Gifs.remove(ctx, f); ask = false; ver++ }) { Text(tr("Usuń")) } },
+                                    dismissButton = { TextButton(onClick = { ask = false }) { Text(tr("Anuluj")) } },
                                 )
                             }
                         }
@@ -237,7 +238,7 @@ fun GifPickerDialog(onDismiss: () -> Unit, onSend: (File) -> Unit) {
             file, remote,
             saved = remember(file, ver) { Gifs.isSaved(ctx, file) },
             onClose = { preview = null },
-            onSave = { f -> scope.launch(Dispatchers.IO) { try { Gifs.save(ctx, f); ver++; toast(ctx, "Zapisano w Twoich GIF-ach") } catch (e: Exception) { toast(ctx, sendError(e)) } } },
+            onSave = { f -> scope.launch(Dispatchers.IO) { try { Gifs.save(ctx, f); ver++; toast(ctx, tr("Zapisano w Twoich GIF-ach")) } catch (e: Exception) { toast(ctx, sendError(e)) } } },
             onSend = { f -> preview = null; if (f.parentFile == Gifs.dir(ctx)) Gifs.touch(f); onSend(f) },
         )
     }
@@ -252,13 +253,13 @@ private fun KlipyTab(key: String, onPick: (File, Gifs.Remote) -> Unit) {
     if (keyNow.isBlank()) {
         var k by remember { mutableStateOf("") }
         Column(Modifier.padding(16.dp)) {
-            Text("Wyszukiwarka GIF-ów KLIPY potrzebuje bezpłatnego klucza aplikacji.", style = MaterialTheme.typography.bodyMedium)
+            Text(tr("Wyszukiwarka GIF-ów KLIPY potrzebuje bezpłatnego klucza aplikacji."), style = MaterialTheme.typography.bodyMedium)
             Text(
-                "Załóż konto na klipy.com → panel → „API key” i wklej go tutaj (albo administrator może go rozesłać wszystkim).",
+                tr("Załóż konto na klipy.com → panel → „API key” i wklej go tutaj (albo administrator może go rozesłać wszystkim)."),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 6.dp),
             )
-            OutlinedTextField(k, { k = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Klucz KLIPY") })
-            Button(onClick = { Gifs.setKlipyKey(ctx, k); keyNow = k }, enabled = k.length >= 8, modifier = Modifier.padding(top = 8.dp)) { Text("Zapisz") }
+            OutlinedTextField(k, { k = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Klucz KLIPY")) })
+            Button(onClick = { Gifs.setKlipyKey(ctx, k); keyNow = k }, enabled = k.length >= 8, modifier = Modifier.padding(top = 8.dp)) { Text(tr("Zapisz")) }
         }
         return
     }
@@ -280,7 +281,7 @@ private fun KlipyTab(key: String, onPick: (File, Gifs.Remote) -> Unit) {
                 if (myGen != gen) return@launch
                 items.addAll(p.items.filter { n -> items.none { it.id == n.id } }); hasNext = p.hasNext; page++
             } catch (e: Exception) {
-                if (myGen == gen) error = (e as? Core.SendException)?.message ?: "Brak połączenia z KLIPY"
+                if (myGen == gen) error = (e as? Core.SendException)?.message ?: tr("Brak połączenia z KLIPY")
             } finally { if (myGen == gen) loading = false }
         }
     }
@@ -294,16 +295,16 @@ private fun KlipyTab(key: String, onPick: (File, Gifs.Remote) -> Unit) {
     }
     Column(Modifier.padding(8.dp)) {
         OutlinedTextField(query, { query = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Search, null) }, placeholder = { Text("Szukaj GIF-ów") })
+            leadingIcon = { Icon(Icons.Default.Search, null) }, placeholder = { Text(tr("Szukaj GIF-ów")) })
         Text(
-            "Wyszukiwanie łączy się z KLIPY (widzi Twój adres IP i wpisane słowa). Wysłany GIF idzie do rozmówcy zaszyfrowany, jak zdjęcie.",
+            tr("Wyszukiwanie łączy się z KLIPY (widzi Twój adres IP i wpisane słowa). Wysłany GIF idzie do rozmówcy zaszyfrowany, jak zdjęcie."),
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(4.dp),
         )
         error?.let { e ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(e, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f).padding(4.dp))
-                TextButton(onClick = { load(true) }) { Text("Ponów") }
-                if (e.contains("klucz", true)) TextButton(onClick = { Gifs.setKlipyKey(ctx, ""); keyNow = "" }) { Text("Zmień klucz") }
+                TextButton(onClick = { load(true) }) { Text(tr("Ponów")) }
+                if (e.contains("klucz", true) || e.contains("key", true)) TextButton(onClick = { Gifs.setKlipyKey(ctx, ""); keyNow = "" }) { Text(tr("Zmień klucz")) }
             }
         }
         LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxWidth().heightIn(min = 200.dp), state = grid,
@@ -311,7 +312,7 @@ private fun KlipyTab(key: String, onPick: (File, Gifs.Remote) -> Unit) {
             items(items, key = { it.id }) { g -> RemoteGifCell(g, onPick) }
         }
         if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(8.dp).size(24.dp))
-        else if (items.isEmpty() && error == null) Text("Nic nie znaleziono.", Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else if (items.isEmpty() && error == null) Text(tr("Nic nie znaleziono."), Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -365,11 +366,11 @@ fun GifPreviewDialog(
                 if (onSend != null) FastSendChip(Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!isSaved) OutlinedButton(enabled = full != null, onClick = { onSave(shown); isSaved = true }) { Text("Zapisz w moich") }
-                    else Text("✓ W Twoich GIF-ach", Modifier.padding(top = 10.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                    if (onSend != null) Button(enabled = full != null && !busy, onClick = { busy = true; scope.launch { onSend(shown) } }) { Text("Wyślij") }
+                    if (!isSaved) OutlinedButton(enabled = full != null, onClick = { onSave(shown); isSaved = true }) { Text(tr("Zapisz w moich")) }
+                    else Text(tr("✓ W Twoich GIF-ach"), Modifier.padding(top = 10.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    if (onSend != null) Button(enabled = full != null && !busy, onClick = { busy = true; scope.launch { onSend(shown) } }) { Text(tr("Wyślij")) }
                 }
-                TextButton(onClick = onClose) { Text("Zamknij") }
+                TextButton(onClick = onClose) { Text(tr("Zamknij")) }
             }
         }
     }

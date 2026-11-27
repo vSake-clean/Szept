@@ -1,5 +1,6 @@
 package pl.szept.core
 
+import pl.szept.tr
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -63,7 +64,7 @@ object MediaUtil {
         if (isGif) {
             val tmpGif = tmp(ctx, "gif")
             cr.openInputStream(uri)?.use { i -> tmpGif.outputStream().use { o -> i.copyTo(o) } }
-            if (tmpGif.length() > Gifs.MAX_GIF) { tmpGif.delete(); throw Core.SendException("GIF jest za duży (max 8 MB)") }
+            if (tmpGif.length() > Gifs.MAX_GIF) { tmpGif.delete(); throw Core.SendException(tr("GIF jest za duży (max 8 MB)")) }
             return@withContext Gifs.attachment(ctx, tmpGif).also { tmpGif.delete() }
         }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -71,7 +72,7 @@ object MediaUtil {
         var sample = 1
         while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 1600) sample *= 2
         var bmp = cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
-            ?: throw Core.SendException("Nie można odczytać zdjęcia")
+            ?: throw Core.SendException(tr("Nie można odczytać zdjęcia"))
         val rot = try { cr.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees } ?: 0 } catch (e: Exception) { 0 }
         val scale = 1600f / max(bmp.width, bmp.height)
         if (rot != 0 || scale < 1f) {
@@ -87,7 +88,7 @@ object MediaUtil {
 
     /** Kwadratowe zdjęcie profilowe: przycięte do środka, maks. 256 px, JPEG. Zwraca plik + base64. */
     suspend fun prepareAvatar(ctx: Context, uri: Uri): Pair<File, String> = withContext(Dispatchers.IO) {
-        var bmp = decodeScaled(ctx, uri, 256) ?: throw Core.SendException("Nie można odczytać zdjęcia")
+        var bmp = decodeScaled(ctx, uri, 256) ?: throw Core.SendException(tr("Nie można odczytać zdjęcia"))
         val side = min(bmp.width, bmp.height)
         bmp = Bitmap.createBitmap(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side)
         if (side > 256) bmp = Bitmap.createScaledBitmap(bmp, 256, 256, true)
@@ -98,13 +99,13 @@ object MediaUtil {
 
     /** Zdjęcie do edycji (kadrowania): obrócone według EXIF, do 1600 px. */
     suspend fun prepareForEdit(ctx: Context, uri: Uri): File = withContext(Dispatchers.IO) {
-        val bmp = decodeScaled(ctx, uri, 1600) ?: throw Core.SendException("Nie można odczytać zdjęcia")
+        val bmp = decodeScaled(ctx, uri, 1600) ?: throw Core.SendException(tr("Nie można odczytać zdjęcia"))
         tmp(ctx, "jpg").also { f -> f.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) } }
     }
 
     /** Baner profilu: szeroki pas ~1024×340, JPEG. */
     suspend fun prepareBanner(ctx: Context, uri: Uri): Pair<File, String> = withContext(Dispatchers.IO) {
-        var bmp = decodeScaled(ctx, uri, 1024) ?: throw Core.SendException("Nie można odczytać zdjęcia")
+        var bmp = decodeScaled(ctx, uri, 1024) ?: throw Core.SendException(tr("Nie można odczytać zdjęcia"))
         val targetRatio = 3f
         val w = bmp.width; val h = bmp.height
         val cropH = (w / targetRatio).toInt().coerceAtMost(h)
@@ -154,7 +155,7 @@ object MediaUtil {
             out.delete()
             withContext(Dispatchers.IO) { copyToCache(ctx, uri, "mp4") }
         }
-        if (file.length() > Core.MAX_MEDIA) { file.delete(); throw Core.SendException("Wideo jest za długie — limit to ok. 16 MB (ok. 1,5 min po kompresji)") }
+        if (file.length() > Core.MAX_MEDIA) { file.delete(); throw Core.SendException(tr("Wideo jest za długie — limit to ok. 16 MB (ok. 1,5 min po kompresji)")) }
         val finalInfo = withContext(Dispatchers.IO) { videoInfo(ctx, Uri.fromFile(file)) }
         return Core.Attachment(file, "video/mp4", "wideo.mp4", info.thumb ?: finalInfo.thumb,
             finalInfo.w.takeIf { it > 0 } ?: info.w, finalInfo.h.takeIf { it > 0 } ?: info.h, max(finalInfo.dur, info.dur))
@@ -182,8 +183,8 @@ object MediaUtil {
         val effects = Effects(listOf(), listOf(Presentation.createForWidthAndHeight(384, 384, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP)))
         val ok = try { runTransformer(ctx, Uri.fromFile(file), out, effects, 800_000, null) } catch (e: Exception) { false }
         file.delete()
-        if (!ok || out.length() == 0L) { out.delete(); throw Core.SendException("Nie udało się przygotować notatki wideo") }
-        if (out.length() > Core.MAX_MEDIA) { out.delete(); throw Core.SendException("Notatka jest za długa") }
+        if (!ok || out.length() == 0L) { out.delete(); throw Core.SendException(tr("Nie udało się przygotować notatki wideo")) }
+        if (out.length() > Core.MAX_MEDIA) { out.delete(); throw Core.SendException(tr("Notatka jest za długa")) }
         val info = withContext(Dispatchers.IO) { videoInfo(ctx, Uri.fromFile(out)) }
         return Core.Attachment(out, "video/mp4", "notatka.mp4", info.thumb, 384, 384, max(info.dur, durMs))
     }
@@ -241,7 +242,7 @@ object MediaUtil {
 
     private fun copyToCache(ctx: Context, uri: Uri, ext: String): File {
         val out = tmp(ctx, ext)
-        (ctx.contentResolver.openInputStream(uri) ?: throw Core.SendException("Nie można odczytać pliku")).use { ins ->
+        (ctx.contentResolver.openInputStream(uri) ?: throw Core.SendException(tr("Nie można odczytać pliku"))).use { ins ->
             out.outputStream().use { ins.copyTo(it) }
         }
         return out
@@ -252,7 +253,7 @@ object MediaUtil {
         val mime = ctx.contentResolver.getType(uri) ?: "application/octet-stream"
         val ext = name.substringAfterLast('.', "bin")
         val f = copyToCache(ctx, uri, ext)
-        if (f.length() > Core.MAX_MEDIA) { f.delete(); throw Core.SendException("Plik za duży (max 16 MB)") }
+        if (f.length() > Core.MAX_MEDIA) { f.delete(); throw Core.SendException(tr("Plik za duży (max 16 MB)")) }
         Core.Attachment(f, mime, name, null, 0, 0, 0)
     }
 
@@ -286,7 +287,7 @@ object MediaUtil {
                 ctx.contentResolver.update(uri, values, null, null)
             } else {
                 @Suppress("DEPRECATION")
-                val dir = File(android.os.Environment.getExternalStoragePublicDirectory(dirName), "Szept").apply { mkdirs() }
+                val dir = File(android.os.Environment.getExternalStoragePublicDirectory(dirName), tr("Szept")).apply { mkdirs() }
                 val out = File(dir, name)
                 src.copyTo(out, overwrite = true)
                 android.media.MediaScannerConnection.scanFile(ctx, arrayOf(out.absolutePath), arrayOf(mime), null)

@@ -2,7 +2,7 @@
 
 🇵🇱 [Polski](README.md) · 🇬🇧 English
 
-*Szept* is Polish for “whisper”. The app's interface is in Polish.
+*Szept* is Polish for “whisper”. The app is available in Polish and English (choose in the first-run wizard or in Settings → Language).
 
 ## Installation
 1. Download the latest `Szept-<version>.apk` from the [releases](https://github.com/vSake-clean/Szept/releases/latest), copy it to your phone (Android 8 or newer) and open it. Allow installing from unknown sources.
@@ -18,6 +18,10 @@
 Every version has its number in the file name (`Szept-1.9.apk`, then `Szept-2.2.apk`…). The installed version is shown in Settings → “About” and on the welcome screen. You install a newer version the same way, by opening the file on the phone. It installs “over” the old version and keeps your account, contacts, groups and messages.
 
 ## Features
+### New in 3.4
+- **Language choice**: Polish or English — all of Szept, including games and notifications. After installation the wizard starts in the phone's language, with flags to choose from.
+- **The wizard again**: after the update everyone sees it once more (account, name, ID, chats and groups stay). In Settings: “Wizard: language & appearance” and “Language”.
+
 ### New in 3.3.5
 - **Updates install again**: large files (such as an update) are spread over several relays and downloaded piece by piece, so they no longer stall halfway — also for people still on an older version. As a fallback there is a “Download from the website” button.
 - **⚡ Fast sending**: photos, videos, GIFs, files and updates go to all relays at once. On by default on Wi-Fi, off on mobile data; once you turn it on, it stays on (Settings → Connection & battery, or “⚡ Szybko” when sending).

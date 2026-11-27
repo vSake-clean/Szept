@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.os.Build
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -165,7 +166,7 @@ fun MessageItem(
                 if (senderName != null && !mine && (!series || first)) {
                     Text(senderName, color = readable(avatarColor(m.sender), fillSolid, 3.5f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
-                if (m.ex.fwd) Text("↪ Przekazano", style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (m.ex.fwd) Text(tr("↪ Przekazano"), style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 m.reply?.let { r -> QuoteBox(r, replyName ?: "") { onReplyClick(r.id) } }
                 when {
                     // moja wiadomość czasowa: treść nie jest przechowywana, widać tylko jej stan
@@ -215,7 +216,7 @@ private fun FlatMessage(
                 Text(formatTime(m.ts), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                 if (m.mine) { Spacer(Modifier.width(4.dp)); StatusIcon(m.status) }
             }
-            if (m.ex.fwd) Text("↪ Przekazano", style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = cs.onSurfaceVariant)
+            if (m.ex.fwd) Text(tr("↪ Przekazano"), style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = cs.onSurfaceVariant)
             m.reply?.let { r -> QuoteBox(r, replyName ?: "") { onReplyClick(r.id) } }
             when {
                 m.mine && m.xmode == XMode.AFTER_OPEN -> { ViewOnceSent(m); TransferInfo(m) }
@@ -236,12 +237,12 @@ private fun MetaRow(m: Message, modifier: Modifier) {
         // „czasowa od otwarcia”: u nadawcy 1 h to tylko zapas na wypadek nieotwarcia — licznik dopiero od otwarcia
         val waiting = m.mine && m.xmode == XMode.AFTER_OPEN && m.status != St.OPENED
         if (m.expires > 0 && !waiting) { Countdown(m.expires); Spacer(Modifier.width(6.dp)) }
-        if (m.edited > 0) Text("edytowano · ", style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (m.edited > 0) Text(tr("edytowano · "), style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(formatTime(m.ts), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (m.mine) { Spacer(Modifier.width(4.dp)); StatusIcon(m.status) }
         if (m.delOthers) when (UiPrefs.delMark) {
-            0 -> Box(Modifier.padding(start = 5.dp).size(8.dp).clip(CircleShape).background(Color(0xFFE53935)).semantics { contentDescription = "Usunięte u rozmówcy" })
-            1 -> Text(" · usunięte u rozmówcy", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935))
+            0 -> Box(Modifier.padding(start = 5.dp).size(8.dp).clip(CircleShape).background(Color(0xFFE53935)).semantics { contentDescription = tr("Usunięte u rozmówcy") })
+            1 -> Text(tr(" · usunięte u rozmówcy"), style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935))
         }
     }
 }
@@ -274,7 +275,7 @@ fun ReactionsRow(list: List<Reaction>, onClick: () -> Unit) {
         Modifier.pop(list.size, animOn, appear = false).padding(top = 2.dp, start = 6.dp, end = 6.dp).clip(RoundedCornerShape(12.dp))
             .background(if (list.any { it.pk == me }) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick).padding(horizontal = 7.dp, vertical = 2.dp)
-            .semantics { contentDescription = "Reakcje: " + grouped.joinToString { it.key + " " + it.value.size } },
+            .semantics { contentDescription = tr("Reakcje: ") + grouped.joinToString { it.key + " " + it.value.size } },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         grouped.take(5).forEach { (e, l) ->
@@ -311,7 +312,7 @@ fun AlbumItem(
                 if (senderName != null && !mine) {
                     Text(senderName, Modifier.padding(start = 5.dp, bottom = 3.dp), color = readable(avatarColor(first.sender), fillSolid, 3.5f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
-                if (first.ex.fwd) Text("↪ Przekazano", Modifier.padding(start = 5.dp), style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic)
+                if (first.ex.fwd) Text(tr("↪ Przekazano"), Modifier.padding(start = 5.dp), style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic)
                 list.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(bottom = 3.dp)) {
                         row.forEach { m ->
@@ -322,7 +323,7 @@ fun AlbumItem(
                 list.firstOrNull { it.body.isNotEmpty() }?.let { c -> Text(c.body, Modifier.padding(horizontal = 5.dp), style = MaterialTheme.typography.bodyLarge) }
                 val last = list.last()
                 val uploading = list.filter { it.mine && it.status == St.UPLOADING }
-                if (uploading.isNotEmpty()) Text("Wysyłanie ${list.size - uploading.size}/${list.size}…", Modifier.padding(horizontal = 5.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                if (uploading.isNotEmpty()) Text(tr("Wysyłanie {0}/{1}…", list.size - uploading.size, list.size), Modifier.padding(horizontal = 5.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 MetaRow(last.copy(status = list.minOf { it.status }.let { if (it < 0) St.FAILED else it }), Modifier.align(Alignment.End).padding(end = 5.dp))
             }
         }
@@ -381,7 +382,7 @@ fun RichText(text: String, style: androidx.compose.ui.text.TextStyle = MaterialT
 @Composable
 private fun PollContent(m: Message, votes: List<Vote>, onVote: (List<Int>) -> Unit) {
     val poll = remember(m.body) { Poll.parse(m.body) }
-    if (poll == null) { Text("📊 Ankieta"); return }
+    if (poll == null) { Text(tr("📊 Ankieta")); return }
     val me = App.core.myPub
     val mine = votes.firstOrNull { it.pk == me }?.sel ?: emptyList()
     val counts = IntArray(poll.opts.size)
@@ -390,7 +391,7 @@ private fun PollContent(m: Message, votes: List<Vote>, onVote: (List<Int>) -> Un
     Column(Modifier.widthIn(min = 230.dp, max = 280.dp)) {
         Text("📊 " + poll.q, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
         Text(
-            (if (poll.multi) "Możesz wybrać kilka" else "Wybierz jedną odpowiedź") + " · głosy jawne",
+            (if (poll.multi) tr("Możesz wybrać kilka") else tr("Wybierz jedną odpowiedź")) + tr(" · głosy jawne"),
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         poll.opts.forEachIndexed { i, o ->
@@ -412,7 +413,7 @@ private fun PollContent(m: Message, votes: List<Vote>, onVote: (List<Int>) -> Un
                 }
             }
         }
-        Text(plural(voters, "głos", "głosy", "głosów"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(plural(voters, tr("głos"), tr("głosy"), tr("głosów")), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -421,16 +422,16 @@ private fun PollContent(m: Message, votes: List<Vote>, onVote: (List<Int>) -> Un
 private fun LocationContent(m: Message) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val loc = remember(m.body) { Loc.parse(m.body) }
-    if (loc == null) { Text("📍 Lokalizacja"); return }
+    if (loc == null) { Text(tr("📍 Lokalizacja")); return }
     var now by remember { mutableLongStateOf(pl.szept.nostr.Clock.now()) }
     LaunchedEffect(loc.live, loc.ended) { while (loc.live > 0 && !loc.ended) { now = pl.szept.nostr.Clock.now(); delay(10_000) } }
     val live = loc.isLive(now)
     val accent = if (live) OkGreen else MaterialTheme.colorScheme.primary
     Column(Modifier.widthIn(min = 230.dp, max = 280.dp)) {
-        Box(Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(12.dp)).clickable { openMap(ctx, loc.lat, loc.lon, "Szept") }) {
+        Box(Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(12.dp)).clickable { openMap(ctx, loc.lat, loc.lon, tr("Szept")) }) {
             MapSketch(accent)
             Text(
-                "%.5f, %.5f".format(java.util.Locale.ROOT, loc.lat, loc.lon), Modifier.align(Alignment.BottomStart).padding(6.dp)
+                tr("%.5f, %.5f").format(java.util.Locale.ROOT, loc.lat, loc.lon), Modifier.align(Alignment.BottomStart).padding(6.dp)
                     .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(horizontal = 5.dp),
                 color = Color.White, style = MaterialTheme.typography.labelSmall,
             )
@@ -438,21 +439,21 @@ private fun LocationContent(m: Message) {
         Spacer(Modifier.height(6.dp))
         Text(
             when {
-                loc.live == 0L -> "📍 Lokalizacja"
-                live -> "🟢 Lokalizacja na żywo"
-                else -> "📍 Udostępnianie zakończone"
+                loc.live == 0L -> tr("📍 Lokalizacja")
+                live -> tr("🟢 Lokalizacja na żywo")
+                else -> tr("📍 Udostępnianie zakończone")
             },
             fontWeight = FontWeight.Bold,
         )
         val details = buildString {
-            if (loc.acc > 0) append("dokładność ±${loc.acc.toInt()} m")
-            if (live) append(" · do ${formatTime(loc.live)} · aktualizacja ${agoText(loc.upd, now)}")
-            else if (loc.live > 0) append(" · ostatnia pozycja ${formatTime(loc.upd)}")
+            if (loc.acc > 0) append(tr("dokładność ±{0} m", loc.acc.toInt()))
+            if (live) append(tr(" · do {0} · aktualizacja {1}", formatTime(loc.live), agoText(loc.upd, now)))
+            else if (loc.live > 0) append(tr(" · ostatnia pozycja {0}", formatTime(loc.upd)))
         }
         if (details.isNotEmpty()) Text(details.trimStart(' ', '·'), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row {
-            TextButton(onClick = { openMap(ctx, loc.lat, loc.lon, "Szept") }) { Text("Otwórz w mapach") }
-            if (m.mine && live) TextButton(onClick = { App.core.stopLive(m.id) }) { Text("Zakończ", color = MaterialTheme.colorScheme.error) }
+            TextButton(onClick = { openMap(ctx, loc.lat, loc.lon, tr("Szept")) }) { Text(tr("Otwórz w mapach")) }
+            if (m.mine && live) TextButton(onClick = { App.core.stopLive(m.id) }) { Text(tr("Zakończ"), color = MaterialTheme.colorScheme.error) }
         }
     }
 }
@@ -460,9 +461,9 @@ private fun LocationContent(m: Message) {
 fun agoText(ts: Long, now: Long): String {
     val s = ((now - ts) / 1000).coerceAtLeast(0)
     return when {
-        s < 60 -> "przed chwilą"
-        s < 3600 -> "${s / 60} min temu"
-        else -> "${s / 3600} h temu"
+        s < 60 -> tr("przed chwilą")
+        s < 3600 -> tr("{0} min temu", s / 60)
+        else -> tr("{0} h temu", s / 3600)
     }
 }
 
@@ -495,20 +496,20 @@ private fun UpdateContent(m: Message) {
         Text("⬆️", fontSize = 26.sp)
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            Text("Nowa wersja Szept ${m.body}", fontWeight = FontWeight.Bold)
+            Text(tr("Nowa wersja Szept {0}", m.body), fontWeight = FontWeight.Bold)
             Text(
                 when {
-                    m.path == null && m.status == St.DOWNLOAD_HELD -> "Dotknij, aby pobrać (" + formatSize(m.media?.size ?: 0) + ")"
-                    m.path == null && m.status == St.DOWNLOAD_FAILED -> "Nie udało się pobrać — dotknij, aby spróbować ponownie"
-                    m.path == null -> "Pobieranie ${m.progress}%…"
-                    !newer -> "Masz już wersję $current lub nowszą"
-                    else -> "Dotknij, aby zainstalować"
+                    m.path == null && m.status == St.DOWNLOAD_HELD -> tr("Dotknij, aby pobrać (") + formatSize(m.media?.size ?: 0) + ")"
+                    m.path == null && m.status == St.DOWNLOAD_FAILED -> tr("Nie udało się pobrać — dotknij, aby spróbować ponownie")
+                    m.path == null -> tr("Pobieranie {0}%…", m.progress)
+                    !newer -> tr("Masz już wersję {0} lub nowszą", current)
+                    else -> tr("Dotknij, aby zainstalować")
                 },
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             // zapasowo: plik ze strony (gdy przekaźniki nie oddają całego pliku)
             if (m.path == null && newer) Text(
-                "Nie pobiera się? Pobierz ze strony",
+                tr("Nie pobiera się? Pobierz ze strony"),
                 Modifier.padding(top = 4.dp).clickable { openUrl(ctx, pl.szept.core.Admin.RELEASES_URL) },
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
             )
@@ -524,11 +525,11 @@ private fun Caption(m: Message) {
 @Composable
 private fun TransferInfo(m: Message) {
     val text = when {
-        m.mine && m.status == St.UPLOADING -> "Wysyłanie ${m.progress}%"
-        !m.mine && m.media != null && m.path == null && m.status == St.DOWNLOADING -> "Pobieranie ${m.progress}%"
-        !m.mine && m.status == St.DOWNLOAD_HELD -> "Dotknij, aby pobrać"
-        !m.mine && m.status == St.DOWNLOAD_FAILED -> "Nie udało się pobrać — dotknij, aby ponowić"
-        m.mine && m.status == St.FAILED -> "Nie wysłano — dotknij, aby ponowić"
+        m.mine && m.status == St.UPLOADING -> tr("Wysyłanie {0}%", m.progress)
+        !m.mine && m.media != null && m.path == null && m.status == St.DOWNLOADING -> tr("Pobieranie {0}%", m.progress)
+        !m.mine && m.status == St.DOWNLOAD_HELD -> tr("Dotknij, aby pobrać")
+        !m.mine && m.status == St.DOWNLOAD_FAILED -> tr("Nie udało się pobrać — dotknij, aby ponowić")
+        m.mine && m.status == St.FAILED -> tr("Nie wysłano — dotknij, aby ponowić")
         else -> null
     } ?: return
     Text(text, style = MaterialTheme.typography.labelSmall,
@@ -562,7 +563,7 @@ private fun VideoContent(m: Message) {
         if (thumb != null) BitmapImage(thumb, Modifier.fillMaxSize())
         if (m.path == null) CircularProgressIndicator(Modifier.size(36.dp))
         else Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.PlayArrow, "Odtwórz", tint = Color.White, modifier = Modifier.size(34.dp))
+            Icon(Icons.Default.PlayArrow, tr("Odtwórz"), tint = Color.White, modifier = Modifier.size(34.dp))
         }
         if (meta != null && meta.dur > 0) Text(
             formatDuration(meta.dur), Modifier.align(Alignment.BottomStart).padding(6.dp)
@@ -584,7 +585,7 @@ private fun VoiceContent(m: Message) {
     val dur = m.media?.dur ?: 0
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.width(250.dp)) {
         FilledIconButton(onClick = { m.path?.let { RoundPlayer.stop(); VoicePlayer.toggle(m.id, it) } }, enabled = m.path != null) {
-            Icon(if (isMe) Icons.Default.Pause else Icons.Default.PlayArrow, if (isMe) "Pauza" else "Odtwórz")
+            Icon(if (isMe) Icons.Default.Pause else Icons.Default.PlayArrow, if (isMe) tr("Pauza") else tr("Odtwórz"))
         }
         Spacer(Modifier.width(8.dp))
         Waveform(
@@ -628,10 +629,10 @@ private fun FileContent(m: Message) {
 private fun ViewOnceCover(m: Message) {
     val ready = m.media == null || m.path != null
     val action = when (m.kind) {
-        Kind.VOICE -> "Dotknij, aby odsłuchać"
-        Kind.IMAGE, Kind.VIDEO -> "Dotknij, aby zobaczyć"
-        Kind.FILE -> "Dotknij, aby otworzyć"
-        else -> "Dotknij, aby przeczytać"
+        Kind.VOICE -> tr("Dotknij, aby odsłuchać")
+        Kind.IMAGE, Kind.VIDEO -> tr("Dotknij, aby zobaczyć")
+        Kind.FILE -> tr("Dotknij, aby otworzyć")
+        else -> tr("Dotknij, aby przeczytać")
     }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Box(Modifier.size(40.dp).clip(CircleShape).background(Fire.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
@@ -641,7 +642,7 @@ private fun ViewOnceCover(m: Message) {
         Column {
             Text(Db.timedLabel(m.kind), fontWeight = FontWeight.Bold)
             Text(
-                if (ready) "$action · zniknie ${formatTtl(m.ttl)} po otwarciu" else "Pobieranie ${m.progress}%…",
+                if (ready) tr("{0} · zniknie {1} po otwarciu", action, formatTtl(m.ttl)) else tr("Pobieranie {0}%…", m.progress),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -656,7 +657,7 @@ private fun ViewOnceSent(m: Message) {
         Column {
             Text(Db.timedLabel(m.kind), fontWeight = FontWeight.Bold)
             Text(
-                if (m.status == St.OPENED) "Otwarto — zniknie po ${formatTtl(m.ttl)}" else "Czeka na otwarcie · zniknie ${formatTtl(m.ttl)} po otwarciu",
+                if (m.status == St.OPENED) tr("Otwarto — zniknie po {0}", formatTtl(m.ttl)) else tr("Czeka na otwarcie · zniknie {0} po otwarciu", formatTtl(m.ttl)),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

@@ -1,5 +1,6 @@
 package pl.szept.data
 
+import pl.szept.tr
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -208,7 +209,7 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         val existing = contact(pk)
         if (existing == null) {
             w.insert("contacts", null, ContentValues().apply {
-                put("pk", pk); put("name", name?.takeIf { it.isNotBlank() } ?: ("Użytkownik " + pk.take(6)))
+                put("pk", pk); put("name", name?.takeIf { it.isNotBlank() } ?: (tr("Użytkownik ") + pk.take(6)))
                 put("added", System.currentTimeMillis()); put("is_contact", if (makeContact) 1 else 0)
             })
         } else {
@@ -252,7 +253,7 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         w.execSQL("UPDATE messages SET delothers=1 WHERE id=?", arrayOf<Any?>(id)); changed()
     }
 
-    fun nameOf(pk: String): String = contact(pk)?.display ?: ("Użytkownik " + pk.take(6))
+    fun nameOf(pk: String): String = contact(pk)?.display ?: (tr("Użytkownik ") + pk.take(6))
 
     /** Zapisuje profil innej osoby (z sieci), jeśli nowszy; zachowuje mój lokalny alias. */
     fun saveProfile(pk: String, name: String?, status: String?, bio: String?, avatar: String?, banner: String?, ts: Long) {
@@ -997,11 +998,11 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
     companion object {
         /** „Wiadomość czasowa”, „Zdjęcie czasowe”… */
         fun timedLabel(kind: String) = when (kind) {
-            Kind.IMAGE -> "Zdjęcie czasowe"
-            Kind.VIDEO -> "Wideo czasowe"
-            Kind.VOICE -> "Głosówka czasowa"
-            Kind.FILE -> "Plik czasowy"
-            else -> "Wiadomość czasowa"
+            Kind.IMAGE -> tr("Zdjęcie czasowe")
+            Kind.VIDEO -> tr("Wideo czasowe")
+            Kind.VOICE -> tr("Głosówka czasowa")
+            Kind.FILE -> tr("Plik czasowy")
+            else -> tr("Wiadomość czasowa")
         }
 
         private val spoilerRx = Regex("""\|\|(.+?)\|\|""")
@@ -1011,16 +1012,16 @@ class Db(context: Context, name: String, encrypt: Boolean = false) : Schema {
         fun preview(m: Message): String = when {
             // treści czasowych/znikających nie pokazujemy na liście czatów ani w powiadomieniach
             m.xmode == XMode.AFTER_OPEN -> "⏱ " + timedLabel(m.kind)
-            m.xmode == XMode.AFTER_SEND -> "⏱ Wiadomość znikająca"
+            m.xmode == XMode.AFTER_SEND -> tr("⏱ Wiadomość znikająca")
             m.kind == Kind.TEXT && m.ex.game != null -> m.body.substringBefore(" — ")
             m.kind == Kind.TEXT -> hideSpoilers(m.body)
-            m.kind == Kind.IMAGE -> "📷 Zdjęcie" + if (m.body.isNotEmpty()) ": " + hideSpoilers(m.body) else ""
-            m.kind == Kind.VOICE -> "🎤 Wiadomość głosowa"
-            m.kind == Kind.VIDEO -> "🎬 Wideo" + if (m.body.isNotEmpty()) ": " + m.body else ""
-            m.kind == Kind.FILE -> "📎 " + (m.media?.name ?: "Plik")
-            m.kind == Kind.POLL -> "📊 " + (Poll.parse(m.body)?.q?.ifBlank { null } ?: "Ankieta")
-            m.kind == Kind.LOCATION -> if ((Loc.parse(m.body)?.live ?: 0L) > 0) "📍 Lokalizacja na żywo" else "📍 Lokalizacja"
-            m.kind == Kind.UPDATE -> "⬆️ Nowa wersja Szept ${m.body}"
+            m.kind == Kind.IMAGE -> tr("📷 Zdjęcie") + if (m.body.isNotEmpty()) ": " + hideSpoilers(m.body) else ""
+            m.kind == Kind.VOICE -> tr("🎤 Wiadomość głosowa")
+            m.kind == Kind.VIDEO -> tr("🎬 Wideo") + if (m.body.isNotEmpty()) ": " + m.body else ""
+            m.kind == Kind.FILE -> "📎 " + (m.media?.name ?: tr("Plik"))
+            m.kind == Kind.POLL -> "📊 " + (Poll.parse(m.body)?.q?.ifBlank { null } ?: tr("Ankieta"))
+            m.kind == Kind.LOCATION -> if ((Loc.parse(m.body)?.live ?: 0L) > 0) tr("📍 Lokalizacja na żywo") else tr("📍 Lokalizacja")
+            m.kind == Kind.UPDATE -> tr("⬆️ Nowa wersja Szept {0}", m.body)
             else -> m.body
         }
     }

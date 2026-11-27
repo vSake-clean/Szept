@@ -1,5 +1,6 @@
 package pl.szept.ui.style
 
+import pl.szept.tr
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -140,7 +141,7 @@ fun StyleBackBar(title: String, onBack: () -> Unit, hasActions: Boolean, actions
             // tytuł na środku ekranu, ale nigdy pod przyciskami (odstęp = szerszy z boków)
             val density = androidx.compose.ui.platform.LocalDensity.current
             var side by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(44.dp) }
-            GlassIconButton(ChevronBack, "Wstecz", onBack, Modifier.align(Alignment.CenterStart))
+            GlassIconButton(ChevronBack, tr("Wstecz"), onBack, Modifier.align(Alignment.CenterStart))
             Text(
                 title, Modifier.align(Alignment.Center).padding(horizontal = maxOf(44.dp, side) + 10.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -153,7 +154,7 @@ fun StyleBackBar(title: String, onBack: () -> Unit, hasActions: Boolean, actions
         Chrome.IOS6 -> Ios6Bar(title, onBack, hasActions, actions)
         else -> TopAppBar(
             title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = barTitleWeight()) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(backIcon(), "Wstecz") } },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(backIcon(), tr("Wstecz")) } },
             actions = { actions() },
             colors = styleBarColors(),
             modifier = Modifier.styleTopBar(st),
@@ -173,7 +174,7 @@ fun barTitleWeight(): FontWeight? = when (chrome()) {
 fun Ios6Bar(title: String, onBack: (() -> Unit)?, hasActions: Boolean, actions: @Composable () -> Unit, titleContent: (@Composable () -> Unit)? = null) {
     val st = LocalStyle.current
     Box(Modifier.fillMaxWidth().styleTopBar(st).statusBarsPadding().height(48.dp)) {
-        if (onBack != null) Ios6BackButton("Wstecz", onBack, Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
+        if (onBack != null) Ios6BackButton(tr("Wstecz"), onBack, Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
         Box(Modifier.align(Alignment.Center).padding(horizontal = 92.dp)) {
             if (titleContent != null) titleContent()
             else Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = ios6Title())

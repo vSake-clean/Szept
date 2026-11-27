@@ -2,6 +2,7 @@
 
 package pl.szept.ui.games
 
+import pl.szept.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,7 +39,7 @@ private val GRAY = Color(0xFF787C7E)
 /** Klawiatura z polskimi literami. [state] litera → kolor (podpowiedzi). */
 @Composable
 fun PolishKeyboard(state: Map<Char, Color> = emptyMap(), disabled: Set<Char> = emptySet(), onKey: (Char) -> Unit, onBack: (() -> Unit)? = null, onEnter: (() -> Unit)? = null) {
-    val rows = listOf("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM", "ĄĆĘŁŃÓŚŹŻ")
+    val rows = listOf("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM", tr("ĄĆĘŁŃÓŚŹŻ"))
     Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         rows.forEachIndexed { ri, row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
@@ -49,7 +50,7 @@ fun PolishKeyboard(state: Map<Char, Color> = emptyMap(), disabled: Set<Char> = e
                     Key(ch.toString(), Modifier.weight(1f), if (off) bg.copy(alpha = 0.3f) else bg, if (state[ch] != null) Color.White else MaterialTheme.colorScheme.onSurface) { if (!off) onKey(ch) }
                 }
                 if (ri == 2 && onBack != null) Box(Modifier.weight(1.5f).height(46.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onBack() },
-                    contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.Backspace, "Usuń") }
+                    contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.Backspace, tr("Usuń")) }
             }
         }
     }
@@ -89,11 +90,11 @@ fun WordleGame(env: GameEnv) {
         if (cur.length != 5 || over) return
         rows.add(cur)
         if (cur == target) { over = true; env.finish(rows.size.toDouble()) }
-        else if (rows.size >= 6) { over = true; env.fail("Szukane słowo: $target") }
+        else if (rows.size >= 6) { over = true; env.fail(tr("Szukane słowo: {0}", target)) }
         cur = ""
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("próba ${minOf(rows.size + 1, 6)}/6", "5 liter")
+        GameHud(tr("próba {0}/6", minOf(rows.size + 1, 6)), tr("5 liter"))
         Column(Modifier.weight(1f).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally) {
             for (r in 0 until 6) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 val word = rows.getOrNull(r) ?: if (r == rows.size) cur else ""
@@ -120,7 +121,7 @@ fun HangSoloGame(env: GameEnv) {
     val wrong = guessed.count { it !in word }
     val lives = 8
     Column(Modifier.fillMaxSize()) {
-        GameHud("$wrong ${GameCatalog.plural(wrong.toLong(), "błąd", "błędy", "błędów")}", "życia: ${lives - wrong}")
+        GameHud("$wrong ${GameCatalog.plural(wrong.toLong(), tr("błąd"), tr("błędy"), tr("błędów"))}", tr("życia: {0}", lives - wrong))
         Column(Modifier.weight(1f).fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             HangmanDrawing(wrong, lives, Modifier.size(160.dp))
             Spacer(Modifier.height(16.dp))
@@ -131,7 +132,7 @@ fun HangSoloGame(env: GameEnv) {
             guessed.add(ch)
             val w = guessed.count { it !in word }
             if (word.all { it in guessed }) { over = true; env.finish(w.toDouble()) }
-            else if (w >= lives) { over = true; env.fail("Słowo: $word") }
+            else if (w >= lives) { over = true; env.fail(tr("Słowo: {0}", word)) }
         })
     }
 }
@@ -193,12 +194,12 @@ fun AnagramGame(env: GameEnv) {
         }
         Spacer(Modifier.weight(1f))
         Row {
-            OutlinedButton(onClick = { if (used.isNotEmpty()) used.removeAt(used.lastIndex) }) { Text("Cofnij literę") }
+            OutlinedButton(onClick = { if (used.isNotEmpty()) used.removeAt(used.lastIndex) }) { Text(tr("Cofnij literę")) }
             Spacer(Modifier.width(12.dp))
-            TextButton(onClick = { idx++ }) { Text("Pomiń") }
+            TextButton(onClick = { idx++ }) { Text(tr("Pomiń")) }
         }
     }
-    if (!started) StartOverlay("Ułóż słowa z pomieszanych liter. Punkty = długość słowa") { started = true }
+    if (!started) StartOverlay(tr("Ułóż słowa z pomieszanych liter. Punkty = długość słowa")) { started = true }
 }
 
 // ============================ szybkie pisanie ============================
@@ -226,8 +227,8 @@ fun TypingGame(env: GameEnv) {
             if (!started && v.isNotEmpty()) started = true
             text = v.take(sentence.length + 5)
             if (text == sentence) { over = true; env.finish(ms.value.coerceAtLeast(1).toDouble()) }
-        }, Modifier.fillMaxWidth(), isError = !ok, label = { Text("Przepisz zdanie (z polskimi znakami)") })
-        Text("Czas rusza od pierwszej litery.", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
+        }, Modifier.fillMaxWidth(), isError = !ok, label = { Text(tr("Przepisz zdanie (z polskimi znakami)")) })
+        Text(tr("Czas rusza od pierwszej litery."), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
@@ -252,7 +253,7 @@ fun QuizGame(env: GameEnv) {
     }
     val q = questions[idx]
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        GameHud("$score pkt", "pytanie ${idx + 1}/10 · ${left} s")
+        GameHud("$score pkt", tr("pytanie {0}/10 · {1} s", idx + 1, left))
         LinearProgressIndicator(progress = { left / 15f }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(20.dp))
         Text(q.q, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -270,7 +271,7 @@ fun QuizGame(env: GameEnv) {
             }
         }
     }
-    if (!started) StartOverlay("10 pytań, 15 sekund na każde.\nSzybsza dobra odpowiedź = więcej punktów") { started = true }
+    if (!started) StartOverlay(tr("10 pytań, 15 sekund na każde.\nSzybsza dobra odpowiedź = więcej punktów")) { started = true }
 }
 
 // ============================ prawda czy fałsz ============================
@@ -304,13 +305,13 @@ fun TrueFalseGame(env: GameEnv) {
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = { answer(true) }, Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = GREEN)) {
-                Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text("Prawda", fontSize = 18.sp)
+                Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(tr("Prawda"), fontSize = 18.sp)
             }
             Button(onClick = { answer(false) }, Modifier.weight(1f).height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))) {
-                Icon(Icons.Default.Close, null); Spacer(Modifier.width(6.dp)); Text("Fałsz", fontSize = 18.sp)
+                Icon(Icons.Default.Close, null); Spacer(Modifier.width(6.dp)); Text(tr("Fałsz"), fontSize = 18.sp)
             }
         }
         Spacer(Modifier.height(16.dp))
     }
-    if (!started) StartOverlay("Oceniaj zdania jak najszybciej.\nBłąd = −1 pkt") { started = true }
+    if (!started) StartOverlay(tr("Oceniaj zdania jak najszybciej.\nBłąd = −1 pkt")) { started = true }
 }

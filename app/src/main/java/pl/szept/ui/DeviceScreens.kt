@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,39 +46,39 @@ fun DevicesScreen(nav: Nav) {
     var forget by remember { mutableStateOf<Core.Device?>(null) }
     LaunchedEffect(Unit) { while (true) { delay(3000); tick++ } }
     val devices = remember(tick, multi) { core.devices() }
-    Scaffold(topBar = { BackBar("Moje urządzenia", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Moje urządzenia"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "Możesz używać jednego konta na kilku telefonach lub tablecie. Wiadomości, które wyślesz z jednego, " +
-                    "pojawią się na pozostałych; tak samo przeczytanie, reakcje, edycje, usuwanie, wyciszenie i nowe kontakty.",
+                tr("Możesz używać jednego konta na kilku telefonach lub tablecie. Wiadomości, które wyślesz z jednego, ") +
+                    tr("pojawią się na pozostałych; tak samo przeczytanie, reakcje, edycje, usuwanie, wyciszenie i nowe kontakty."),
                 style = MaterialTheme.typography.bodyMedium,
             )
             ListItem(
-                headlineContent = { Text("Synchronizuj z innymi urządzeniami", fontWeight = FontWeight.Bold) },
-                supportingContent = { Text(if (multi) "Włączone" else "Włączy się samo, gdy zalogujesz się na drugim urządzeniu") },
+                headlineContent = { Text(tr("Synchronizuj z innymi urządzeniami"), fontWeight = FontWeight.Bold) },
+                supportingContent = { Text(if (multi) tr("Włączone") else tr("Włączy się samo, gdy zalogujesz się na drugim urządzeniu")) },
                 trailingContent = { Switch(multi, { v -> multi = v; core.setMultiDevice(v) }) },
             )
             HorizontalDivider()
             devices.forEach { d ->
                 ListItem(
                     leadingContent = { Icon(if (d.me) Icons.Default.PhoneAndroid else Icons.Default.Devices, null) },
-                    headlineContent = { Text(d.name + if (d.me) " (to urządzenie)" else "") },
-                    supportingContent = { if (!d.me) Text("Ostatnio: " + formatWhen(d.seen)) },
-                    trailingContent = { if (!d.me) TextButton(onClick = { forget = d }) { Text("Zapomnij") } },
+                    headlineContent = { Text(d.name + if (d.me) tr(" (to urządzenie)") else "") },
+                    supportingContent = { if (!d.me) Text(tr("Ostatnio: ") + formatWhen(d.seen)) },
+                    trailingContent = { if (!d.me) TextButton(onClick = { forget = d }) { Text(tr("Zapomnij")) } },
                 )
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Jak dodać urządzenie", fontWeight = FontWeight.Bold)
+            Text(tr("Jak dodać urządzenie"), fontWeight = FontWeight.Bold)
             Text(
-                "1. Zainstaluj Szept na drugim urządzeniu.\n" +
-                    "2. Na ekranie powitalnym wybierz „Mam już konto” i wpisz kod dostępu do konta z tego telefonu.\n" +
-                    "3. Urządzenia same się odnajdą — drugie dostanie kontakty i grupy, a od tej chwili wszystkie nowe wiadomości.\n" +
-                    "Starsza historia: przenieś ją kopią zapasową (Ustawienia → Kopia zapasowa).",
+                tr("1. Zainstaluj Szept na drugim urządzeniu.\n") +
+                    tr("2. Na ekranie powitalnym wybierz „Mam już konto” i wpisz kod dostępu do konta z tego telefonu.\n") +
+                    tr("3. Urządzenia same się odnajdą — drugie dostanie kontakty i grupy, a od tej chwili wszystkie nowe wiadomości.\n") +
+                    tr("Starsza historia: przenieś ją kopią zapasową (Ustawienia → Kopia zapasowa)."),
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { nav.go(Screen.AccessCode) }, Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Key, null); Text("  Pokaż kod dostępu do konta")
+                Icon(Icons.Default.Key, null); Text(tr("  Pokaż kod dostępu do konta"))
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -85,10 +86,10 @@ fun DevicesScreen(nav: Nav) {
     forget?.let { d ->
         StyleAlertDialog(
             onDismissRequest = { forget = null },
-            title = { Text("Zapomnieć „${d.name}”?") },
-            text = { Text("Przestanie dostawać kopie Twoich wiadomości. Jeśli to urządzenie zostało skradzione, zmień też konto — kod dostępu jest na nim zapisany.") },
-            confirmButton = { TextButton(onClick = { core.forgetDevice(d.id); forget = null; tick++ }) { Text("Zapomnij") } },
-            dismissButton = { TextButton(onClick = { forget = null }) { Text("Anuluj") } },
+            title = { Text(tr("Zapomnieć „{0}”?", d.name)) },
+            text = { Text(tr("Przestanie dostawać kopie Twoich wiadomości. Jeśli to urządzenie zostało skradzione, zmień też konto — kod dostępu jest na nim zapisany.")) },
+            confirmButton = { TextButton(onClick = { core.forgetDevice(d.id); forget = null; tick++ }) { Text(tr("Zapomnij")) } },
+            dismissButton = { TextButton(onClick = { forget = null }) { Text(tr("Anuluj")) } },
         )
     }
 }

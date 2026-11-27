@@ -1,5 +1,6 @@
 package pl.szept.ui.games
 
+import pl.szept.tr
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,7 +48,7 @@ fun SquareBoard(modifier: Modifier = Modifier, maxSize: androidx.compose.ui.unit
 
 @Composable
 private fun EndButton(onClick: () -> Unit) {
-    TextButton(onClick = onClick) { Icon(Icons.Default.Flag, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Zakończ") }
+    TextButton(onClick = onClick) { Icon(Icons.Default.Flag, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Zakończ")) }
 }
 
 // ============================ 2048 ============================
@@ -119,7 +120,7 @@ fun Game2048(env: GameEnv) {
                 }
             }
         }
-        Text("Przesuwaj palcem w dowolną stronę", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Przesuwaj palcem w dowolną stronę"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -138,7 +139,7 @@ fun MinesGame(env: GameEnv) {
     fun reveal(i: Int) {
         if (open[i] || flags[i] || over) return
         started = true
-        if (i in m.mines) { open[i] = true; over = true; env.fail("Trafiłeś na minę."); return }
+        if (i in m.mines) { open[i] = true; over = true; env.fail(tr("Trafiłeś na minę.")); return }
         val stack = ArrayDeque<Int>(); stack.add(i)
         while (stack.isNotEmpty()) {
             val k = stack.removeLast()
@@ -151,7 +152,7 @@ fun MinesGame(env: GameEnv) {
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             GameHud(GameCatalog.fmtTime(ms.value.toDouble()), "miny: ${m.mines.size - flags.count { it }}", Modifier.weight(1f))
-            FilterChip(flagMode, { flagMode = !flagMode }, { Text("Flagi") }, leadingIcon = { Icon(Icons.Default.Flag, null, Modifier.size(16.dp)) })
+            FilterChip(flagMode, { flagMode = !flagMode }, { Text(tr("Flagi")) }, leadingIcon = { Icon(Icons.Default.Flag, null, Modifier.size(16.dp)) })
             Spacer(Modifier.width(8.dp))
         }
         Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
@@ -182,7 +183,7 @@ fun MinesGame(env: GameEnv) {
                 }
             }
         }
-        Text("Zacznij od zielonego pola. Przytrzymaj, aby postawić flagę.", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Zacznij od zielonego pola. Przytrzymaj, aby postawić flagę."), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -192,7 +193,7 @@ fun MinesGame(env: GameEnv) {
 fun SudokuGame(env: GameEnv) {
     var data by remember { mutableStateOf<Pair<IntArray, IntArray>?>(null) }
     LaunchedEffect(Unit) { data = withContext(Dispatchers.Default) { Puzzles.sudoku(env.seed) } }
-    val d = data ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(); Text("Przygotowuję planszę…") } }
+    val d = data ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(); Text(tr("Przygotowuję planszę…")) } }
     val (puzzle, solution) = d
     val grid = remember(d) { mutableStateListOf(*puzzle.toTypedArray()) }
     var sel by remember { mutableIntStateOf(-1) }
@@ -249,7 +250,7 @@ fun SudokuGame(env: GameEnv) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (v in 1..9) Button(onClick = { put(v) }, Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("$v", fontSize = 18.sp) }
         }
-        TextButton(onClick = { put(0) }, Modifier.align(Alignment.CenterHorizontally)) { Icon(Icons.AutoMirrored.Filled.Backspace, null); Spacer(Modifier.width(4.dp)); Text("Wyczyść pole") }
+        TextButton(onClick = { put(0) }, Modifier.align(Alignment.CenterHorizontally)) { Icon(Icons.AutoMirrored.Filled.Backspace, null); Spacer(Modifier.width(4.dp)); Text(tr("Wyczyść pole")) }
     }
 }
 
@@ -273,7 +274,7 @@ fun FifteenGame(env: GameEnv) {
         if ((0 until 15).all { b[it] == it + 1 }) { over = true; env.finish(moves.toDouble()) }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$moves ruchów")
+        GameHud(tr("{0} ruchów", moves))
         SquareBoard(Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(Color(0xFF37474F)).padding(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (r in 0 until 4) Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -288,7 +289,7 @@ fun FifteenGame(env: GameEnv) {
                 }
             }
         }
-        Text("Dotknij kafelka w tym samym rzędzie lub kolumnie co puste pole", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Dotknij kafelka w tym samym rzędzie lub kolumnie co puste pole"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -301,7 +302,7 @@ fun LightsGame(env: GameEnv) {
     var moves by remember { mutableIntStateOf(0) }
     var over by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$moves ruchów", "świeci: ${b.count { it }}")
+        GameHud(tr("{0} ruchów", moves), tr("świeci: {0}", b.count { it }))
         SquareBoard(Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (r in 0 until n) Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -320,7 +321,7 @@ fun LightsGame(env: GameEnv) {
                 }
             }
         }
-        Text("Dotknięcie przełącza lampkę i jej sąsiadów", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Dotknięcie przełącza lampkę i jej sąsiadów"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -335,7 +336,7 @@ fun FloodGame(env: GameEnv) {
     var moves by remember { mutableIntStateOf(0) }
     var over by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$moves ruchów", "cel: jeden kolor")
+        GameHud(tr("{0} ruchów", moves), tr("cel: jeden kolor"))
         SquareBoard(Modifier.weight(1f)) {
             Canvas(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
                 val cs = size.width / n
@@ -382,7 +383,7 @@ fun MazeGame(env: GameEnv) {
         if (pos == w * h - 1) { over = true; env.finish(ms.value.coerceAtLeast(1).toDouble()) }
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud(GameCatalog.fmtTime(ms.value.toDouble()), "do wyjścia ↘")
+        GameHud(GameCatalog.fmtTime(ms.value.toDouble()), tr("do wyjścia ↘"))
         Box(Modifier.weight(1f).fillMaxWidth().padding(10.dp).pointerInput(Unit) {
             var total = Offset.Zero
             detectDragGestures(onDragStart = { total = Offset.Zero }) { ch, d ->
@@ -412,7 +413,7 @@ fun MazeGame(env: GameEnv) {
                 drawCircle(Color(0xFFFF7043), cs * 0.32f, Offset((pos % w + 0.5f) * cs, (pos / w + 0.5f) * cs))
             }
         }
-        Text("Przesuń palcem — kulka jedzie do najbliższego rozwidlenia", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Przesuń palcem — kulka jedzie do najbliższego rozwidlenia"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -437,7 +438,7 @@ fun HanoiGame(env: GameEnv) {
         sel = -1
     }
     Column(Modifier.fillMaxSize()) {
-        GameHud("$moves ruchów", "najlepiej: ${(1 shl n) - 1}")
+        GameHud(tr("{0} ruchów", moves), "najlepiej: ${(1 shl n) - 1}")
         Row(Modifier.weight(1f).fillMaxWidth().padding(12.dp)) {
             for (p in 0 until 3) {
                 Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp))
@@ -453,7 +454,7 @@ fun HanoiGame(env: GameEnv) {
                 }
             }
         }
-        Text("Dotknij słupka, z którego bierzesz krążek, a potem docelowego", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Dotknij słupka, z którego bierzesz krążek, a potem docelowego"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -470,9 +471,9 @@ fun PegGame(env: GameEnv) {
         if (!b[i]) return emptyList()
         val r = i / n; val c = i % n
         return listOf(0 to 1, 0 to -1, 1 to 0, -1 to 0).mapNotNull { (dr, dc) ->
-            val mr = r + dr; val mc = c + dc; val tr = r + 2 * dr; val tc = c + 2 * dc
-            if (tr !in 0 until n || tc !in 0 until n) return@mapNotNull null
-            val mid = mr * n + mc; val to = tr * n + tc
+            val mr = r + dr; val mc = c + dc; val tRow = r + 2 * dr; val tc = c + 2 * dc
+            if (tRow !in 0 until n || tc !in 0 until n) return@mapNotNull null
+            val mid = mr * n + mc; val to = tRow * n + tc
             if (valid(to) && b[mid] && !b[to]) to to mid else null
         }
     }
@@ -481,7 +482,7 @@ fun PegGame(env: GameEnv) {
     }
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            GameHud("${b.count { it }} pionków", "", Modifier.weight(1f))
+            GameHud(tr("{0} pionków", b.count { it }), "", Modifier.weight(1f))
             EndButton { if (!over) { over = true; env.finish(b.count { it }.toDouble()) } }
         }
         SquareBoard(Modifier.weight(1f)) {
@@ -504,7 +505,7 @@ fun PegGame(env: GameEnv) {
                 }
             }
         }
-        Text("Wybierz pionek i przeskocz nim nad sąsiadem na wolne pole", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Wybierz pionek i przeskocz nim nad sąsiadem na wolne pole"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -526,9 +527,9 @@ fun SokobanGame(env: GameEnv) {
     }
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            GameHud("$moves ruchów", "poziom ${level + 1}", Modifier.weight(1f))
-            IconButton(onClick = { if (history.isNotEmpty() && !over) { s = history.removeAt(history.lastIndex); moves++ } }) { Icon(Icons.AutoMirrored.Filled.Undo, "Cofnij") }
-            IconButton(onClick = { if (!over) { history.clear(); s = start; moves = 0 } }) { Icon(Icons.Default.RestartAlt, "Od nowa") }
+            GameHud(tr("{0} ruchów", moves), "poziom ${level + 1}", Modifier.weight(1f))
+            IconButton(onClick = { if (history.isNotEmpty() && !over) { s = history.removeAt(history.lastIndex); moves++ } }) { Icon(Icons.AutoMirrored.Filled.Undo, tr("Cofnij")) }
+            IconButton(onClick = { if (!over) { history.clear(); s = start; moves = 0 } }) { Icon(Icons.Default.RestartAlt, tr("Od nowa")) }
         }
         Box(Modifier.weight(1f).fillMaxWidth().padding(10.dp).pointerInput(Unit) {
             var total = Offset.Zero
@@ -556,13 +557,13 @@ fun SokobanGame(env: GameEnv) {
         }
         // przyciski kierunków
         Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            FilledTonalIconButton(onClick = { go(0, -1) }) { Icon(Icons.Default.KeyboardArrowUp, "Góra") }
+            FilledTonalIconButton(onClick = { go(0, -1) }) { Icon(Icons.Default.KeyboardArrowUp, tr("Góra")) }
             Row {
-                FilledTonalIconButton(onClick = { go(-1, 0) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Lewo") }
+                FilledTonalIconButton(onClick = { go(-1, 0) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, tr("Lewo")) }
                 Spacer(Modifier.width(48.dp))
-                FilledTonalIconButton(onClick = { go(1, 0) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Prawo") }
+                FilledTonalIconButton(onClick = { go(1, 0) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, tr("Prawo")) }
             }
-            FilledTonalIconButton(onClick = { go(0, 1) }) { Icon(Icons.Default.KeyboardArrowDown, "Dół") }
+            FilledTonalIconButton(onClick = { go(0, 1) }) { Icon(Icons.Default.KeyboardArrowDown, tr("Dół")) }
         }
     }
 }
@@ -584,7 +585,7 @@ fun MastermindGame(env: GameEnv) {
         val common = (0 until 6).sumOf { c -> minOf(g.count { it == c }, secret.count { it == c }) }
         tries.add(g to (black to common - black)); cur.clear()
         if (black == 4) { over = true; env.finish(tries.size.toDouble()) }
-        else if (tries.size >= 10) { over = true; env.fail("Kod to był: " + secret.joinToString(" ") { listOf("czerwony", "niebieski", "zielony", "żółty", "fioletowy", "pomarańczowy")[it] }) }
+        else if (tries.size >= 10) { over = true; env.fail(tr("Kod to był: ") + secret.joinToString(" ") { listOf(tr("czerwony"), tr("niebieski"), tr("zielony"), tr("żółty"), tr("fioletowy"), tr("pomarańczowy"))[it] }) }
     }
     @Composable
     fun Peg(c: Int?, size: androidx.compose.ui.unit.Dp = 28.dp, onClick: (() -> Unit)? = null) {
@@ -592,7 +593,7 @@ fun MastermindGame(env: GameEnv) {
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier))
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-        GameHud("próba ${tries.size + 1}/10", "")
+        GameHud(tr("próba {0}/10", tries.size + 1), "")
         Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             tries.forEach { (g, fb) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -606,7 +607,7 @@ fun MastermindGame(env: GameEnv) {
                 for (k in 0 until 4) { Peg(cur.getOrNull(k), 32.dp) { if (k < cur.size) cur.removeAt(k) }; Spacer(Modifier.width(6.dp)) }
             }
         }
-        Text("● = dobry kolor na dobrym miejscu, ○ = dobry kolor w złym miejscu", style = MaterialTheme.typography.labelSmall)
+        Text(tr("● = dobry kolor na dobrym miejscu, ○ = dobry kolor w złym miejscu"), style = MaterialTheme.typography.labelSmall)
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             for (c in 0 until 6) Peg(c, 40.dp) { if (cur.size < 4 && !over) cur.add(c) }
         }
@@ -690,7 +691,7 @@ fun Match3Game(env: GameEnv) {
                 }
             }
         }
-        Text("Dotknij dwóch sąsiednich klejnotów, by je zamienić", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Dotknij dwóch sąsiednich klejnotów, by je zamienić"), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -755,7 +756,7 @@ fun LinesGame(env: GameEnv) {
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             GameHud("$score pkt", "", Modifier.weight(1f))
-            Text("następne: ", style = MaterialTheme.typography.labelMedium)
+            Text(tr("następne: "), style = MaterialTheme.typography.labelMedium)
             next.forEach { Box(Modifier.padding(2.dp).size(16.dp).clip(CircleShape).background(BALL_COLORS[it])) }
             Spacer(Modifier.width(8.dp))
             EndButton { if (!over) { over = true; env.finish(score.toDouble()) } }
@@ -773,6 +774,6 @@ fun LinesGame(env: GameEnv) {
                 }
             }
         }
-        Text("Wybierz kulkę i miejsce, do którego da się dojść. 5 w linii znika.", Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+        Text(tr("Wybierz kulkę i miejsce, do którego da się dojść. 5 w linii znika."), Modifier.fillMaxWidth().padding(8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
     }
 }

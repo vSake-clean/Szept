@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import androidx.compose.ui.semantics.contentDescription
 
 import androidx.compose.ui.semantics.semantics
@@ -400,7 +401,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     fun jumpTo(id: String) {
         scope.launch {
             val target = withContext(Dispatchers.IO) { core.db.message(id) }
-            if (target == null || target.chat != chatId) { toast(ctx, "Tej wiadomości już nie ma"); return@launch }
+            if (target == null || target.chat != chatId) { toast(ctx, tr("Tej wiadomości już nie ma")); return@launch }
             val need = withContext(Dispatchers.IO) { core.db.countNewer(chatId, target.ts) } + 40
             if (need > limit) limit = need + 100
             var idx = rowIndexOf(id)
@@ -441,13 +442,13 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         val path = m.path ?: return
         scope.launch {
             val ok = MediaUtil.saveToGallery(ctx, File(path), m.media?.mime ?: "image/jpeg")
-            toast(ctx, if (ok) "Zapisano w galerii (folder Szept)" else "Nie udało się zapisać")
+            toast(ctx, if (ok) tr("Zapisano w galerii (folder Szept)") else tr("Nie udało się zapisać"))
         }
     }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val m = pendingSave
         pendingSave = null
-        if (granted && m != null) doSave(m) else if (!granted) toast(ctx, "Brak zgody na zapis w pamięci")
+        if (granted && m != null) doSave(m) else if (!granted) toast(ctx, tr("Brak zgody na zapis w pamięci"))
     }
     fun saveToGallery(m: Message) {
         if (Build.VERSION.SDK_INT < 29 &&
@@ -479,9 +480,9 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                     core.send(chatId, kind, caption, att, xmode, ttl, r)
                 }
             } catch (e: Core.SendException) {
-                toast(ctx, e.message ?: "Błąd")
+                toast(ctx, e.message ?: tr("Błąd"))
             } catch (e: Exception) {
-                toast(ctx, "Nie udało się: ${e.message}")
+                toast(ctx, tr("Nie udało się: {0}", e.message))
             } finally {
                 watcher.cancel()
                 preparing = null
@@ -510,54 +511,54 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                     if (aid != null) Extra(album = aid, albumIdx = i, albumN = atts.size) else Extra.NONE)
             }
         }
-        toast(ctx, "Zaplanowano na ${formatWhen(at)}")
+        toast(ctx, tr("Zaplanowano na {0}", formatWhen(at)))
     }
 
     val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris: List<Uri> ->
         when {
             uris.isEmpty() -> {}
-            uris.size == 1 -> sendAttachment(Kind.IMAGE, "Przygotowywanie zdjęcia…") { MediaUtil.prepareImage(ctx, uris[0]) }
+            uris.size == 1 -> sendAttachment(Kind.IMAGE, tr("Przygotowywanie zdjęcia…")) { MediaUtil.prepareImage(ctx, uris[0]) }
             else -> work.launch {
                 try {
-                    albumPreview = uris.mapIndexed { i, u -> preparing = "Przygotowywanie zdjęć ${i + 1}/${uris.size}…"; MediaUtil.prepareImage(ctx, u) }
-                } catch (e: Exception) { toast(ctx, "Nie udało się: ${e.message}") } finally { preparing = null }
+                    albumPreview = uris.mapIndexed { i, u -> preparing = tr("Przygotowywanie zdjęć {0}/{1}…", i + 1, uris.size); MediaUtil.prepareImage(ctx, u) }
+                } catch (e: Exception) { toast(ctx, tr("Nie udało się: {0}", e.message)) } finally { preparing = null }
             }
         }
     }
     val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri != null) sendAttachment(Kind.VIDEO, "Kompresja wideo…") { p -> MediaUtil.prepareVideo(ctx, uri, p) }
+        if (uri != null) sendAttachment(Kind.VIDEO, tr("Kompresja wideo…")) { p -> MediaUtil.prepareVideo(ctx, uri, p) }
     }
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) sendAttachment(Kind.FILE, "Przygotowywanie pliku…") { MediaUtil.prepareFile(ctx, uri) }
+        if (uri != null) sendAttachment(Kind.FILE, tr("Przygotowywanie pliku…")) { MediaUtil.prepareFile(ctx, uri) }
     }
     val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val f = camPath?.let { File(it) }
-        if (ok && f != null) sendAttachment(Kind.IMAGE, "Przygotowywanie zdjęcia…") { MediaUtil.prepareImage(ctx, Uri.fromFile(f)).also { f.delete() } }
+        if (ok && f != null) sendAttachment(Kind.IMAGE, tr("Przygotowywanie zdjęcia…")) { MediaUtil.prepareImage(ctx, Uri.fromFile(f)).also { f.delete() } }
     }
     val recordVideo = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok ->
         val f = camPath?.let { File(it) }
-        if (ok && f != null && f.length() > 0) sendAttachment(Kind.VIDEO, "Kompresja wideo…") { p -> MediaUtil.prepareVideo(ctx, Uri.fromFile(f), p).also { f.delete() } }
+        if (ok && f != null && f.length() > 0) sendAttachment(Kind.VIDEO, tr("Kompresja wideo…")) { p -> MediaUtil.prepareVideo(ctx, Uri.fromFile(f), p).also { f.delete() } }
     }
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) pendingCamera?.invoke() else toast(ctx, "Brak dostępu do aparatu")
+        if (granted) pendingCamera?.invoke() else toast(ctx, tr("Brak dostępu do aparatu"))
         pendingCamera = null
     }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted) toast(ctx, "Brak dostępu do mikrofonu")
+        if (!granted) toast(ctx, tr("Brak dostępu do mikrofonu"))
     }
 
     // ---------- lokalizacja ----------
     fun doSendLocation(liveMs: Long) {
         if (!LocationHelper.anyProviderEnabled(ctx)) {
-            toast(ctx, "Włącz lokalizację w telefonie")
+            toast(ctx, tr("Włącz lokalizację w telefonie"))
             try { ctx.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (_: Exception) {}
             return
         }
         work.launch {
-            preparing = "Ustalanie lokalizacji…"
+            preparing = tr("Ustalanie lokalizacji…")
             try {
                 val l = LocationHelper.current(ctx)
-                if (l == null) toast(ctx, "Nie udało się ustalić lokalizacji — spróbuj na zewnątrz")
+                if (l == null) toast(ctx, tr("Nie udało się ustalić lokalizacji — spróbuj na zewnątrz"))
                 else {
                     core.sendLocation(chatId, l.latitude, l.longitude, l.accuracy, liveMs)
                     if (liveMs > 0) MessengerService.start(ctx)
@@ -568,7 +569,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     val locPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
         val live = locPending
         locPending = null
-        if (res.values.any { it } && live != null) doSendLocation(live) else toast(ctx, "Brak zgody na lokalizację")
+        if (res.values.any { it } && live != null) doSendLocation(live) else toast(ctx, tr("Brak zgody na lokalizację"))
     }
     fun sendLocation(liveMs: Long) {
         if (LocationHelper.hasPermission(ctx)) doSendLocation(liveMs)
@@ -577,7 +578,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
 
     // okrągła notatka wideo: kamera + mikrofon
     val noteRecorderPerms = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
-        if (res.values.all { it }) videoNoteDialog = true else toast(ctx, "Notatka wideo wymaga dostępu do aparatu i mikrofonu")
+        if (res.values.all { it }) videoNoteDialog = true else toast(ctx, tr("Notatka wideo wymaga dostępu do aparatu i mikrofonu"))
     }
     fun openVideoNote() {
         val perms = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
@@ -588,24 +589,24 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         val r = replyTo
         replyTo = null
         work.launch {
-            preparing = "Przygotowywanie notatki wideo…"
+            preparing = tr("Przygotowywanie notatki wideo…")
             try {
                 val att = MediaUtil.prepareRoundVideo(ctx, file, dur)
                 core.send(chatId, Kind.VIDEO, "", att, null, null, r, Extra(round = true))
-            } catch (e: Exception) { toast(ctx, sendError(e)) } catch (e: Exception) { toast(ctx, "Nie udało się: ${e.message}") } finally { preparing = null }
+            } catch (e: Exception) { toast(ctx, sendError(e)) } catch (e: Exception) { toast(ctx, tr("Nie udało się: {0}", e.message)) } finally { preparing = null }
         }
     }
     fun transcribe(m: Message) {
         val path = m.path ?: return
         if (android.os.Build.VERSION.SDK_INT < 33) return
         scope.launch {
-            preparing = "Zamiana głosówki na tekst (w telefonie)…"
+            preparing = tr("Zamiana głosówki na tekst (w telefonie)…")
             try {
                 val t = pl.szept.core.Transcriber.transcribe(ctx, File(path), m.media?.dur ?: 60_000)
                 withContext(Dispatchers.IO) { core.db.setBody(m.id, t) }
-            } catch (e: pl.szept.core.Transcriber.TranscribeException) { toast(ctx, e.message ?: "Nie udało się") }
-            catch (e: kotlinx.coroutines.TimeoutCancellationException) { toast(ctx, "Rozpoznawanie trwało za długo") }
-            catch (e: Exception) { toast(ctx, "Nie udało się: ${e.message}") }
+            } catch (e: pl.szept.core.Transcriber.TranscribeException) { toast(ctx, e.message ?: tr("Nie udało się")) }
+            catch (e: kotlinx.coroutines.TimeoutCancellationException) { toast(ctx, tr("Rozpoznawanie trwało za długo")) }
+            catch (e: Exception) { toast(ctx, tr("Nie udało się: {0}", e.message)) }
             finally { preparing = null }
         }
     }
@@ -625,7 +626,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         if (recorder != null) return true
         VoicePlayer.stop()
         val r = VoiceRecorder(ctx)
-        if (!r.start()) { toast(ctx, "Nie można uruchomić nagrywania"); return false }
+        if (!r.start()) { toast(ctx, tr("Nie można uruchomić nagrywania")); return false }
         amps.clear()
         recorder = r
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -642,12 +643,12 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         voiceTimed = false
         val f = r.stop()
         if (!send) { f?.delete(); haptic.performHapticFeedback(HapticFeedbackType.LongPress); return }
-        if (elapsed < 700) { f?.delete(); toast(ctx, "Przytrzymaj mikrofon, aby nagrać — puść, aby wysłać"); return }
-        if (f == null) { toast(ctx, "Nie udało się nagrać"); return }
+        if (elapsed < 700) { f?.delete(); toast(ctx, tr("Przytrzymaj mikrofon, aby nagrać — puść, aby wysłać")); return }
+        if (f == null) { toast(ctx, tr("Nie udało się nagrać")); return }
         val dur = MediaUtil.audioDuration(f).takeIf { it > 0 } ?: elapsed
         val wave = VoiceRecorder.encodeWave(amps.toList())
         // głosówka czasowa: ukryta do dotknięcia, czas od otwarcia (wydłużany do długości nagrania)
-        sendAttachment(Kind.VOICE, "Wysyłanie nagrania…", if (timed) XMode.AFTER_OPEN else null, if (timed) 10 else null) {
+        sendAttachment(Kind.VOICE, tr("Wysyłanie nagrania…"), if (timed) XMode.AFTER_OPEN else null, if (timed) 10 else null) {
             Core.Attachment(f, "audio/mp4", "glosowka.m4a", null, 0, 0, dur, wave)
         }
     }
@@ -684,7 +685,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         val ex = Extra(mentions = currentMentions(t))
         mentionPicks.clear()
         work.launch(Dispatchers.IO) { core.schedule(chatId, at, Kind.TEXT, t, null, null, null, r, ex) }
-        toast(ctx, "Zaplanowano na ${formatWhen(at)}")
+        toast(ctx, tr("Zaplanowano na {0}", formatWhen(at)))
     }
 
     LaunchedEffect(recorder) {
@@ -699,13 +700,13 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
 
     val g = group
     val canSend: String? = when {
-        official -> "To oficjalne konto Szept — na te wiadomości nie można odpowiadać."
+        official -> tr("To oficjalne konto Szept — na te wiadomości nie można odpowiadać.")
         g == null -> null
-        g.state == GroupState.PENDING -> "Czekasz na akceptację administratora grupy…"
-        g.state == GroupState.REMOVED -> "Nie jesteś już członkiem tej grupy."
-        g.state == GroupState.LEFT -> "Opuściłeś(-aś) tę grupę."
-        g.state == GroupState.CLOSED -> "Grupa została rozwiązana."
-        g.adminsOnly && !g.isAdmin(core.myPub) -> "Tylko administratorzy mogą pisać w tej grupie."
+        g.state == GroupState.PENDING -> tr("Czekasz na akceptację administratora grupy…")
+        g.state == GroupState.REMOVED -> tr("Nie jesteś już członkiem tej grupy.")
+        g.state == GroupState.LEFT -> tr("Opuściłeś(-aś) tę grupę.")
+        g.state == GroupState.CLOSED -> tr("Grupa została rozwiązana.")
+        g.adminsOnly && !g.isAdmin(core.myPub) -> tr("Tylko administratorzy mogą pisać w tej grupie.")
         else -> null
     } ?: core.canWrite(chatId)
     val canInteract = g == null || g.state == GroupState.ACTIVE
@@ -751,9 +752,9 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     }
     val typingText = when {
         typers.isEmpty() -> null
-        !isGroup -> "pisze…"
-        typers.size == 1 -> "${nameFor(typers[0])} pisze…"
-        else -> "${typers.size} osoby piszą…"
+        !isGroup -> tr("pisze…")
+        typers.size == 1 -> tr("{0} pisze…", nameFor(typers[0]))
+        else -> tr("{0} osoby piszą…", typers.size)
     }
     // Telegram: gradient tła przesuwa się przy każdej wysłanej wiadomości
     LaunchedEffect(sentTick) {
@@ -783,8 +784,8 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                     Spacer(Modifier.width(5.dp))
                     TypingDots(onBar(OkGreen), 4.dp)
                 } else Text(
-                    typingText ?: group?.let { "${it.members.size} członków · dotknij po szczegóły" }
-                        ?: seenText ?: if (streak > 0) "🔥 $streak dni z rzędu" else "🔒 szyfrowanie end-to-end",
+                    typingText ?: group?.let { tr("{0} członków · dotknij po szczegóły", it.members.size) }
+                        ?: seenText ?: if (streak > 0) tr("🔥 {0} dni z rzędu", streak) else tr("🔒 szyfrowanie end-to-end"),
                     style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     color = when {
                         typingText != null -> onBar(OkGreen)
@@ -798,42 +799,42 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     }
     val headerActions: @Composable () -> Unit = {
         if (videoInBar && chat?.isGroup == false && chat?.peer != null && !official && chromeKind == Chrome.WHATSAPP) IconButton(onClick = { chat?.peer?.let { startCall(it, true) } }) {
-            Icon(Icons.Default.Videocam, "Rozmowa wideo")
+            Icon(Icons.Default.Videocam, tr("Rozmowa wideo"))
         }
         if (chat?.isGroup == false && chat?.peer != null && !official) IconButton(onClick = { chat?.peer?.let { startCall(it, false) } }) {
-            Icon(Icons.Default.Call, "Zadzwoń")
+            Icon(Icons.Default.Call, tr("Zadzwoń"))
         }
         if (videoInBar && chat?.isGroup == false && chat?.peer != null && !official && chromeKind != Chrome.WHATSAPP) IconButton(onClick = { chat?.peer?.let { startCall(it, true) } }) {
-            Icon(Icons.Default.Videocam, "Rozmowa wideo")
+            Icon(Icons.Default.Videocam, tr("Rozmowa wideo"))
         }
         if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) IconButton(onClick = { startGroupCall(chatId.removePrefix("g:"), false) }) {
-            Icon(Icons.Default.Call, "Rozmowa grupowa")
+            Icon(Icons.Default.Call, tr("Rozmowa grupowa"))
         }
         Box {
-            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, "Więcej") }
+            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, tr("Więcej")) }
             StyleMenu(moreMenu, { moreMenu = false }) {
-                if (!official) DropdownMenuItem({ Text(if ((chat?.xmode ?: 0) != 0) "Wiadomości czasowe (włączone)" else "Wiadomości czasowe") }, {
+                if (!official) DropdownMenuItem({ Text(if ((chat?.xmode ?: 0) != 0) tr("Wiadomości czasowe (włączone)") else tr("Wiadomości czasowe")) }, {
                     moreMenu = false; timerDialog = true
                 }, leadingIcon = { Icon(Icons.Default.Timer, null, tint = if ((chat?.xmode ?: 0) != 0) Fire else MaterialTheme.colorScheme.onSurface) })
-                if (chat?.isGroup == false && chat?.peer != null && !official) DropdownMenuItem({ Text("Rozmowa wideo") }, {
+                if (chat?.isGroup == false && chat?.peer != null && !official) DropdownMenuItem({ Text(tr("Rozmowa wideo")) }, {
                     moreMenu = false; chat?.peer?.let { startCall(it, true) }
                 }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
-                if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) DropdownMenuItem({ Text("Rozmowa grupowa wideo") }, {
+                if (chat?.isGroup == true && group?.state == pl.szept.data.GroupState.ACTIVE) DropdownMenuItem({ Text(tr("Rozmowa grupowa wideo")) }, {
                     moreMenu = false; startGroupCall(chatId.removePrefix("g:"), true)
                 }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
-                DropdownMenuItem({ Text("Szukaj w rozmowie") }, { moreMenu = false; searchMode = true }, leadingIcon = { Icon(Icons.Default.Search, null) })
-                DropdownMenuItem({ Text("Multimedia, pliki i linki") }, { moreMenu = false; nav.go(Screen.Media(chatId)) }, leadingIcon = { Icon(Icons.Default.Image, null) })
-                DropdownMenuItem({ Text("Zaplanowane (${scheduled?.size ?: 0})") }, { moreMenu = false; scheduledDialog = true }, leadingIcon = { Icon(Icons.Default.Timer, null) })
+                DropdownMenuItem({ Text(tr("Szukaj w rozmowie")) }, { moreMenu = false; searchMode = true }, leadingIcon = { Icon(Icons.Default.Search, null) })
+                DropdownMenuItem({ Text(tr("Multimedia, pliki i linki")) }, { moreMenu = false; nav.go(Screen.Media(chatId)) }, leadingIcon = { Icon(Icons.Default.Image, null) })
+                DropdownMenuItem({ Text(tr("Zaplanowane ({0})", scheduled?.size ?: 0)) }, { moreMenu = false; scheduledDialog = true }, leadingIcon = { Icon(Icons.Default.Timer, null) })
             }
         }
     }
     val searchBar: @Composable () -> Unit = {
         TopAppBar(
             colors = styleBarColors(), modifier = Modifier.styleTopBar(LocalStyle.current),
-            navigationIcon = { IconButton(onClick = { searchMode = false; query = "" }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zamknij wyszukiwanie") } },
+            navigationIcon = { IconButton(onClick = { searchMode = false; query = "" }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zamknij wyszukiwanie")) } },
             title = {
                 TextField(
-                    query, { query = it }, Modifier.fillMaxWidth(), placeholder = { Text("Szukaj w rozmowie") }, singleLine = true,
+                    query, { query = it }, Modifier.fillMaxWidth(), placeholder = { Text(tr("Szukaj w rozmowie")) }, singleLine = true,
                     colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
                 )
             },
@@ -841,10 +842,10 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                 if (hits.isNotEmpty()) Text("${hitIdx + 1}/${hits.size}", style = MaterialTheme.typography.labelMedium)
                 else if (query.trim().length >= 2) Text("0", style = MaterialTheme.typography.labelMedium)
                 IconButton(onClick = { if (hitIdx < hits.size - 1) { hitIdx++; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx < hits.size - 1) {
-                    Icon(Icons.Default.KeyboardArrowUp, "Starsze")
+                    Icon(Icons.Default.KeyboardArrowUp, tr("Starsze"))
                 }
                 IconButton(onClick = { if (hitIdx > 0) { hitIdx--; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx > 0) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Nowsze")
+                    Icon(Icons.Default.KeyboardArrowDown, tr("Nowsze"))
                 }
             },
         )
@@ -854,17 +855,17 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlassIconButton(Icons.Default.Close, "Zamknij wyszukiwanie", { searchMode = false; query = "" })
+            GlassIconButton(Icons.Default.Close, tr("Zamknij wyszukiwanie"), { searchMode = false; query = "" })
             Spacer(Modifier.width(8.dp))
-            MessageField(query, { query = it }, "Szukaj w rozmowie", Modifier.weight(1f), singleLine = true)
+            MessageField(query, { query = it }, tr("Szukaj w rozmowie"), Modifier.weight(1f), singleLine = true)
             Spacer(Modifier.width(8.dp))
             GlassActions {
                 if (hits.isNotEmpty()) Text("${hitIdx + 1}/${hits.size}", Modifier.padding(start = 10.dp), style = MaterialTheme.typography.labelMedium)
                 IconButton(onClick = { if (hitIdx < hits.size - 1) { hitIdx++; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx < hits.size - 1) {
-                    Icon(Icons.Default.KeyboardArrowUp, "Starsze")
+                    Icon(Icons.Default.KeyboardArrowUp, tr("Starsze"))
                 }
                 IconButton(onClick = { if (hitIdx > 0) { hitIdx--; jumpTo(hits[hitIdx].id) } }, enabled = hitIdx > 0) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Nowsze")
+                    Icon(Icons.Default.KeyboardArrowDown, tr("Nowsze"))
                 }
             }
         }
@@ -895,7 +896,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                         titleContentColor = base.titleContentColor, navigationIconContentColor = st.pal.primary, actionIconContentColor = st.pal.primary,
                     ) else base,
                     modifier = Modifier.styleTopBar(st),
-                    navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(backIcon(), "Wstecz") } },
+                    navigationIcon = { IconButton(onClick = { nav.back() }) { Icon(backIcon(), tr("Wstecz")) } },
                     title = headerTitle,
                     actions = { headerActions() },
                 )
@@ -907,7 +908,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             val k = remember(knownCalls) { core.groupCalls.joinable(chatId.removePrefix("g:")) }
             if (k != null) Surface(color = Color(0xFF2E7D32), modifier = Modifier.fillMaxWidth().clickable { startGroupCall(chatId.removePrefix("g:"), k.video) }) {
                 Text(
-                    (if (k.video) "📹" else "📞") + " Trwa rozmowa grupowa (${k.members.size} " + plural(k.members.size, "osoba", "osoby", "osób") + ") — dotknij, aby dołączyć",
+                    (if (k.video) "📹" else "📞") + tr(" Trwa rozmowa grupowa ({0} ", k.members.size) + plural(k.members.size, "osoba", "osoby", tr("osób")) + tr(") — dotknij, aby dołączyć"),
                     color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -960,7 +961,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                 votes = votes?.get(m.id) ?: emptyList(),
                                 highlight = highlight == m.id,
                                 onReactionsClick = { reactionsFor = m to (reactions?.get(m.id) ?: emptyList()) },
-                                onVote = { sel -> if (canInteract) core.vote(m.id, sel) else toast(ctx, "Nie możesz już głosować w tej grupie") },
+                                onVote = { sel -> if (canInteract) core.vote(m.id, sel) else toast(ctx, tr("Nie możesz już głosować w tej grupie")) },
                                 onClick = {
                                     when {
                                         m.mine && m.status == St.FAILED -> core.retry(m.id)
@@ -1004,7 +1005,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                 exit = androidx.compose.animation.scaleOut(transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)) + androidx.compose.animation.fadeOut(),
             ) {
                 StyledBubble(false) {
-                    Box(Modifier.padding(horizontal = 14.dp, vertical = 11.dp).semantics { contentDescription = "Rozmówca pisze" }) {
+                    Box(Modifier.padding(horizontal = 14.dp, vertical = 11.dp).semantics { contentDescription = tr("Rozmówca pisze") }) {
                         TypingDots(MaterialTheme.colorScheme.onSurfaceVariant, 6.dp)
                     }
                 }
@@ -1014,8 +1015,8 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     val bottomExtras: @Composable () -> Unit = {
         if ((chat?.xmode ?: 0) != XMode.OFF) {
             Text(
-                "⏱ " + (if (chat!!.xmode == XMode.AFTER_SEND) "Automatyczne usuwanie: wiadomości znikają ${formatTtl(chat!!.ttl)} po wysłaniu"
-                else "Wiadomości czasowe: widać je po dotknięciu, znikają ${formatTtl(chat!!.ttl)} po otwarciu"),
+                "⏱ " + (if (chat!!.xmode == XMode.AFTER_SEND) tr("Automatyczne usuwanie: wiadomości znikają {0} po wysłaniu", formatTtl(chat!!.ttl))
+                else tr("Wiadomości czasowe: widać je po dotknięciu, znikają {0} po otwarciu", formatTtl(chat!!.ttl))),
                 Modifier.fillMaxWidth().clickable { timerDialog = true }.background(Fire.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 6.dp),
                 style = MaterialTheme.typography.labelMedium, color = Fire,
             )
@@ -1039,45 +1040,45 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
         text = v.take(10_000)
     }
     val placeholder = when {
-        editing != null -> "Nowa treść"
+        editing != null -> tr("Nowa treść")
         chromeKind == Chrome.MESSENGER || chromeKind == Chrome.FACEBOOK -> "Aa"
-        chromeKind == Chrome.DISCORD -> "Wiadomość do @" + (chat?.name ?: "")
-        chromeKind == Chrome.TERMINAL -> "wpisz wiadomość"
-        else -> "Wiadomość"
+        chromeKind == Chrome.DISCORD -> tr("Wiadomość do @") + (chat?.name ?: "")
+        chromeKind == Chrome.TERMINAL -> tr("wpisz wiadomość")
+        else -> tr("Wiadomość")
     }
     val takePhotoNow: () -> Unit = {
-        withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
+        withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, tr("Nie znaleziono aplikacji aparatu")) } }
     }
     val pickGallery: () -> Unit = { pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     val attachItems: @Composable ColumnScope.() -> Unit = {
-    DropdownMenuItem({ Text("Zdjęcia z galerii (do 10)") }, {
+    DropdownMenuItem({ Text(tr("Zdjęcia z galerii (do 10)")) }, {
         attachMenu = false
         pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }, leadingIcon = { Icon(Icons.Default.Image, null) })
-    DropdownMenuItem({ Text("Zrób zdjęcie") }, {
+    DropdownMenuItem({ Text(tr("Zrób zdjęcie")) }, {
         attachMenu = false
-        withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
+        withCamera { try { takePhoto.launch(fileUri(ctx, newCamFile("jpg"))) } catch (e: Exception) { toast(ctx, tr("Nie znaleziono aplikacji aparatu")) } }
     }, leadingIcon = { Icon(Icons.Default.PhotoCamera, null) })
-    DropdownMenuItem({ Text("Wideo z galerii") }, {
+    DropdownMenuItem({ Text(tr("Wideo z galerii")) }, {
         attachMenu = false
         pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
     }, leadingIcon = { Icon(Icons.Default.VideoLibrary, null) })
-    DropdownMenuItem({ Text("Nagraj wideo") }, {
+    DropdownMenuItem({ Text(tr("Nagraj wideo")) }, {
         attachMenu = false
-        withCamera { try { recordVideo.launch(fileUri(ctx, newCamFile("mp4"))) } catch (e: Exception) { toast(ctx, "Nie znaleziono aplikacji aparatu") } }
+        withCamera { try { recordVideo.launch(fileUri(ctx, newCamFile("mp4"))) } catch (e: Exception) { toast(ctx, tr("Nie znaleziono aplikacji aparatu")) } }
     }, leadingIcon = { Icon(Icons.Default.Videocam, null) })
-    DropdownMenuItem({ Text("Notatka wideo (okrągła)") }, {
+    DropdownMenuItem({ Text(tr("Notatka wideo (okrągła)")) }, {
         attachMenu = false
         openVideoNote()
     }, leadingIcon = { Icon(Icons.Default.Face, null) })
-    DropdownMenuItem({ Text("Plik") }, {
+    DropdownMenuItem({ Text(tr("Plik")) }, {
         attachMenu = false
         pickFile.launch(arrayOf("*/*"))
     }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) })
     DropdownMenuItem({ Text("GIF") }, { attachMenu = false; gifPicker = true }, leadingIcon = { Icon(Icons.Default.Gif, null) })
     DropdownMenuItem({ Text("Gra") }, { attachMenu = false; gamePicker = true }, leadingIcon = { Icon(Icons.Default.SportsEsports, null) })
-    DropdownMenuItem({ Text("Ankieta") }, { attachMenu = false; pollDialog = true }, leadingIcon = { Icon(Icons.Default.BarChart, null) })
-    DropdownMenuItem({ Text("Lokalizacja") }, { attachMenu = false; locationDialog = true }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
+    DropdownMenuItem({ Text(tr("Ankieta")) }, { attachMenu = false; pollDialog = true }, leadingIcon = { Icon(Icons.Default.BarChart, null) })
+    DropdownMenuItem({ Text(tr("Lokalizacja")) }, { attachMenu = false; locationDialog = true }, leadingIcon = { Icon(Icons.Default.LocationOn, null) })
     }
     val attachBox: @Composable () -> Unit = {
         Box {
@@ -1085,35 +1086,35 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             StyleMenu(attachMenu, { attachMenu = false }) { attachItems() }
         }
     }
-    val gifIcon: @Composable () -> Unit = { FieldIcon(EmojiIcon, "Wybierz GIF", { gifPicker = true }) }
+    val gifIcon: @Composable () -> Unit = { FieldIcon(EmojiIcon, tr("Wybierz GIF"), { gifPicker = true }) }
     val showSend = (text.isNotBlank() || editing != null) && recMode == 0
     val sendButton: @Composable () -> Unit = {
         Box {
             // dotknięcie = wyślij, przytrzymanie = czasowa albo zaplanuj
             SendButton(editing != null, onClick = { if (editing == null) sentTick++; sendTextNow() }, onLongClick = { if (editing == null) sendMenu = true })
             StyleMenu(sendMenu, { sendMenu = false }) {
-                DropdownMenuItem({ Text("🕓 Zaplanuj wysłanie…") }, {
+                DropdownMenuItem({ Text(tr("🕓 Zaplanuj wysłanie…")) }, {
                     sendMenu = false
                     schedulePick = { at -> scheduleText(at) }
                 })
-                if (chat?.isGroup == false && !official) DropdownMenuItem({ Text("🟢 Wyślij, gdy będzie online") }, {
+                if (chat?.isGroup == false && !official) DropdownMenuItem({ Text(tr("🟢 Wyślij, gdy będzie online")) }, {
                     sendMenu = false
                     val t = text.trim()
                     if (t.isNotEmpty()) {
                         text = ""
                         val r = replyTo; replyTo = null
                         val s = core.scheduleWhenOnline(chatId, t, r)
-                        toast(ctx, if (s == null) "Rozmówca jest teraz w aplikacji — wysłano" else "Wyślę, gdy rozmówca otworzy Szepta")
+                        toast(ctx, if (s == null) tr("Rozmówca jest teraz w aplikacji — wysłano") else tr("Wyślę, gdy rozmówca otworzy Szepta"))
                     }
                 })
                 HorizontalDivider()
                 Text(
-                    "Wiadomość czasowa — odbiorca zobaczy ją po dotknięciu, potem zniknie po:",
+                    tr("Wiadomość czasowa — odbiorca zobaczy ją po dotknięciu, potem zniknie po:"),
                     Modifier.padding(horizontal = 16.dp, vertical = 6.dp).widthIn(max = 260.dp),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 listOf(5, 10, 30, 60).forEach { sec ->
-                    DropdownMenuItem({ Text("⏱ Czasowa — ${formatTtl(sec)} po otwarciu") }, {
+                    DropdownMenuItem({ Text(tr("⏱ Czasowa — {0} po otwarciu", formatTtl(sec))) }, {
                         sendMenu = false; sendTextNow(XMode.AFTER_OPEN, sec)
                     })
                 }
@@ -1165,18 +1166,18 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             InputStyle.MESSENGER -> Row(Modifier.fillMaxWidth().styleInputBar().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 val typing = text.isNotEmpty() || editing != null
                 if (!recording) {
-                    if (typing && !iconsOpen) FieldIcon(Icons.Default.ChevronRight, "Pokaż przyciski", { iconsOpen = true }, tint = st.pal.primary)
+                    if (typing && !iconsOpen) FieldIcon(Icons.Default.ChevronRight, tr("Pokaż przyciski"), { iconsOpen = true }, tint = st.pal.primary)
                     else if (editing == null) {
                         attachBox()
-                        FieldIcon(Icons.Default.PhotoCamera, "Zrób zdjęcie", takePhotoNow, tint = st.pal.primary)
-                        FieldIcon(Icons.Default.Image, "Zdjęcia z galerii", pickGallery, tint = st.pal.primary)
+                        FieldIcon(Icons.Default.PhotoCamera, tr("Zrób zdjęcie"), takePhotoNow, tint = st.pal.primary)
+                        FieldIcon(Icons.Default.Image, tr("Zdjęcia z galerii"), pickGallery, tint = st.pal.primary)
                     }
                 }
                 if (!typing) micButton()
                 if (recording) holdIndicator(Modifier.weight(1f))
                 else MessageField(
                     text, onTextChange, placeholder, Modifier.weight(1f).padding(horizontal = 4.dp),
-                    trailing = { FieldIcon(EmojiIcon, "Wybierz GIF", { gifPicker = true }, tint = st.pal.primary) },
+                    trailing = { FieldIcon(EmojiIcon, tr("Wybierz GIF"), { gifPicker = true }, tint = st.pal.primary) },
                 )
                 sendSwitch { LikeButton { text = "👍"; sendTextNow() } }
             }
@@ -1196,7 +1197,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                     MessageField(
                         text, onTextChange, placeholder, Modifier.weight(1f),
                         trailing = if (editing == null && text.isBlank()) ({
-                            TextButton(onClick = { gifPicker = true }, modifier = Modifier.semantics { contentDescription = "Wybierz GIF" }) { Text("GIF", fontWeight = FontWeight.Bold) }
+                            TextButton(onClick = { gifPicker = true }, modifier = Modifier.semantics { contentDescription = tr("Wybierz GIF") }) { Text("GIF", fontWeight = FontWeight.Bold) }
                         }) else null,
                     )
                 }
@@ -1220,10 +1221,10 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                                 st.spec.input == InputStyle.DISCORD -> ({ gifIcon() })
                                 whats && editing == null -> ({
                                     Box {
-                                        FieldIcon(Icons.Default.AttachFile, "Załącz", { attachMenu = true }, rotation = -45f)
+                                        FieldIcon(Icons.Default.AttachFile, tr("Załącz"), { attachMenu = true }, rotation = -45f)
                                         StyleMenu(attachMenu, { attachMenu = false }) { attachItems() }
                                     }
-                                    if (text.isEmpty()) FieldIcon(Icons.Default.PhotoCamera, "Zrób zdjęcie", takePhotoNow)
+                                    if (text.isEmpty()) FieldIcon(Icons.Default.PhotoCamera, tr("Zrób zdjęcie"), takePhotoNow)
                                 })
                                 else -> null
                             },
@@ -1304,7 +1305,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             onSave = { saveToGallery(m); actionsFor = null },
             onSaveGif = if (m.media?.mime == "image/gif" && m.path != null && m.xmode == XMode.OFF) ({
                 actionsFor = null
-                work.launch(Dispatchers.IO) { try { Gifs.save(ctx, File(m.path!!)); toast(ctx, "Zapisano w Twoich GIF-ach") } catch (e: Exception) { toast(ctx, sendError(e)) } }
+                work.launch(Dispatchers.IO) { try { Gifs.save(ctx, File(m.path!!)); toast(ctx, tr("Zapisano w Twoich GIF-ach")) } catch (e: Exception) { toast(ctx, sendError(e)) } }
             }) else null,
             onPickPeople = { pickDeleteFor = m; actionsFor = null },
             onTranscribe = if (pl.szept.core.Transcriber.available(ctx)) ({ actionsFor = null; transcribe(m) }) else null,
@@ -1317,7 +1318,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
                         m.id to ("${pl.szept.core.MessageTranslator.languageName(r.from)} → ${pl.szept.core.MessageTranslator.languageName(r.to)}\n\n" + r.text)
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
-                        m.id to ("⚠ " + (e.message ?: "Nie udało się przetłumaczyć"))
+                        m.id to ("⚠ " + (e.message ?: tr("Nie udało się przetłumaczyć")))
                     }
                 }
             },
@@ -1360,15 +1361,15 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     translation?.let { (_, res) ->
         StyleAlertDialog(
             onDismissRequest = { translation = null },
-            title = { Text("🌐 Tłumaczenie") },
+            title = { Text(tr("🌐 Tłumaczenie")) },
             text = {
                 if (res == null) Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.CircularProgressIndicator(Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
-                    Text("Tłumaczę w telefonie… (za pierwszym razem pobieram pakiet języka)")
+                    Text(tr("Tłumaczę w telefonie… (za pierwszym razem pobieram pakiet języka)"))
                 } else androidx.compose.foundation.text.selection.SelectionContainer { Text(res) }
             },
-            confirmButton = { TextButton(onClick = { translation = null }) { Text("Zamknij") } },
-            dismissButton = { if (res != null && !res.startsWith("⚠")) TextButton(onClick = { copyText(ctx, res.substringAfter("\n\n")) }) { Text("Kopiuj") } },
+            confirmButton = { TextButton(onClick = { translation = null }) { Text(tr("Zamknij")) } },
+            dismissButton = { if (res != null && !res.startsWith("⚠")) TextButton(onClick = { copyText(ctx, res.substringAfter("\n\n")) }) { Text(tr("Kopiuj")) } },
         )
     }
     if (gifPicker) GifPickerDialog(onDismiss = { gifPicker = false }) { f ->
@@ -1382,7 +1383,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
     }
     gifFor?.let { (f, m) ->
         GifPreviewDialog(f, null, saved = remember(f) { Gifs.isSaved(ctx, f) }, onClose = { gifFor = null },
-            onSave = { src -> work.launch(Dispatchers.IO) { try { Gifs.save(ctx, src); toast(ctx, "Zapisano w Twoich GIF-ach") } catch (e: Exception) { toast(ctx, sendError(e)) } } },
+            onSave = { src -> work.launch(Dispatchers.IO) { try { Gifs.save(ctx, src); toast(ctx, tr("Zapisano w Twoich GIF-ach")) } catch (e: Exception) { toast(ctx, sendError(e)) } } },
             onSend = null)
     }
     schedulePick?.let { pick ->
@@ -1412,7 +1413,7 @@ private fun TimerDialog(mode0: Int, ttl0: Int, onDismiss: () -> Unit, onSave: (I
     val options = listOf(5, 10, 30, 60, 300, 3600, 86400, 7 * 86400)
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Wiadomości czasowe") },
+        title = { Text(tr("Wiadomości czasowe")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 @Composable
@@ -1425,25 +1426,25 @@ private fun TimerDialog(mode0: Int, ttl0: Int, onDismiss: () -> Unit, onSave: (I
                         }
                     }
                 }
-                opt(XMode.OFF, "Wyłączone", "Zwykłe wiadomości — zostają, dopóki ktoś ich nie usunie")
-                opt(XMode.AFTER_OPEN, "Wiadomości czasowe", "Treść widać dopiero po dotknięciu. Czas liczy się od otwarcia — potem wiadomość znika")
-                opt(XMode.AFTER_SEND, "Automatyczne usuwanie", "Wiadomości widać normalnie, a znikają u wszystkich po czasie od wysłania")
+                opt(XMode.OFF, tr("Wyłączone"), tr("Zwykłe wiadomości — zostają, dopóki ktoś ich nie usunie"))
+                opt(XMode.AFTER_OPEN, tr("Wiadomości czasowe"), tr("Treść widać dopiero po dotknięciu. Czas liczy się od otwarcia — potem wiadomość znika"))
+                opt(XMode.AFTER_SEND, tr("Automatyczne usuwanie"), tr("Wiadomości widać normalnie, a znikają u wszystkich po czasie od wysłania"))
                 Text(
-                    "Wskazówka: pojedynczą wiadomość czasową wyślesz bez zmiany tego ustawienia — przytrzymaj przycisk Wyślij. " +
-                        "Przy zdjęciach i wideo wybierz ⏱ Czasowe w podglądzie, a przy głosówce — ⏱ Czasowa podczas nagrywania.",
+                    tr("Wskazówka: pojedynczą wiadomość czasową wyślesz bez zmiany tego ustawienia — przytrzymaj przycisk Wyślij. ") +
+                        tr("Przy zdjęciach i wideo wybierz ⏱ Czasowe w podglądzie, a przy głosówce — ⏱ Czasowa podczas nagrywania."),
                     Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (mode != XMode.OFF) {
                     Spacer(Modifier.size(8.dp))
-                    Text("Czas:", style = MaterialTheme.typography.labelLarge)
+                    Text(tr("Czas:"), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         options.forEach { o -> FilterChip(ttl == o, { ttl = o }, { Text(formatTtl(o)) }) }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(mode, ttl) }) { Text("Zapisz") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+        confirmButton = { TextButton(onClick = { onSave(mode, ttl) }) { Text(tr("Zapisz")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -1455,7 +1456,7 @@ private fun DeleteForPeopleDialog(m: Message, g: Group, onDismiss: () -> Unit) {
     val others = g.members.filter { it.pk != App.core.myPub }
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Usuń u wybranych") },
+        title = { Text(tr("Usuń u wybranych")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 others.forEach { mem ->
@@ -1467,7 +1468,7 @@ private fun DeleteForPeopleDialog(m: Message, g: Group, onDismiss: () -> Unit) {
                 }
                 HorizontalDivider()
                 Row(Modifier.fillMaxWidth().clickable { alsoMe = !alsoMe }, verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(alsoMe, { alsoMe = it }); Text("Usuń także u mnie")
+                    Checkbox(alsoMe, { alsoMe = it }); Text(tr("Usuń także u mnie"))
                 }
             }
         },
@@ -1475,12 +1476,12 @@ private fun DeleteForPeopleDialog(m: Message, g: Group, onDismiss: () -> Unit) {
             TextButton(onClick = {
                 if (selected.isNotEmpty() || alsoMe) {
                     App.core.deleteFor(m.id, selected.toList(), alsoMe)
-                    toast(ctx, "Usunięto u ${selected.size} os." + if (alsoMe) " i u Ciebie" else "")
+                    toast(ctx, tr("Usunięto u {0} os.", selected.size) + if (alsoMe) tr(" i u Ciebie") else "")
                 }
                 onDismiss()
-            }) { Text("Usuń") }
+            }) { Text(tr("Usuń")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -1516,7 +1517,7 @@ fun ViewerScreen(nav: Nav, msgId: String, act: MainActivity) {
     var pendingSave by remember { mutableStateOf(false) }
     val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted && pendingSave) scope.launch {
-            toast(ctx, if (MediaUtil.saveToGallery(ctx, File(current.path ?: ""), current.media?.mime ?: "image/jpeg")) "Zapisano w galerii" else "Nie udało się")
+            toast(ctx, if (MediaUtil.saveToGallery(ctx, File(current.path ?: ""), current.media?.mime ?: "image/jpeg")) tr("Zapisano w galerii") else tr("Nie udało się"))
         }
         pendingSave = false
     }
@@ -1542,7 +1543,7 @@ fun ViewerScreen(nav: Nav, msgId: String, act: MainActivity) {
                 Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.45f)).padding(top = 32.dp, start = 4.dp, end = 8.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wstecz", tint = Color.White) }
+                IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Wstecz"), tint = Color.White) }
                 Column(Modifier.weight(1f)) {
                     Text(if (current.mine) "Ty" else App.core.db.nameOf(current.sender), color = Color.White, fontWeight = FontWeight.Medium)
                     Text(
@@ -1557,9 +1558,9 @@ fun ViewerScreen(nav: Nav, msgId: String, act: MainActivity) {
                         if (Build.VERSION.SDK_INT < 29 &&
                             ContextCompat.checkSelfPermission(ctx, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
                         ) { pendingSave = true; storagePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) }
-                        else scope.launch { toast(ctx, if (MediaUtil.saveToGallery(ctx, File(path), current.media?.mime ?: "image/jpeg")) "Zapisano w galerii" else "Nie udało się") }
-                    }) { Text("Zapisz", color = Color.White) }
-                    TextButton(onClick = { shareFile(ctx, path, current.media?.mime ?: "") }) { Text("Udostępnij", color = Color.White) }
+                        else scope.launch { toast(ctx, if (MediaUtil.saveToGallery(ctx, File(path), current.media?.mime ?: "image/jpeg")) tr("Zapisano w galerii") else tr("Nie udało się")) }
+                    }) { Text(tr("Zapisz"), color = Color.White) }
+                    TextButton(onClick = { shareFile(ctx, path, current.media?.mime ?: "") }) { Text(tr("Udostępnij"), color = Color.White) }
                 }
             }
         }
@@ -1602,7 +1603,7 @@ fun ZoomableImage(path: String) {
 
 /** Komunikat dla użytkownika po nieudanym wysłaniu (także dla błędów dysku itp.). */
 fun sendError(e: Throwable): String = when (e) {
-    is Core.SendException -> e.message ?: "Błąd"
-    is java.io.IOException -> "Nie udało się zapisać pliku — sprawdź wolne miejsce w telefonie"
-    else -> "Nie udało się: " + (e.message ?: e.javaClass.simpleName)
+    is Core.SendException -> e.message ?: tr("Błąd")
+    is java.io.IOException -> tr("Nie udało się zapisać pliku — sprawdź wolne miejsce w telefonie")
+    else -> tr("Nie udało się: ") + (e.message ?: e.javaClass.simpleName)
 }

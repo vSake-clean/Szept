@@ -1,5 +1,6 @@
 package pl.szept.ui
 
+import pl.szept.tr
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -100,10 +101,10 @@ fun rememberCallStarter(): (String, Boolean) -> Unit {
         val p = pending ?: return@rememberLauncherForActivityResult
         pending = null
         if (has(ctx, Manifest.permission.RECORD_AUDIO)) go(p.first, p.second && has(ctx, Manifest.permission.CAMERA))
-        else toast(ctx, "Rozmowa wymaga dostępu do mikrofonu")
+        else toast(ctx, tr("Rozmowa wymaga dostępu do mikrofonu"))
     }
     return { peer, video ->
-        if (!App.core.groupCalls.available) toast(ctx, "Rozmowy nie działają na tym urządzeniu")
+        if (!App.core.groupCalls.available) toast(ctx, tr("Rozmowy nie działają na tym urządzeniu"))
         else {
             val need = listOf(Manifest.permission.RECORD_AUDIO) + if (video) listOf(Manifest.permission.CAMERA) else emptyList()
             if (need.all { has(ctx, it) }) go(peer, video) else { pending = peer to video; perm.launch(need.toTypedArray()) }
@@ -186,7 +187,7 @@ fun CallScreen(act: MainActivity, call: CallManager.Call) {
 
     val answerPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ ->
         if (has(ctx, Manifest.permission.RECORD_AUDIO)) scope.launch { core.calls.answer() }
-        else toast(ctx, "Bez mikrofonu nie można odebrać")
+        else toast(ctx, tr("Bez mikrofonu nie można odebrać"))
     }
     fun answer() {
         val need = listOf(Manifest.permission.RECORD_AUDIO) + if (call.video) listOf(Manifest.permission.CAMERA) else emptyList()
@@ -198,9 +199,9 @@ fun CallScreen(act: MainActivity, call: CallManager.Call) {
     BackHandler(enabled = call.phase != Phase.RINGING) { act.callHidden = true }
 
     val status = when (call.phase) {
-        Phase.DIALING -> "Dzwonię…"
-        Phase.RINGING -> if (call.video) "Rozmowa wideo przychodząca" else "Połączenie przychodzące"
-        Phase.CONNECTING -> "Łączenie…"
+        Phase.DIALING -> tr("Dzwonię…")
+        Phase.RINGING -> if (call.video) tr("Rozmowa wideo przychodząca") else tr("Połączenie przychodzące")
+        Phase.CONNECTING -> tr("Łączenie…")
         Phase.CONNECTED -> formatDuration(now - call.connectedAt)
         Phase.ENDED -> call.endReason
     }
@@ -220,7 +221,7 @@ fun CallScreen(act: MainActivity, call: CallManager.Call) {
                 Spacer(Modifier.height(4.dp))
                 Text(status, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
                 if (call.phase != Phase.ENDED && !showRemote) Text(
-                    "🔒 szyfrowane end-to-end", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall,
+                    tr("🔒 szyfrowane end-to-end"), color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
@@ -231,7 +232,7 @@ fun CallScreen(act: MainActivity, call: CallManager.Call) {
             }
             if (call.phase != Phase.RINGING && call.phase != Phase.ENDED) {
                 IconButton(onClick = { act.callHidden = true }, modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp)) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Wróć do aplikacji", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowDown, tr("Wróć do aplikacji"), tint = Color.White)
                 }
             }
             Column(
@@ -240,23 +241,23 @@ fun CallScreen(act: MainActivity, call: CallManager.Call) {
             ) {
                 when (call.phase) {
                     Phase.RINGING -> Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        RoundAction(Icons.Default.CallEnd, "Odrzuć", Red, { scope.launch { core.calls.decline() } }, 72)
-                        RoundAction(if (call.video) Icons.Default.Videocam else Icons.Default.Call, "Odbierz", Green, { answer() }, 72)
+                        RoundAction(Icons.Default.CallEnd, tr("Odrzuć"), Red, { scope.launch { core.calls.decline() } }, 72)
+                        RoundAction(if (call.video) Icons.Default.Videocam else Icons.Default.Call, tr("Odbierz"), Green, { answer() }, 72)
                     }
                     Phase.ENDED -> {}
                     else -> {
                         Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                            RoundAction(if (call.muted) Icons.Default.MicOff else Icons.Default.Mic, if (call.muted) "Włącz mikrofon" else "Wycisz",
+                            RoundAction(if (call.muted) Icons.Default.MicOff else Icons.Default.Mic, if (call.muted) tr("Włącz mikrofon") else tr("Wycisz"),
                                 if (call.muted) On else Dim, { core.calls.setMuted(!call.muted) })
-                            RoundAction(Icons.Default.VolumeUp, "Głośnik", if (speaker) On else Dim, { CallAudio.setSpeaker(ctx, !speaker) })
+                            RoundAction(Icons.Default.VolumeUp, tr("Głośnik"), if (speaker) On else Dim, { CallAudio.setSpeaker(ctx, !speaker) })
                             if (call.video) {
-                                RoundAction(if (call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff, "Kamera",
+                                RoundAction(if (call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff, tr("Kamera"),
                                     if (call.camOn) Dim else On, { core.calls.setCamera(!call.camOn) })
-                                RoundAction(Icons.Default.Cameraswitch, "Obróć", Dim, { core.calls.switchCamera() })
+                                RoundAction(Icons.Default.Cameraswitch, tr("Obróć"), Dim, { core.calls.switchCamera() })
                             }
                         }
                         Spacer(Modifier.height(20.dp))
-                        RoundAction(Icons.Default.CallEnd, "Rozłącz", Red, { scope.launch { core.calls.hangup() } }, 72)
+                        RoundAction(Icons.Default.CallEnd, tr("Rozłącz"), Red, { scope.launch { core.calls.hangup() } }, 72)
                     }
                 }
             }
@@ -271,8 +272,8 @@ fun CallBanner(call: CallManager.Call, onClick: () -> Unit) {
     LaunchedEffect(call.phase) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
     Surface(color = Green, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Text(
-            "📞 " + App.core.db.nameOf(call.peer) + " · " + (if (call.phase == Phase.CONNECTED) formatDuration(now - call.connectedAt) else "łączenie…") +
-                " · dotknij, aby wrócić",
+            "📞 " + App.core.db.nameOf(call.peer) + " · " + (if (call.phase == Phase.CONNECTED) formatDuration(now - call.connectedAt) else tr("łączenie…")) +
+                tr(" · dotknij, aby wrócić"),
             color = Color.White, modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelLarge,
         )
@@ -287,40 +288,40 @@ fun CallSettingsScreen(nav: Nav) {
     var url by remember { mutableStateOf(core.turnUrl) }
     var user by remember { mutableStateOf(core.turnUser) }
     var pass by remember { mutableStateOf(core.turnPass) }
-    Scaffold(topBar = { BackBar("Rozmowy", nav) }) { pad ->
+    Scaffold(topBar = { BackBar(tr("Rozmowy"), nav) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "Rozmowy głosowe i wideo są szyfrowane end-to-end (DTLS-SRTP) i płyną bezpośrednio między telefonami — bez serwera. " +
-                    "Zadzwonisz z rozmowy prywatnej albo grupy (ikona słuchawki u góry; wideo w menu ⋮). W grupie mieści się do 6 osób (głos) lub 4 (wideo).",
+                tr("Rozmowy głosowe i wideo są szyfrowane end-to-end (DTLS-SRTP) i płyną bezpośrednio między telefonami — bez serwera. ") +
+                    tr("Zadzwonisz z rozmowy prywatnej albo grupy (ikona słuchawki u góry; wideo w menu ⋮). W grupie mieści się do 6 osób (głos) lub 4 (wideo)."),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "• Rozmówca, z którym łączysz się bezpośrednio, może poznać Twój adres IP.\n" +
-                    "• Do ustalenia adresu telefon pyta publiczne serwery STUN (Google, Cloudflare) — nie przechodzi przez nie dźwięk ani obraz.\n" +
-                    "• W części sieci komórkowych i firmowych połączenie bezpośrednie jest zablokowane — wtedy pomaga Wi-Fi albo własny serwer TURN poniżej.\n" +
-                    "• Telefon w trybie oszczędnym (Ustawienia → Działanie w tle) może nie dzwonić od razu.",
+                tr("• Rozmówca, z którym łączysz się bezpośrednio, może poznać Twój adres IP.\n") +
+                    tr("• Do ustalenia adresu telefon pyta publiczne serwery STUN (Google, Cloudflare) — nie przechodzi przez nie dźwięk ani obraz.\n") +
+                    tr("• W części sieci komórkowych i firmowych połączenie bezpośrednie jest zablokowane — wtedy pomaga Wi-Fi albo własny serwer TURN poniżej.\n") +
+                    tr("• Telefon w trybie oszczędnym (Ustawienia → Działanie w tle) może nie dzwonić od razu."),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            Text("Własny serwer TURN (opcjonalnie)", fontWeight = FontWeight.Bold)
+            Text(tr("Własny serwer TURN (opcjonalnie)"), fontWeight = FontWeight.Bold)
             Text(
-                "Np. coturn na Raspberry Pi lub serwerze: docker run -d --network=host coturn/coturn -n --lt-cred-mech --user szept:HASLO --realm szept",
+                tr("Np. coturn na Raspberry Pi lub serwerze: docker run -d --network=host coturn/coturn -n --lt-cred-mech --user szept:HASLO --realm szept"),
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(Modifier.height(6.dp))
-            OutlinedTextField(url, { url = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Adres, np. turn:moj.serwer.pl:3478") })
-            OutlinedTextField(user, { user = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Użytkownik") })
-            OutlinedTextField(pass, { pass = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Hasło") },
+            OutlinedTextField(url, { url = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Adres, np. turn:moj.serwer.pl:3478")) })
+            OutlinedTextField(user, { user = it.trim() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Użytkownik")) })
+            OutlinedTextField(pass, { pass = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(tr("Hasło")) },
                 visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
             Row {
                 TextButton(onClick = {
-                    if (url.isNotEmpty() && !url.startsWith("turn:") && !url.startsWith("turns:")) { toast(ctx, "Adres musi zaczynać się od turn: lub turns:"); return@TextButton }
-                    core.setTurn(url, user, pass); toast(ctx, "Zapisano")
-                }) { Text("Zapisz") }
-                if (core.turnUrl.isNotEmpty()) TextButton(onClick = { url = ""; user = ""; pass = ""; core.setTurn("", "", ""); toast(ctx, "Usunięto") }) { Text("Usuń") }
+                    if (url.isNotEmpty() && !url.startsWith("turn:") && !url.startsWith("turns:")) { toast(ctx, tr("Adres musi zaczynać się od turn: lub turns:")); return@TextButton }
+                    core.setTurn(url, user, pass); toast(ctx, tr("Zapisano"))
+                }) { Text(tr("Zapisz")) }
+                if (core.turnUrl.isNotEmpty()) TextButton(onClick = { url = ""; user = ""; pass = ""; core.setTurn("", "", ""); toast(ctx, tr("Usunięto")) }) { Text(tr("Usuń")) }
             }
-            if (!core.calls.available) Text("Na tym urządzeniu rozmowy nie są dostępne (nietypowy procesor).", color = MaterialTheme.colorScheme.error)
+            if (!core.calls.available) Text(tr("Na tym urządzeniu rozmowy nie są dostępne (nietypowy procesor)."), color = MaterialTheme.colorScheme.error)
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -338,18 +339,18 @@ fun rememberGroupCallStarter(): (String, Boolean) -> Unit {
         App.core.scope.launch {
             val gc = App.core.groupCalls
             try { if (gc.joinable(gid) != null) gc.join(gid) else gc.start(gid, video) }
-            catch (e: IllegalStateException) { toast(ctx, e.message ?: "Nie udało się zacząć rozmowy") }
+            catch (e: IllegalStateException) { toast(ctx, e.message ?: tr("Nie udało się zacząć rozmowy")) }
         }
     }
     val perm = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ ->
         val p = pending ?: return@rememberLauncherForActivityResult
         pending = null
         if (has(ctx, Manifest.permission.RECORD_AUDIO)) go(p.first, p.second && has(ctx, Manifest.permission.CAMERA))
-        else toast(ctx, "Rozmowa wymaga dostępu do mikrofonu")
+        else toast(ctx, tr("Rozmowa wymaga dostępu do mikrofonu"))
     }
     return { gid, video0 ->
         val gc = App.core.groupCalls
-        if (!gc.available) toast(ctx, "Rozmowy nie działają na tym urządzeniu")
+        if (!gc.available) toast(ctx, tr("Rozmowy nie działają na tym urządzeniu"))
         else {
             val video = gc.joinable(gid)?.video ?: video0
             val need = listOf(Manifest.permission.RECORD_AUDIO) + if (video) listOf(Manifest.permission.CAMERA) else emptyList()
@@ -364,7 +365,7 @@ private fun Tile(name: String, key: String, avatar: String?, track: VideoTrack?,
         if (track != null && !connecting) VideoView(track, mirror, overlay = false, modifier = Modifier.fillMaxSize())
         else Column(horizontalAlignment = Alignment.CenterHorizontally) {
             PulseAvatar(name, key, avatar, 72.dp, pulsing = connecting)
-            if (connecting) Text("łączenie…", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 6.dp))
+            if (connecting) Text(tr("łączenie…"), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 6.dp))
         }
         Text(
             name, color = Color.White, style = MaterialTheme.typography.labelMedium,
@@ -413,13 +414,13 @@ private fun Modifier.androidxAlpha(a: Float) = this.alpha(a)
 /** Tytuł rozmowy: grupa albo osoby, z którymi rozmawiam. */
 fun callTitle(call: pl.szept.call.GroupCallManager.GroupCall): String {
     val core = App.core
-    if (!call.isRoom) return core.db.group(call.gid)?.name ?: "Grupa"
+    if (!call.isRoom) return core.db.group(call.gid)?.name ?: tr("Grupa")
     val others = (call.room.ifEmpty { setOf(call.from) } - core.myPub).ifEmpty { call.peers.values.map { it.pk }.toSet() }
     val names = others.map { core.db.nameOf(it) }
     return when {
-        names.isEmpty() -> "Rozmowa"
+        names.isEmpty() -> tr("Rozmowa")
         names.size <= 3 -> names.joinToString(", ")
-        else -> names.take(2).joinToString(", ") + " i ${names.size - 2} inne"
+        else -> names.take(2).joinToString(", ") + tr(" i {0} inne", names.size - 2)
     }
 }
 
@@ -454,7 +455,7 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
         onDispose { runCatching { lock?.release() } }
     }
     val joinPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ ->
-        if (has(ctx, Manifest.permission.RECORD_AUDIO)) core.scope.launch { gc.join() } else toast(ctx, "Bez mikrofonu nie można odebrać")
+        if (has(ctx, Manifest.permission.RECORD_AUDIO)) core.scope.launch { gc.join() } else toast(ctx, tr("Bez mikrofonu nie można odebrać"))
     }
     fun join() {
         val need = listOf(Manifest.permission.RECORD_AUDIO) + if (call.video) listOf(Manifest.permission.CAMERA) else emptyList()
@@ -477,14 +478,14 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
     }
     val bg = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(avatarColor(key).copy(alpha = 0.55f), Color(0xFF0E1216), Color(0xFF0B0E11)))
     val status = when (call.phase) {
-        GPhase.RINGING -> (if (call.video) "Rozmowa wideo" else "Połączenie głosowe") +
-            if (call.isRoom) "" else " · " + core.db.nameOf(call.from) + " zaprasza do rozmowy"
+        GPhase.RINGING -> (if (call.video) tr("Rozmowa wideo") else tr("Połączenie głosowe")) +
+            if (call.isRoom) "" else " · " + core.db.nameOf(call.from) + tr(" zaprasza do rozmowy")
         GPhase.ACTIVE -> when {
-            connected > 0 -> (if (!call.isRoom || others.size > 1) "${others.size + 1} " + plural(others.size + 1, "osoba", "osoby", "osób") + " · " else "") +
+            connected > 0 -> (if (!call.isRoom || others.size > 1) "${others.size + 1} " + plural(others.size + 1, "osoba", "osoby", tr("osób")) + " · " else "") +
                 formatDuration(now - talkSince)
-            others.isNotEmpty() -> "Łączenie…"
-            call.invited.isNotEmpty() -> "Dzwonię…"
-            else -> "Czekam, aż ktoś dołączy…"
+            others.isNotEmpty() -> tr("Łączenie…")
+            call.invited.isNotEmpty() -> tr("Dzwonię…")
+            else -> tr("Czekam, aż ktoś dołączy…")
         }
         GPhase.ENDED -> call.endReason
     }
@@ -496,16 +497,16 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                 if (call.phase == GPhase.ACTIVE) IconButton(onClick = { act.callHidden = true }) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Wróć do aplikacji", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowDown, tr("Wróć do aplikacji"), tint = Color.White)
                 } else Spacer(Modifier.width(48.dp))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (call.phase == GPhase.ACTIVE && (fullVideo || others.size > 1 || (call.video && others.isNotEmpty()))) {
                         Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                         Text(status, color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
-                    } else Text("🔒 szyfrowane end-to-end", color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
+                    } else Text(tr("🔒 szyfrowane end-to-end"), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
                 }
                 if (call.phase == GPhase.ACTIVE) IconButton(onClick = { addDialog = true }) {
-                    Icon(Icons.Default.PersonAdd, "Dodaj osobę", tint = Color.White)
+                    Icon(Icons.Default.PersonAdd, tr("Dodaj osobę"), tint = Color.White)
                 } else Spacer(Modifier.width(48.dp))
             }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -515,7 +516,7 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
                         Spacer(Modifier.height(14.dp))
                         Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
-                        Text(call.endReason.ifBlank { "Rozmowa zakończona" }, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
+                        Text(call.endReason.ifBlank { tr("Rozmowa zakończona") }, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
                     }
                     call.phase == GPhase.RINGING || (call.phase == GPhase.ACTIVE && !fullVideo && others.size <= 1 && !(call.video && others.isNotEmpty())) -> {
                         // jedna osoba: duży awatar, imię i stan
@@ -529,7 +530,7 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
                             Spacer(Modifier.height(6.dp))
                             Text(status, color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                             if (call.phase == GPhase.ACTIVE && call.invited.isNotEmpty() && others.isNotEmpty()) Text(
-                                "Dzwonię też do: " + call.invited.joinToString { core.db.nameOf(it) },
+                                tr("Dzwonię też do: ") + call.invited.joinToString { core.db.nameOf(it) },
                                 color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp),
                             )
                         }
@@ -571,10 +572,10 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
                             Participant("Ty", core.myPub, core.myAvatarB64(), if (call.muted) "wyciszony(-a)" else null, dim = false)
                             others.forEach { p ->
                                 Participant(core.db.nameOf(p.pk), p.pk, core.db.contact(p.pk)?.avatar?.ifBlank { null },
-                                    if (p.phase == pl.szept.call.GroupCallManager.PeerPhase.CONNECTING) "łączenie…" else null, dim = false)
+                                    if (p.phase == pl.szept.call.GroupCallManager.PeerPhase.CONNECTING) tr("łączenie…") else null, dim = false)
                             }
                             call.invited.forEach { pk ->
-                                Participant(core.db.nameOf(pk), pk, core.db.contact(pk)?.avatar?.ifBlank { null }, "dzwonię…", dim = true)
+                                Participant(core.db.nameOf(pk), pk, core.db.contact(pk)?.avatar?.ifBlank { null }, tr("dzwonię…"), dim = true)
                             }
                         }
                     }
@@ -584,24 +585,24 @@ fun GroupCallScreen(act: MainActivity, call: pl.szept.call.GroupCallManager.Grou
             Column(Modifier.fillMaxWidth().padding(bottom = 28.dp, top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 when (call.phase) {
                     GPhase.RINGING -> Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        RoundAction(Icons.Default.CallEnd, "Odrzuć", Red, { core.scope.launch { gc.decline() } }, 72)
-                        RoundAction(if (call.video) Icons.Default.Videocam else Icons.Default.Call, "Odbierz", Green, { join() }, 72)
+                        RoundAction(Icons.Default.CallEnd, tr("Odrzuć"), Red, { core.scope.launch { gc.decline() } }, 72)
+                        RoundAction(if (call.video) Icons.Default.Videocam else Icons.Default.Call, tr("Odbierz"), Green, { join() }, 72)
                     }
                     GPhase.ACTIVE -> {
                         Surface(color = Color.Black.copy(alpha = 0.35f), shape = RoundedCornerShape(28.dp), modifier = Modifier.padding(horizontal = 12.dp)) {
                             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp)) {
-                                RoundAction(if (call.muted) Icons.Default.MicOff else Icons.Default.Mic, if (call.muted) "Włącz" else "Wycisz",
+                                RoundAction(if (call.muted) Icons.Default.MicOff else Icons.Default.Mic, if (call.muted) tr("Włącz") else tr("Wycisz"),
                                     if (call.muted) On else Dim, { gc.setMuted(!call.muted) }, 54)
-                                RoundAction(Icons.Default.VolumeUp, "Głośnik", if (speaker) On else Dim, { CallAudio.setSpeaker(ctx, !speaker) }, 54)
+                                RoundAction(Icons.Default.VolumeUp, tr("Głośnik"), if (speaker) On else Dim, { CallAudio.setSpeaker(ctx, !speaker) }, 54)
                                 if (call.video) {
-                                    RoundAction(if (call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff, "Kamera",
+                                    RoundAction(if (call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff, tr("Kamera"),
                                         if (call.camOn) Dim else On, { gc.setCamera(!call.camOn) }, 54)
-                                    RoundAction(Icons.Default.Cameraswitch, "Obróć", Dim, { gc.switchCamera() }, 54)
-                                } else RoundAction(Icons.Default.PersonAdd, "Dodaj", Dim, { addDialog = true }, 54)
+                                    RoundAction(Icons.Default.Cameraswitch, tr("Obróć"), Dim, { gc.switchCamera() }, 54)
+                                } else RoundAction(Icons.Default.PersonAdd, tr("Dodaj"), Dim, { addDialog = true }, 54)
                             }
                         }
                         Spacer(Modifier.height(18.dp))
-                        RoundAction(Icons.Default.CallEnd, "Rozłącz", Red, { core.scope.launch { gc.leave() } }, 70)
+                        RoundAction(Icons.Default.CallEnd, tr("Rozłącz"), Red, { core.scope.launch { gc.leave() } }, 70)
                     }
                     GPhase.ENDED -> {}
                 }
@@ -624,15 +625,15 @@ private fun AddToCallDialog(call: pl.szept.call.GroupCallManager.GroupCall, onDi
     val picked = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     StyleAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Dodaj do rozmowy") },
+        title = { Text(tr("Dodaj do rozmowy")) },
         text = {
             Column {
                 Text(
-                    if (call.isRoom) "Wybrane osoby dostaną dzwonek i dołączą do tej rozmowy." else "Zadzwoń jeszcze raz do osób z grupy, których nie ma w rozmowie.",
+                    if (call.isRoom) tr("Wybrane osoby dostaną dzwonek i dołączą do tej rozmowy.") else tr("Zadzwoń jeszcze raz do osób z grupy, których nie ma w rozmowie."),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text("Wolne miejsca: ${free.coerceAtLeast(0)}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 6.dp))
-                if (candidates.isEmpty()) Text("Nie ma kogo dodać.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Wolne miejsca: {0}", free.coerceAtLeast(0)), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 6.dp))
+                if (candidates.isEmpty()) Text(tr("Nie ma kogo dodać."), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 androidx.compose.foundation.lazy.LazyColumn(Modifier.height(300.dp)) {
                     items(candidates.size) { i ->
                         val pk = candidates[i]
@@ -648,7 +649,7 @@ private fun AddToCallDialog(call: pl.szept.call.GroupCallManager.GroupCall, onDi
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(core.db.nameOf(pk), maxLines = 1)
-                                if (pk in call.invited) Text("dzwonię…", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                if (pk in call.invited) Text(tr("dzwonię…"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -660,9 +661,9 @@ private fun AddToCallDialog(call: pl.szept.call.GroupCallManager.GroupCall, onDi
                 val list = picked.toList()
                 core.scope.launch { core.groupCalls.invite(list) }
                 onDismiss()
-            }) { Text("Zadzwoń") }
+            }) { Text(tr("Zadzwoń")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Anuluj")) } },
     )
 }
 
@@ -671,8 +672,8 @@ private fun AddToCallDialog(call: pl.szept.call.GroupCallManager.GroupCall, onDi
 fun GroupCallBanner(call: pl.szept.call.GroupCallManager.GroupCall, onClick: () -> Unit) {
     Surface(color = Green, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Text(
-            "📞 " + callTitle(call) + (if (call.peers.isNotEmpty()) " · ${call.peers.size + 1} " + plural(call.peers.size + 1, "osoba", "osoby", "osób") else " · dzwonię…") +
-                " · dotknij, aby wrócić",
+            "📞 " + callTitle(call) + (if (call.peers.isNotEmpty()) " · ${call.peers.size + 1} " + plural(call.peers.size + 1, "osoba", "osoby", tr("osób")) else tr(" · dzwonię…")) +
+                tr(" · dotknij, aby wrócić"),
             color = Color.White, modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelLarge, maxLines = 1,
         )

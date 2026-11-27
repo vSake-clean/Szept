@@ -2,6 +2,7 @@
 
 package pl.szept.ui.games
 
+import pl.szept.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,21 +62,21 @@ fun ChallengeBubble(m: Message, info: GameCatalog.Info) {
     val tries = remember(moves) { Games.challengeResults(moves) }
     var totals by remember { mutableStateOf(false) }
     val goal = when {
-        info.score.kind == GameCatalog.Score.Kind.TIME && !info.score.higher -> "kto szybciej?"
-        info.score.higher -> "kto więcej?"
-        else -> "kto mniej?"
+        info.score.kind == GameCatalog.Score.Kind.TIME && !info.score.higher -> tr("kto szybciej?")
+        info.score.higher -> tr("kto więcej?")
+        else -> tr("kto mniej?")
     }
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, "Wyzwanie: $goal")
+        GameTitle(info, tr("Wyzwanie: {0}", goal))
         Spacer(Modifier.height(6.dp))
-        if (ranking.isEmpty()) Text("Nikt jeszcze nie zagrał — bądź pierwszy!", style = MaterialTheme.typography.bodyMedium)
+        if (ranking.isEmpty()) Text(tr("Nikt jeszcze nie zagrał — bądź pierwszy!"), style = MaterialTheme.typography.bodyMedium)
         ranking.take(5).forEachIndexed { i, (pk, v) -> RankRow(i, pk, info.score.fmt(v)) }
-        if (ranking.size > 5) Text("…i jeszcze ${ranking.size - 5}", style = MaterialTheme.typography.labelSmall)
+        if (ranking.size > 5) Text(tr("…i jeszcze {0}", ranking.size - 5), style = MaterialTheme.typography.labelSmall)
         ranking.indexOfFirst { it.first == me }.takeIf { it >= 5 }?.let { i -> RankRow(i, me, info.score.fmt(ranking[i].second)) }
-        tries[me]?.let { Text("Twoje próby: ${it.size}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        tries[me]?.let { Text(tr("Twoje próby: {0}", it.size), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         BubbleActions {
             Button(onClick = { Play.start(ctx, info.id, game.optLong("s"), m.id, m.chat) }) {
-                Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text(if (tries[me] == null) "Zagraj" else "Jeszcze raz")
+                Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text(if (tries[me] == null) tr("Zagraj") else tr("Jeszcze raz"))
             }
             TotalsButton { totals = true }
         }
@@ -98,7 +99,7 @@ fun PartyBubble(m: Message, info: GameCatalog.Info, game: JSONObject) {
         "quick" -> QuickBubble(m, info, game, showTotals)
         "typerace" -> TypeRaceBubble(m, info, game, showTotals)
         "wyr" -> VoteBubble(m, info, game.optString("a"), game.optString("b"), listOf("a", "b"), null)
-        "never" -> VoteBubble(m, info, "Ja tak", "Ja nigdy", listOf("y", "n"), "Nigdy przenigdy " + game.optString("q"))
+        "never" -> VoteBubble(m, info, tr("Ja tak"), tr("Ja nigdy"), listOf("y", "n"), tr("Nigdy przenigdy ") + game.optString("q"))
         "truth" -> TruthBubble(m, info, game)
         "whoof" -> WhoBubble(m, info, game)
         "ball8" -> Ball8Bubble(m, info, game)
@@ -119,10 +120,10 @@ private fun DiceBubble(m: Message, info: GameCatalog.Info, game: JSONObject, tot
     val v = remember(game) { game.optJSONArray("v")?.let { a -> List(a.length()) { a.optInt(it).coerceIn(1, 6) } } ?: emptyList() }
     Column(Modifier.widthIn(min = 200.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         GameTitle(info, "rzuca: ${whoName(m.sender)}")
-        Row(Modifier.padding(8.dp).semantics { contentDescription = "Kości: " + v.joinToString(" i ") }, horizontalArrangement = Arrangement.spacedBy(10.dp)) { v.forEach { Die(it, 56.dp) } }
-        Text("Razem: ${v.sum()}", style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.padding(8.dp).semantics { contentDescription = tr("Kości: ") + v.joinToString(" i ") }, horizontalArrangement = Arrangement.spacedBy(10.dp)) { v.forEach { Die(it, 56.dp) } }
+        Text(tr("Razem: {0}", v.sum()), style = MaterialTheme.typography.titleMedium)
         BubbleActions {
-            TextButton(onClick = { startInChat(ctx, m.chat, Games.DICE) }) { Text("Rzuć ponownie") }
+            TextButton(onClick = { startInChat(ctx, m.chat, Games.DICE) }) { Text(tr("Rzuć ponownie")) }
             TotalsButton(totals)
         }
     }
@@ -150,9 +151,9 @@ private fun FastBubble(m: Message, info: GameCatalog.Info, totals: () -> Unit) {
         GameTitle(info)
         if (mine == null && phase != 3) {
             val (bg, label) = when (phase) {
-                1 -> Color(0xFFC62828) to "Czekaj na zielone…"
-                2 -> Color(0xFF2E7D32) to "TERAZ!"
-                else -> MaterialTheme.colorScheme.primary to "Start"
+                1 -> Color(0xFFC62828) to tr("Czekaj na zielone…")
+                2 -> Color(0xFF2E7D32) to tr("TERAZ!")
+                else -> MaterialTheme.colorScheme.primary to tr("Start")
             }
             Box(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp).height(64.dp).clip(RoundedCornerShape(14.dp)).background(bg)
@@ -168,7 +169,7 @@ private fun FastBubble(m: Message, info: GameCatalog.Info, totals: () -> Unit) {
                     },
                 contentAlignment = Alignment.Center,
             ) { Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) }
-            if (phase == 0) Text("Dotknij Start, poczekaj na zielone i dotknij jak najszybciej. Jedna próba.", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+            if (phase == 0) Text(tr("Dotknij Start, poczekaj na zielone i dotknij jak najszybciej. Jedna próba."), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
         }
         results.forEachIndexed { i, (pk, ms) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -178,7 +179,7 @@ private fun FastBubble(m: Message, info: GameCatalog.Info, totals: () -> Unit) {
             }
         }
         BubbleActions {
-            if (results.isNotEmpty()) TextButton(onClick = { startInChat(ctx, m.chat, Games.FAST) }) { Text("Nowa runda") }
+            if (results.isNotEmpty()) TextButton(onClick = { startInChat(ctx, m.chat, Games.FAST) }) { Text(tr("Nowa runda")) }
             TotalsButton(totals)
         }
     }
@@ -187,7 +188,7 @@ private fun FastBubble(m: Message, info: GameCatalog.Info, totals: () -> Unit) {
 /** Litery do zgadywania w rozmowie (mniejsze niż klawiatura na pełnym ekranie). */
 @Composable
 private fun LetterGrid(used: Set<Char>, good: Set<Char>, enabled: Boolean, onPick: (Char) -> Unit) {
-    val letters = "AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ"
+    val letters = tr("AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ")
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         letters.forEach { ch ->
             val u = ch in used
@@ -211,8 +212,8 @@ private fun HangmanBubble(m: Message, info: GameCatalog.Info, game: JSONObject, 
     var guess by remember { mutableStateOf("") }
     val canPlay = !author && !h.over && core.canWrite(m.chat) == null
     Column(Modifier.width(BUBBLE_W), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameTitle(info, "hasło od: ${whoName(m.sender)}")
-        game.optString("h").takeIf { it.isNotEmpty() }?.let { Text("Podpowiedź: $it", style = MaterialTheme.typography.labelMedium) }
+        GameTitle(info, tr("hasło od: {0}", whoName(m.sender)))
+        game.optString("h").takeIf { it.isNotEmpty() }?.let { Text(tr("Podpowiedź: {0}", it), style = MaterialTheme.typography.labelMedium) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             HangmanDrawing(h.wrong, Games.HANGMAN_LIVES, Modifier.size(70.dp))
             Spacer(Modifier.width(8.dp))
@@ -227,21 +228,21 @@ private fun HangmanBubble(m: Message, info: GameCatalog.Info, game: JSONObject, 
                 }, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             } else Text(h.masked, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
-        Text("Błędy: ${h.wrong}/${Games.HANGMAN_LIVES}", style = MaterialTheme.typography.labelMedium)
+        Text(tr("Błędy: {0}/{1}", h.wrong, Games.HANGMAN_LIVES), style = MaterialTheme.typography.labelMedium)
         when {
-            h.solved -> Text("🏆 Odgadł(a): ${whoName(h.winner)}", fontWeight = FontWeight.Bold)
-            h.lost -> Text("Nikt nie odgadł — hasło: ${h.word}", fontWeight = FontWeight.Bold)
-            author -> Text("To Twoje hasło — inni zgadują.", style = MaterialTheme.typography.labelMedium)
+            h.solved -> Text(tr("🏆 Odgadł(a): {0}", whoName(h.winner)), fontWeight = FontWeight.Bold)
+            h.lost -> Text(tr("Nikt nie odgadł — hasło: {0}", h.word), fontWeight = FontWeight.Bold)
+            author -> Text(tr("To Twoje hasło — inni zgadują."), style = MaterialTheme.typography.labelMedium)
         }
         if (canPlay) {
             LetterGrid(h.guessed + h.tried.mapNotNull { it.second.singleOrNull() }, h.guessed, true) { ch -> core.gameMove(m.id, "L:$ch") }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(guess, { guess = it.take(20) }, Modifier.weight(1f), singleLine = true, placeholder = { Text("Całe hasło") }, textStyle = MaterialTheme.typography.bodySmall)
-                IconButton(onClick = { if (guess.isNotBlank()) { core.gameMove(m.id, "W:" + Games.cleanWord(guess)); guess = "" } }) { Icon(Icons.AutoMirrored.Filled.Send, "Zgadnij hasło") }
+                OutlinedTextField(guess, { guess = it.take(20) }, Modifier.weight(1f), singleLine = true, placeholder = { Text(tr("Całe hasło")) }, textStyle = MaterialTheme.typography.bodySmall)
+                IconButton(onClick = { if (guess.isNotBlank()) { core.gameMove(m.id, "W:" + Games.cleanWord(guess)); guess = "" } }) { Icon(Icons.AutoMirrored.Filled.Send, tr("Zgadnij hasło")) }
             }
         }
         BubbleActions {
-            if (h.over) TextButton(onClick = { startInChat(ctx, m.chat, "hangman") }) { Text("Nowe hasło") }
+            if (h.over) TextButton(onClick = { startInChat(ctx, m.chat, "hangman") }) { Text(tr("Nowe hasło")) }
             TotalsButton(totals)
         }
     }
@@ -258,22 +259,22 @@ private fun GuessGroupBubble(m: Message, info: GameCatalog.Info, game: JSONObjec
     var lo = 1; var hi = 100
     g.forEach { if (it.hint > 0) lo = maxOf(lo, it.n + 1) else if (it.hint < 0) hi = minOf(hi, it.n - 1) }
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, if (won == null) "liczba od 1 do 100 · zakres $lo–$hi" else "zgadnięte w ${g.size} próbach")
+        GameTitle(info, if (won == null) tr("liczba od 1 do 100 · zakres {0}–{1}", lo, hi) else tr("zgadnięte w {0} próbach", g.size))
         g.takeLast(6).forEach { x ->
             Row(Modifier.fillMaxWidth().padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(whoName(x.who), Modifier.weight(1f), maxLines = 1, style = MaterialTheme.typography.bodySmall)
                 Text("${x.n} ", fontWeight = FontWeight.Bold)
-                Text(when { x.hint > 0 -> "↑ więcej"; x.hint < 0 -> "↓ mniej"; else -> "✔ trafione!" }, style = MaterialTheme.typography.bodySmall)
+                Text(when { x.hint > 0 -> tr("↑ więcej"); x.hint < 0 -> tr("↓ mniej"); else -> tr("✔ trafione!") }, style = MaterialTheme.typography.bodySmall)
             }
         }
-        if (won != null) Text("🏆 ${whoName(won.who)} zgadł(a): ${won.n}", fontWeight = FontWeight.Bold)
+        if (won != null) Text(tr("🏆 {0} zgadł(a): {1}", whoName(won.who), won.n), fontWeight = FontWeight.Bold)
         else if (core.canWrite(m.chat) == null) Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(input, { input = it.filter { c -> c.isDigit() }.take(3) }, Modifier.weight(1f), singleLine = true, placeholder = { Text("Twój strzał") },
+            OutlinedTextField(input, { input = it.filter { c -> c.isDigit() }.take(3) }, Modifier.weight(1f), singleLine = true, placeholder = { Text(tr("Twój strzał")) },
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
-            IconButton(onClick = { input.toIntOrNull()?.takeIf { it in 1..100 }?.let { core.gameMove(m.id, it.toString()); input = "" } }) { Icon(Icons.AutoMirrored.Filled.Send, "Zgadnij") }
+            IconButton(onClick = { input.toIntOrNull()?.takeIf { it in 1..100 }?.let { core.gameMove(m.id, it.toString()); input = "" } }) { Icon(Icons.AutoMirrored.Filled.Send, tr("Zgadnij")) }
         }
         BubbleActions {
-            if (won != null) TextButton(onClick = { startInChat(ctx, m.chat, "guessgroup") }) { Text("Nowa liczba") }
+            if (won != null) TextButton(onClick = { startInChat(ctx, m.chat, "guessgroup") }) { Text(tr("Nowa liczba")) }
             TotalsButton(totals)
         }
     }
@@ -284,7 +285,7 @@ private fun AnswerField(placeholder: String, onSend: (String) -> Unit) {
     var t by remember { mutableStateOf("") }
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(t, { t = it.take(60) }, Modifier.weight(1f), singleLine = true, placeholder = { Text(placeholder) })
-        IconButton(onClick = { if (t.isNotBlank()) { onSend(t.trim()); t = "" } }) { Icon(Icons.AutoMirrored.Filled.Send, "Wyślij odpowiedź") }
+        IconButton(onClick = { if (t.isNotBlank()) { onSend(t.trim()); t = "" } }) { Icon(Icons.AutoMirrored.Filled.Send, tr("Wyślij odpowiedź")) }
     }
 }
 
@@ -301,16 +302,16 @@ private fun EmojiBubble(m: Message, info: GameCatalog.Info, game: JSONObject, to
         GameTitle(info, "kategoria: ${game.optString("k")}")
         Text(game.optString("e"), fontSize = 44.sp, modifier = Modifier.padding(8.dp))
         when {
-            first != null -> { Text("🏆 ${whoName(first.sender)}", fontWeight = FontWeight.Bold); Text("Odpowiedź: $answer") }
-            reveal -> Text("Odpowiedź: $answer", fontWeight = FontWeight.Bold)
+            first != null -> { Text("🏆 ${whoName(first.sender)}", fontWeight = FontWeight.Bold); Text(tr("Odpowiedź: {0}", answer)) }
+            reveal -> Text(tr("Odpowiedź: {0}", answer), fontWeight = FontWeight.Bold)
             else -> {
-                Text("Prób: ${moves.size}" + if (mine.isNotEmpty()) " · Twoje: ${mine.joinToString(", ") { it.mv }}" else "", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                if (core.canWrite(m.chat) == null) AnswerField("Twoja odpowiedź") { core.gameMove(m.id, it) }
+                Text(tr("Prób: {0}", moves.size) + if (mine.isNotEmpty()) tr(" · Twoje: {0}", mine.joinToString(", ") { it.mv }) else "", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                if (core.canWrite(m.chat) == null) AnswerField(tr("Twoja odpowiedź")) { core.gameMove(m.id, it) }
             }
         }
         BubbleActions {
-            if (first == null && !reveal && moves.isNotEmpty()) TextButton(onClick = { reveal = true }) { Text("Poddaję się") }
-            if (first != null || reveal) TextButton(onClick = { startInChat(ctx, m.chat, "emoji") }) { Text("Następna") }
+            if (first == null && !reveal && moves.isNotEmpty()) TextButton(onClick = { reveal = true }) { Text(tr("Poddaję się")) }
+            if (first != null || reveal) TextButton(onClick = { startInChat(ctx, m.chat, "emoji") }) { Text(tr("Następna")) }
             TotalsButton(totals)
         }
     }
@@ -331,8 +332,8 @@ private fun QuickBubble(m: Message, info: GameCatalog.Info, game: JSONObject, to
     Column(Modifier.width(BUBBLE_W)) {
         GameTitle(info, "odpowiedzi: ${answers.size}")
         if (mine == null && !open) {
-            Text("Pytanie pojawi się po dotknięciu — liczy się czas!", style = MaterialTheme.typography.bodySmall)
-            Button(onClick = { open = true; shownAt = System.currentTimeMillis() }, Modifier.fillMaxWidth()) { Text("Pokaż pytanie") }
+            Text(tr("Pytanie pojawi się po dotknięciu — liczy się czas!"), style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { open = true; shownAt = System.currentTimeMillis() }, Modifier.fillMaxWidth()) { Text(tr("Pokaż pytanie")) }
         } else {
             Text(game.optString("q").take(300), fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
             opts.forEachIndexed { k, o ->
@@ -352,10 +353,10 @@ private fun QuickBubble(m: Message, info: GameCatalog.Info, game: JSONObject, to
             val good = answers.filter { it.second == correct }.sortedBy { it.third }
             good.take(5).forEachIndexed { i, (pk, _, ms) -> RankRow(i, pk, "${ms} ms") }
             val bad = answers.count { it.second != correct }
-            if (bad > 0) Text("Błędne odpowiedzi: $bad", style = MaterialTheme.typography.labelSmall)
+            if (bad > 0) Text(tr("Błędne odpowiedzi: {0}", bad), style = MaterialTheme.typography.labelSmall)
         }
         BubbleActions {
-            if (mine != null) TextButton(onClick = { startInChat(ctx, m.chat, "quick") }) { Text("Następne pytanie") }
+            if (mine != null) TextButton(onClick = { startInChat(ctx, m.chat, "quick") }) { Text(tr("Następne pytanie")) }
             TotalsButton(totals)
         }
     }
@@ -376,18 +377,18 @@ private fun TypeRaceBubble(m: Message, info: GameCatalog.Info, game: JSONObject,
     Column(Modifier.width(BUBBLE_W)) {
         GameTitle(info, "wyniki: ${results.size}")
         if (mine == null) {
-            if (!started) Button(onClick = { started = true; startAt = System.currentTimeMillis() }, Modifier.fillMaxWidth()) { Text("Start — pokaż słowo") }
+            if (!started) Button(onClick = { started = true; startAt = System.currentTimeMillis() }, Modifier.fillMaxWidth()) { Text(tr("Start — pokaż słowo")) }
             else {
                 Text(word, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 6.dp))
                 OutlinedTextField(text, { v ->
                     text = v.take(60)
                     if (text.trim().equals(word, ignoreCase = true)) core.gameMove(m.id, (System.currentTimeMillis() - startAt).coerceIn(0, 999_999).toString())
-                }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Przepisz słowo") })
+                }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(tr("Przepisz słowo")) })
             }
-        } else Text("Słowo: $word", fontWeight = FontWeight.Medium)
+        } else Text(tr("Słowo: {0}", word), fontWeight = FontWeight.Medium)
         results.take(6).forEachIndexed { i, (pk, ms) -> RankRow(i, pk, GameCatalog.fmtTime(ms.toDouble())) }
         BubbleActions {
-            if (mine != null) TextButton(onClick = { startInChat(ctx, m.chat, "typerace") }) { Text("Następne słowo") }
+            if (mine != null) TextButton(onClick = { startInChat(ctx, m.chat, "typerace") }) { Text(tr("Następne słowo")) }
             TotalsButton(totals)
         }
     }
@@ -402,7 +403,7 @@ private fun VoteBubble(m: Message, info: GameCatalog.Info, a: String, b: String,
     val votes = remember(moves) { Games.lastMoves(moves).mapValues { it.value.mv }.filterValues { it in codes } }
     val mine = votes[me]
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, "głosy: ${votes.size}")
+        GameTitle(info, tr("głosy: {0}", votes.size))
         question?.let { Text(it, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp)) }
         listOf(a to codes[0], b to codes[1]).forEach { (label, code) ->
             val who = votes.filterValues { it == code }.keys
@@ -420,8 +421,8 @@ private fun VoteBubble(m: Message, info: GameCatalog.Info, a: String, b: String,
                 }
             }
         }
-        if (mine == null) Text("Zagłosuj, aby zobaczyć wyniki", style = MaterialTheme.typography.labelSmall)
-        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, info.id) }) { Text("Następne") } }
+        if (mine == null) Text(tr("Zagłosuj, aby zobaczyć wyniki"), style = MaterialTheme.typography.labelSmall)
+        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, info.id) }) { Text(tr("Następne")) } }
     }
 }
 
@@ -442,11 +443,11 @@ private fun TruthBubble(m: Message, info: GameCatalog.Info, game: JSONObject) {
                 Text(game.optString("q").take(300), color = Color.Black)
             }
         }
-        if (done) Text("✔ Zrobione!", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
-        else if (who == core.myPub) Button(onClick = { core.gameMove(m.id, "done") }, Modifier.fillMaxWidth()) { Text("Zrobione") }
+        if (done) Text(tr("✔ Zrobione!"), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+        else if (who == core.myPub) Button(onClick = { core.gameMove(m.id, "done") }, Modifier.fillMaxWidth()) { Text(tr("Zrobione")) }
         BubbleActions {
-            TextButton(onClick = { startInChat(ctx, m.chat, "truth", JSONObject().put("t", "p")) }) { Text("Prawda") }
-            TextButton(onClick = { startInChat(ctx, m.chat, "truth", JSONObject().put("t", "w")) }) { Text("Wyzwanie") }
+            TextButton(onClick = { startInChat(ctx, m.chat, "truth", JSONObject().put("t", "p")) }) { Text(tr("Prawda")) }
+            TextButton(onClick = { startInChat(ctx, m.chat, "truth", JSONObject().put("t", "w")) }) { Text(tr("Wyzwanie")) }
         }
     }
 }
@@ -462,15 +463,15 @@ private fun WhoBubble(m: Message, info: GameCatalog.Info, game: JSONObject) {
     val mine = votes[me]
     val counts = votes.values.groupingBy { it }.eachCount()
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, "głosy: ${votes.size}")
-        Text("Kto z nas " + game.optString("q").take(120), fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
+        GameTitle(info, tr("głosy: {0}", votes.size))
+        Text(tr("Kto z nas ") + game.optString("q").take(120), fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             members.sortedByDescending { counts[it] ?: 0 }.forEach { pk ->
                 FilterChip(mine == pk, { core.gameMove(m.id, pk) }, { Text(whoName(pk) + if (mine != null) " · ${counts[pk] ?: 0}" else "") })
             }
         }
-        if (mine == null) Text("Zagłosuj, aby zobaczyć wyniki", style = MaterialTheme.typography.labelSmall)
-        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, "whoof") }) { Text("Następne pytanie") } }
+        if (mine == null) Text(tr("Zagłosuj, aby zobaczyć wyniki"), style = MaterialTheme.typography.labelSmall)
+        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, "whoof") }) { Text(tr("Następne pytanie")) } }
     }
 }
 
@@ -485,7 +486,7 @@ private fun Ball8Bubble(m: Message, info: GameCatalog.Info, game: JSONObject) {
                 Text(game.optString("a").take(60), color = Color.White, textAlign = TextAlign.Center, fontSize = 12.sp, modifier = Modifier.padding(6.dp))
             }
         }
-        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, "ball8") }) { Text("Zapytaj jeszcze raz") } }
+        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, "ball8") }) { Text(tr("Zapytaj jeszcze raz")) } }
     }
 }
 
@@ -498,10 +499,10 @@ private fun CoinBubble(m: Message, info: GameCatalog.Info, game: JSONObject) {
         Box(Modifier.padding(10.dp).size(110.dp).clip(CircleShape).background(Color(0xFFFFC107)).border(6.dp, Color(0xFFFFA000), CircleShape), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(if (heads) Icons.Default.EmojiEvents else Icons.Default.Looks5, null, tint = Color(0xFF6D4C41), modifier = Modifier.size(40.dp))
-                Text(if (heads) "ORZEŁ" else "RESZKA", fontWeight = FontWeight.Black, color = Color(0xFF6D4C41))
+                Text(if (heads) tr("ORZEŁ") else tr("RESZKA"), fontWeight = FontWeight.Black, color = Color(0xFF6D4C41))
             }
         }
-        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, "coin") }) { Text("Rzuć ponownie") } }
+        BubbleActions { TextButton(onClick = { startInChat(ctx, m.chat, "coin") }) { Text(tr("Rzuć ponownie")) } }
     }
 }
 
@@ -511,14 +512,14 @@ private fun PickBubble(m: Message, info: GameCatalog.Info, game: JSONObject) {
     Column(Modifier.widthIn(min = 200.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         GameTitle(info, "losuje: ${whoName(m.sender)}")
         if (game.has("who")) {
-            Text("Wylosowana osoba:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
+            Text(tr("Wylosowana osoba:"), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
             Text(whoName(game.optString("who")), fontSize = 26.sp, fontWeight = FontWeight.Bold)
         } else {
-            Text("Liczba od 1 do ${game.optInt("max")}:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
+            Text(tr("Liczba od 1 do {0}:", game.optInt("max")), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
             Text("${game.optInt("n")}", fontSize = 40.sp, fontWeight = FontWeight.Bold)
         }
         BubbleActions {
-            TextButton(onClick = { startInChat(ctx, m.chat, "pick", if (game.has("max")) JSONObject().put("max", game.optInt("max")) else null) }) { Text("Losuj ponownie") }
+            TextButton(onClick = { startInChat(ctx, m.chat, "pick", if (game.has("max")) JSONObject().put("max", game.optInt("max")) else null) }) { Text(tr("Losuj ponownie")) }
         }
     }
 }
@@ -532,7 +533,7 @@ private fun CardBubble(m: Message, info: GameCatalog.Info, game: JSONObject, tot
     val mine = draws.firstOrNull { it.first == core.myPub }
     val best = draws.maxOfOrNull { Games.cardRank(it.second) }
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, "ciągnęło: ${draws.size}")
+        GameTitle(info, tr("ciągnęło: {0}", draws.size))
         draws.sortedByDescending { Games.cardRank(it.second) }.forEach { (pk, c) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 PlayingCard(c, 30.dp); Spacer(Modifier.width(8.dp))
@@ -541,8 +542,8 @@ private fun CardBubble(m: Message, info: GameCatalog.Info, game: JSONObject, tot
             }
         }
         BubbleActions {
-            if (mine == null && core.canWrite(m.chat) == null) Button(onClick = { core.gameMove(m.id, "d") }) { Text("Ciągnij kartę") }
-            else TextButton(onClick = { startInChat(ctx, m.chat, "card") }) { Text("Nowa runda") }
+            if (mine == null && core.canWrite(m.chat) == null) Button(onClick = { core.gameMove(m.id, "d") }) { Text(tr("Ciągnij kartę")) }
+            else TextButton(onClick = { startInChat(ctx, m.chat, "card") }) { Text(tr("Nowa runda")) }
             TotalsButton(totals)
         }
     }
@@ -556,15 +557,15 @@ private fun RouletteBubble(m: Message, info: GameCatalog.Info, game: JSONObject,
     val moves = rememberMoves(m.id)
     val (bets, spun) = remember(moves) { Games.roulette(m.sender, moves) }
     val n = Games.rouletteNumber(game.optLong("s"))
-    val labels = mapOf("r" to "Czerwone", "b" to "Czarne", "e" to "Parzyste", "o" to "Nieparzyste")
+    val labels = mapOf("r" to tr("Czerwone"), "b" to tr("Czarne"), "e" to tr("Parzyste"), "o" to tr("Nieparzyste"))
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, "zakłady: ${bets.size}")
+        GameTitle(info, tr("zakłady: {0}", bets.size))
         if (spun) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
                 Box(Modifier.size(56.dp).clip(CircleShape).background(when { n == 0 -> Color(0xFF2E7D32); n in Games.ROULETTE_RED -> Color(0xFFD32F2F); else -> Color(0xFF212121) }),
                     contentAlignment = Alignment.Center) { Text("$n", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.width(10.dp))
-                Text("Wygrywają: " + bets.filterValues { Games.rouletteWins(it, n) }.keys.joinToString(", ") { whoName(it) }.ifEmpty { "nikt" })
+                Text(tr("Wygrywają: ") + bets.filterValues { Games.rouletteWins(it, n) }.keys.joinToString(", ") { whoName(it) }.ifEmpty { tr("nikt") })
             }
         } else {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -575,9 +576,9 @@ private fun RouletteBubble(m: Message, info: GameCatalog.Info, game: JSONObject,
             Text("${whoName(pk)}: ${labels[b] ?: b}" + if (spun) (if (Games.rouletteWins(b, n)) " ✔" else " ✘") else "", style = MaterialTheme.typography.bodySmall)
         }
         BubbleActions {
-            if (!spun && m.sender == me) Button(onClick = { core.gameMove(m.id, "spin") }, enabled = bets.isNotEmpty()) { Text("Kręć!") }
-            if (!spun && m.sender != me) Text("Kołem kręci ${whoName(m.sender)}", style = MaterialTheme.typography.labelSmall)
-            if (spun) TextButton(onClick = { startInChat(ctx, m.chat, "roulette") }) { Text("Nowa runda") }
+            if (!spun && m.sender == me) Button(onClick = { core.gameMove(m.id, "spin") }, enabled = bets.isNotEmpty()) { Text(tr("Kręć!")) }
+            if (!spun && m.sender != me) Text(tr("Kołem kręci {0}", whoName(m.sender)), style = MaterialTheme.typography.labelSmall)
+            if (spun) TextButton(onClick = { startInChat(ctx, m.chat, "roulette") }) { Text(tr("Nowa runda")) }
             TotalsButton(totals)
         }
     }
@@ -592,7 +593,7 @@ private fun DiceWarBubble(m: Message, info: GameCatalog.Info, totals: () -> Unit
     val mine = rolls.firstOrNull { it.first == core.myPub }
     val best = rolls.maxOfOrNull { it.second.sum() }
     Column(Modifier.width(BUBBLE_W)) {
-        GameTitle(info, "rzuciło: ${rolls.size}")
+        GameTitle(info, tr("rzuciło: {0}", rolls.size))
         rolls.forEach { (pk, v) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 v.forEach { Die(it, 22.dp); Spacer(Modifier.width(2.dp)) }
@@ -602,8 +603,8 @@ private fun DiceWarBubble(m: Message, info: GameCatalog.Info, totals: () -> Unit
             }
         }
         BubbleActions {
-            if (mine == null && core.canWrite(m.chat) == null) Button(onClick = { core.gameMove(m.id, Games.rollDice(3).joinToString(",")) }) { Icon(Icons.Default.Casino, null); Text(" Rzuć") }
-            else TextButton(onClick = { startInChat(ctx, m.chat, "dicewar") }) { Text("Nowa runda") }
+            if (mine == null && core.canWrite(m.chat) == null) Button(onClick = { core.gameMove(m.id, Games.rollDice(3).joinToString(",")) }) { Icon(Icons.Default.Casino, null); Text(tr(" Rzuć")) }
+            else TextButton(onClick = { startInChat(ctx, m.chat, "dicewar") }) { Text(tr("Nowa runda")) }
             TotalsButton(totals)
         }
     }
@@ -621,8 +622,8 @@ private fun BjGroupBubble(m: Message, info: GameCatalog.Info, game: JSONObject, 
     Column(Modifier.width(BUBBLE_W)) {
         GameTitle(info, "graczy: ${hands.size}")
         if (mine == null) {
-            Text("Dostaniesz dwie karty i dobierasz, ile chcesz. Kto bliżej 21, ten wygrywa.", style = MaterialTheme.typography.bodySmall)
-            if (core.canWrite(m.chat) == null) Button(onClick = { core.gameMove(m.id, "start") }, Modifier.fillMaxWidth()) { Text("Dołącz i weź karty") }
+            Text(tr("Dostaniesz dwie karty i dobierasz, ile chcesz. Kto bliżej 21, ten wygrywa."), style = MaterialTheme.typography.bodySmall)
+            if (core.canWrite(m.chat) == null) Button(onClick = { core.gameMove(m.id, "start") }, Modifier.fillMaxWidth()) { Text(tr("Dołącz i weź karty")) }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 mine.cards.forEach { PlayingCard(it, 36.dp) }
@@ -630,7 +631,7 @@ private fun BjGroupBubble(m: Message, info: GameCatalog.Info, game: JSONObject, 
                 Text("= ${mine.value}" + if (mine.bust) " (fura!)" else "", fontWeight = FontWeight.Bold)
             }
             if (!mine.done) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { core.gameMove(m.id, "h") }) { Text("Dobierz") }
+                Button(onClick = { core.gameMove(m.id, "h") }) { Text(tr("Dobierz")) }
                 OutlinedButton(onClick = { core.gameMove(m.id, "s") }) { Text("Pas") }
             }
         }
@@ -639,13 +640,13 @@ private fun BjGroupBubble(m: Message, info: GameCatalog.Info, game: JSONObject, 
         finished.entries.sortedByDescending { if (it.value.bust) -1 else it.value.value }.forEach { (pk, h) ->
             Row(Modifier.fillMaxWidth()) {
                 Text(whoName(pk), Modifier.weight(1f), fontWeight = if (!h.bust && h.value == best) FontWeight.Bold else FontWeight.Normal)
-                Text(if (h.bust) "fura (${h.value})" else "${h.value}" + if (h.value == best) " 🏆" else "")
+                Text(if (h.bust) tr("fura ({0})", h.value) else "${h.value}" + if (h.value == best) " 🏆" else "")
             }
         }
         val waiting = hands.count { !it.value.done }
-        if (waiting > 0) Text("Jeszcze gra: $waiting", style = MaterialTheme.typography.labelSmall)
+        if (waiting > 0) Text(tr("Jeszcze gra: {0}", waiting), style = MaterialTheme.typography.labelSmall)
         BubbleActions {
-            if (mine?.done == true) TextButton(onClick = { startInChat(ctx, m.chat, "bjgroup") }) { Text("Nowe rozdanie") }
+            if (mine?.done == true) TextButton(onClick = { startInChat(ctx, m.chat, "bjgroup") }) { Text(tr("Nowe rozdanie")) }
             TotalsButton(totals)
         }
     }
