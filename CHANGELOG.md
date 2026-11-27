@@ -2,6 +2,11 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.4.3
+- Wysyłka nie wisi już na 100%: gdy odbiorcy mają plik, zapasowa kopia odpuszcza przekaźnik, który każe zwolnić, i wysyłka się kończy.
+- Panel administratora: wysłane aktualizacje są w osobnej części „Wysłane ✓” z numerem wersji, a „W toku” pokazuje tylko to, na co odbiorcy jeszcze czekają.
+- Godzina „odpoczywa do …” odświeża się na bieżąco, a przekaźnik po 10 minutach spokoju zaczyna od czystej karty.
+
 ## 3.4.2
 - Grzeczniejsza wysyłka dużych plików: jeden plik naraz na przekaźnik, mniej paczek jednocześnie, zwalnianie, gdy przekaźnik o to prosi („slow down”), i przerwa, gdy dalej narzeka — przekaźniki nie blokują już telefonu za zbyt szybkie wysyłanie.
 - Przekaźnik, który zablokował telefon albo ma pełny dysk, jest omijany przez kilka godzin, a jego część pliku od razu przejmują inne.

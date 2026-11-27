@@ -134,6 +134,7 @@ fun AdminScreen(nav: Nav) {
     var jobs by remember { mutableStateOf(listOf<pl.szept.core.Core.AdminJob>()) }
     var relayState by remember { mutableStateOf(mapOf<String, List<pl.szept.core.Core.RelayUpload>>()) }
     var cancelJob by remember { mutableStateOf<pl.szept.core.Core.AdminJob?>(null) }
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(jobsFlow) {
         while (true) {
             withContext(Dispatchers.IO) {
@@ -141,6 +142,7 @@ fun AdminScreen(nav: Nav) {
                 jobs = j
                 relayState = j.associate { it.id to core.uploadRelays(it.id) }
             }
+            now = System.currentTimeMillis()   // godziny „odpoczywa do …” liczone na bieżąco
             delay(2000)
         }
     }
@@ -228,10 +230,18 @@ fun AdminScreen(nav: Nav) {
                 5 -> AccessTab()
                 6 -> PyGamesTab()
             }
-            if (jobs.isNotEmpty()) {
+            val sentJobs = jobs.filter { it.sent }
+            if (sentJobs.isNotEmpty()) {
+                HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                Text(tr("Wysłane ✓"), fontWeight = FontWeight.Bold)
+                sentJobs.forEach { job -> Text("✓ " + job.label, style = MaterialTheme.typography.bodySmall) }
+                Text(tr("Odbiorcy już dostali plik. W tle dosyłam jeszcze zapasowe kopie na przekaźniki, które na to pozwalają."),
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (jobs.any { !it.sent }) {
                 HorizontalDivider(Modifier.padding(vertical = 12.dp))
                 Text(tr("W toku"), fontWeight = FontWeight.Bold)
-                jobs.forEach { job ->
+                jobs.filter { !it.sent }.forEach { job ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(job.label + " · " + job.progress + "%", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                         TextButton(onClick = { cancelJob = job }) { Text(tr("Anuluj")) }
@@ -239,7 +249,6 @@ fun AdminScreen(nav: Nav) {
                     LinearProgressIndicator(progress = { job.progress / 100f }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                     // każdy przekaźnik: ile paczek przyjął i co ostatnio odpowiedział
                     relayState[job.id].orEmpty().forEach { r ->
-                        val now = System.currentTimeMillis()
                         val hm = java.text.SimpleDateFormat("HH:mm", pl.szept.I18n.locale)
                         val state = when {
                             r.done >= r.need -> "✓"

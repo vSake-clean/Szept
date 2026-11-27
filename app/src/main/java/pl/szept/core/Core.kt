@@ -1058,7 +1058,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             val pend = db.pending(u.msg)
             val sent = pend == null
             if (sent && uploadComplete(u.msg)) return@mapNotNull null
-            val label = labels[u.msg] ?: pend?.let { (inner, rec) ->
+            val label = labels[u.msg] ?: if (pend == null) sentLabel(u.msg) else pend.let { (inner, rec) ->
                 val o = try { JSONObject(inner) } catch (e: Exception) { JSONObject() }
                 when {
                     u.msg.startsWith("admin:pol") -> tr("Wymuszenie aktualizacji (od {0})", o.optString("v"))
@@ -1066,9 +1066,19 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     else -> tr("Aktualizacja {0} → {1} os.", o.optString("txt"), rec.size)
                 }
             } ?: tr("Wysyłka pliku")
-            AdminJob(u.msg, if (sent) label + tr(" — wysłane, dosyłam zapasowe kopie") else label,
+            AdminJob(u.msg, label,
                 if (sent) 100 else (uploadCovered(u) * 100 / u.chunks.coerceAtLeast(1)).coerceIn(0, 99), sent)
         }
+    }
+
+    /** Nazwa wysłanej już aktualizacji (z zapamiętanego pliku wersji). */
+    private fun sentLabel(msgId: String): String {
+        for ((k, v) in prefs.all) {
+            if (!k.startsWith("adm_upd:")) continue
+            val o = try { JSONObject(v as? String ?: continue) } catch (e: Exception) { continue }
+            if (o.optString("msg") == msgId) return tr("Aktualizacja {0}", k.removePrefix("adm_upd:"))
+        }
+        return tr("Wysyłka pliku")
     }
 
     /** Anuluje wysyłkę administratora (plik przestaje się wgrywać, nic nie trafia do odbiorców). */
@@ -3835,9 +3845,10 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             if (!relay.isConnected || (inCooldown(url) && !isLocal(url))) continue
             val p = paceOf(url)
             if (p.pausedUntil > now) { scheduleUploadRetry(p.pausedUntil - now + 500); continue }
-            // najpierw pliki, na które czekają odbiorcy; zapasowe kopie tylko, gdy przekaźnik nie narzeka
+            if (p.pausedUntil > 0 && now - p.pausedUntil > 10 * 60_000L) { p.strikes = 0; p.gap = 0; p.pausedUntil = 0 }
+            // najpierw pliki, na które czekają odbiorcy; zapasowe kopie potem (przy pierwszej skardze przekaźnika odpuszczają)
             val next = list.filter { !it.second }.minByOrNull { it.first.created }
-                ?: list.takeIf { p.strikes == 0 && p.gap == 0L }?.minByOrNull { it.first.created } ?: continue
+                ?: list.minByOrNull { it.first.created } ?: continue
             if (!uploading.add(url)) continue   // jeden plik naraz na przekaźnik
             scope.launch {
                 val progressed = try { uploadTo(relay, next.first.media, next.second) } catch (e: Exception) { Log.w(TAG, "upload", e); false } finally { uploading.remove(url) }
@@ -3847,7 +3858,9 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
     }
 
     /** Wysyła kolejne paczki pliku na przekaźnik we wspólnym tempie tego przekaźnika. Zwraca true, gdy przyjął choć jedną. */
-    private suspend fun uploadTo(relay: Relay, mediaId: String, backup: Boolean = false): Boolean {
+    private suspend fun uploadTo(relay: Relay, mediaId: String, backupAtStart: Boolean = false): Boolean {
+        // zapasowa kopia = odbiorcy już mają plik; sprawdzane na bieżąco (plik może być gotowy w trakcie)
+        var backup = backupAtStart
         val u = db.upload(mediaId) ?: return false
         val file = File(u.path)
         if (!file.exists()) { db.updateStatus(u.msg, St.FAILED, false); db.setUploadDone(mediaId, relay.url, -1); return false }
@@ -3885,7 +3898,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     val covered = uploadCovered(fresh)
                     db.setProgress(u.msg, (covered * 100 / u.chunks).coerceIn(0, 100))
                     // cały plik jest już do pobrania (choćby w jednej kopii) — koperty mogą iść od razu
-                    if (covered >= u.chunks) releaseUpload(fresh)
+                    if (covered >= u.chunks) { releaseUpload(fresh); if (db.pending(u.msg) == null) backup = true }
                 }
                 if (okCount == results.size) {
                     // wszystko przyjęte — ostrożnie przyspieszamy
@@ -3903,10 +3916,16 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                         p.win = 1
                         p.gap = max(p.gap * 2, 2_000L).coerceAtMost(30_000L)
                         p.strikes++
-                        if (backup || p.strikes >= 5) {
-                            // dalej narzeka — dajemy mu odpocząć (zapasowe kopie ustępują od razu); jego część mogą przejąć inne
-                            p.pausedUntil = System.currentTimeMillis() + if (backup) 5 * 60_000L else 3 * 60_000L
-                            if (!backup) p.strikes = 2
+                        if (backup) {
+                            // odbiorcy już mają plik — zapasowej kopii na narzekający przekaźnik nie wciskamy na siłę
+                            db.setUploadDone(mediaId, relay.url, -1)
+                            p.pausedUntil = System.currentTimeMillis() + 5 * 60_000L
+                            break
+                        }
+                        if (p.strikes >= 5) {
+                            // dalej narzeka — dajemy mu odpocząć; jego część mogą przejąć inne
+                            p.pausedUntil = System.currentTimeMillis() + 3 * 60_000L
+                            p.strikes = 2
                             break
                         }
                         delay(p.gap)
@@ -3926,6 +3945,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     }
                     Refusal.TRANSIENT -> {
                         p.pausedUntil = System.currentTimeMillis() + 15_000
+                        // zapasowa kopia: po kilku chwilowych błędach z rzędu odpuszczamy ten przekaźnik
+                        if (backup && ++p.strikes >= 3) db.setUploadDone(mediaId, relay.url, -1)
                         break
                     }
                 }

@@ -151,6 +151,13 @@ class MediaSpreadTest {
         waitFor("odbiorca pobrał plik mimo bana i limitów", 150_000) { b.db.message(m.id)?.path != null }
         assertEquals(sha0, sha(File(b.db.message(m.id)!!.path!!)))
         assertTrue("zbanowany przekaźnik powinien być omijany", a.mediaCooldownUntil(urls[0]) > System.currentTimeMillis())
+        // 3.4.3: po wysłaniu wysyłka się kończy — zapasowa kopia odpuszcza przekaźnik, który każe zwolnić (nic nie wisi na 100%)
+        var lastPrint = 0L
+        waitFor("wysyłka zakończona (także zapasowe kopie)", 90_000) {
+            val st = a.uploadRelays(m.id)
+            if (System.currentTimeMillis() - lastPrint > 20_000) { lastPrint = System.currentTimeMillis(); println("  stan: " + st.joinToString { "${it.host.takeLast(5)} ${it.done}/${it.need} rej=${it.rejected} err=${it.error}" }) }
+            st.all { it.done >= it.need || it.rejected }
+        }
         val st = a.uploadRelays(m.id)
         println(st.joinToString("\n") { "${it.host}: ${it.done}/${it.need} rejected=${it.rejected} err=${it.error}" })
         listOf(a, b).forEach { it.stop() }
