@@ -992,7 +992,22 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val id = "admin:" + newId()
         val payload = JSONObject().put("t", "msg").put("id", newId()).put("ts", Clock.now())
         if (apk != null) {
-            val media = prepareAdminUpload(id, apk, tr("Szept-{0}.apk", versionName ?: "nowa"), "application/vnd.android.package-archive")
+            val v = versionName ?: ""
+            // ta sama wersja już się wysyła — dopisujemy odbiorców, zamiast wgrywać plik drugi raz
+            adminUpdateInFlight(v)?.let { busy ->
+                val (inner, rec) = db.pending(busy) ?: return@let
+                db.addPending(busy, inner, (rec + to).distinct())
+                adminJobs.update { it + (busy to tr("Aktualizacja {0} → {1} os.", v, (rec + to).distinct().size)) }
+                return@withLock to.size
+            }
+            // plik tej wersji jest już na przekaźnikach — wysyłamy od razu, bez ponownego wgrywania
+            adminUpdateReady(v)?.let { meta ->
+                payload.put("k", Kind.UPDATE).put("txt", v).put("m", meta)
+                if (text.isNotBlank()) payload.put("note", text.trim())
+                dispatch(payload, to, null, EXPIRE_SEC, asAdmin = true, sync = false)
+                return@withLock to.size
+            }
+            val media = prepareAdminUpload(id, apk, "Szept-${versionName ?: "nowa"}.apk", "application/vnd.android.package-archive")
             payload.put("k", Kind.UPDATE).put("txt", versionName ?: "").put("m", media.toJson())
             if (text.isNotBlank()) payload.put("note", text.trim())
             db.addPending(id, payload.toString(), to)
@@ -1016,6 +1031,52 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         val media = MediaMeta(newId(), B64.enc(key), size, chunks, mime, sha256File(dest), name, null, 0, 0, 0)
         db.addUpload(Db.Upload(media.id, id, dest.absolutePath, B64.enc(key), chunks, Clock.nowSec(), JSONObject(), ""))
         return media
+    }
+
+    /** Wysyłka aktualizacji [version], która jeszcze czeka na komplet paczek (id wiadomości). */
+    private fun adminUpdateInFlight(version: String): String? = db.uploads().map { it.msg }
+        .filter { it.startsWith("admin:") && !it.startsWith("admin:pol") && !it.startsWith("admin:pyg") }
+        .firstOrNull { id ->
+            val p = db.pending(id)?.first ?: return@firstOrNull false
+            try { JSONObject(p).let { it.optString("k") == Kind.UPDATE && it.optString("txt") == version } } catch (e: Exception) { false }
+        }
+
+    /** Opis pliku wersji [version], jeśli jest już w całości na przekaźnikach (i jeszcze nie wygasł). */
+    private fun adminUpdateReady(version: String): JSONObject? {
+        val c = prefs.getString("adm_upd:$version", null)?.let { try { JSONObject(it) } catch (e: Exception) { null } } ?: return null
+        val u = db.uploadForMsg(c.optString("msg")) ?: return null
+        if (Clock.nowSec() - u.created > 18L * 86400 || uploadCovered(u) < u.chunks) return null
+        return c.optJSONObject("m")
+    }
+
+    /** Wysyłki administratora widoczne w „W toku” (także po ponownym uruchomieniu aplikacji). */
+    data class AdminJob(val id: String, val label: String, val progress: Int, val sent: Boolean)
+
+    fun adminJobList(): List<AdminJob> {
+        val labels = adminJobs.value
+        return db.uploads().filter { it.msg.startsWith("admin:") }.mapNotNull { u ->
+            val pend = db.pending(u.msg)
+            val sent = pend == null
+            if (sent && uploadComplete(u.msg)) return@mapNotNull null
+            val label = labels[u.msg] ?: pend?.let { (inner, rec) ->
+                val o = try { JSONObject(inner) } catch (e: Exception) { JSONObject() }
+                when {
+                    u.msg.startsWith("admin:pol") -> tr("Wymuszenie aktualizacji (od {0})", o.optString("v"))
+                    u.msg.startsWith("admin:pyg") -> tr("Gra „{0}” dla wszystkich", o.optString("n"))
+                    else -> tr("Aktualizacja {0} → {1} os.", o.optString("txt"), rec.size)
+                }
+            } ?: tr("Wysyłka pliku")
+            AdminJob(u.msg, if (sent) label + tr(" — wysłane, dosyłam zapasowe kopie") else label,
+                if (sent) 100 else (uploadCovered(u) * 100 / u.chunks.coerceAtLeast(1)).coerceIn(0, 99), sent)
+        }
+    }
+
+    /** Anuluje wysyłkę administratora (plik przestaje się wgrywać, nic nie trafia do odbiorców). */
+    fun adminCancel(id: String) {
+        db.removePending(id)
+        db.uploadForMsg(id)?.let { u -> db.removeUpload(u.media); File(u.path).delete() }
+        prefs.edit().remove("adm_after:$id").apply()
+        adminJobs.update { it - id }
     }
 
     /** Postęp wysyłek administratora: id → procent wgranych paczek. */
@@ -1065,8 +1126,16 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         policy.value?.optJSONArray("turns")?.let { content.put("turns", it) }
         policy.value?.optJSONArray("pyg")?.let { content.put("pyg", it) }
         if (apk != null) {
+            // plik tej wersji już leży na przekaźnikach — od razu wymuszamy, bez ponownego wgrywania
+            adminUpdateReady(versionName)?.let { meta -> content.put("m", meta); publishPolicy(content); return@withLock }
+            // plik tej wersji właśnie się wysyła — wymuszenie pójdzie, gdy będzie gotowy
+            adminUpdateInFlight(versionName)?.let { busy ->
+                prefs.edit().putString("adm_after:$busy", content.toString()).apply()
+                adminJobs.update { it + (busy to (it[busy] ?: "") + tr(" + wymuszenie")) }
+                return@withLock
+            }
             val id = "admin:pol:" + newId()
-            val media = prepareAdminUpload(id, apk, tr("Szept-{0}.apk", versionName), "application/vnd.android.package-archive")
+            val media = prepareAdminUpload(id, apk, "Szept-$versionName.apk", "application/vnd.android.package-archive")
             content.put("m", media.toJson())
             db.addPending(id, content.toString(), emptyList())
             adminJobs.update { it + (id to tr("Wymuszenie aktualizacji (od {0})", versionName)) }
@@ -2249,7 +2318,16 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             when {
                 msgId.startsWith("admin:pol") -> publishPolicy(payload)
                 msgId.startsWith("admin:pyg") -> publishPyGame(payload)
-                else -> dispatch(payload, recipients, null, EXPIRE_SEC, asAdmin = true, sync = false)
+                else -> {
+                    dispatch(payload, recipients, null, EXPIRE_SEC, asAdmin = true, sync = false)
+                    if (payload.optString("k") == Kind.UPDATE) payload.optJSONObject("m")?.let { m ->
+                        prefs.edit().putString("adm_upd:" + payload.optString("txt"), JSONObject().put("msg", msgId).put("m", m).toString()).apply()
+                        prefs.getString("adm_after:$msgId", null)?.let { pol ->
+                            prefs.edit().remove("adm_after:$msgId").apply()
+                            try { publishPolicy(JSONObject(pol).put("m", m)) } catch (e: Exception) { CrashLog.record("Wymuszenie po wysyłce", e) }
+                        }
+                    }
+                }
             }
             adminJobs.update { it - msgId }
             return
@@ -3419,6 +3497,78 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
 
     private val storeProbeHit = ConcurrentHashMap.newKeySet<String>()
 
+    /** Ostatni błąd przekaźnika przy wysyłce pliku („media|url” → komunikat) — widać go w panelu administratora. */
+    private val uploadErr = ConcurrentHashMap<String, String>()
+    /** Kiedy przekaźnik ostatnio przyjął paczki danego pliku („media|url” → czas). */
+    private val uploadOkAt = ConcurrentHashMap<String, Long>()
+    /** Postęp pliku: (ile paczek dostępnych, od kiedy bez zmian) — do wykrywania zastojów. */
+    private val uploadWatch = ConcurrentHashMap<String, Pair<Int, Long>>()
+    @Volatile private var uploadRetryAt = 0L
+    /** Po ilu ms bez postępu brakujące kawałki przejmują inne przekaźniki (w testach krócej). */
+    @Volatile internal var stallMs = 150_000L
+    private val loggedUploadErr = ConcurrentHashMap.newKeySet<String>()
+
+    /** Ponów wysyłkę za chwilę (po chwilowym błędzie albo limicie przekaźnika), zamiast czekać na kolejną minutę. */
+    private fun scheduleUploadRetry(ms: Long) {
+        val at = System.currentTimeMillis() + ms
+        if (uploadRetryAt in (System.currentTimeMillis() + 1)..at) return
+        uploadRetryAt = at
+        scope.launch { delay(ms); kickUploads() }
+    }
+
+    private fun noteUploadError(media: String, url: String, msg: String) {
+        uploadErr["$media|$url"] = msg.take(120)
+        // do dziennika błędów raz na plik, przekaźnik i rodzaj błędu
+        if (loggedUploadErr.add("$media|$url|${msg.substringBefore(':')}")) CrashLog.note("Wysyłka pliku: ${url.removePrefix("wss://")} — ${msg.take(120)}")
+    }
+
+    /**
+     * Zastój: gdy od dłuższego czasu nie przybywa paczek dostępnych do pobrania, brakujące odcinki
+     * przejmują przekaźniki, które ostatnio przyjmowały paczki (albo którykolwiek połączony).
+     */
+    private fun rescueStall(u: Db.Upload, plan: ChunkPlan, covered: Int) {
+        val now = System.currentTimeMillis()
+        if (covered >= u.chunks) { uploadWatch.remove(u.media); return }
+        val w = uploadWatch[u.media]
+        if (w == null || w.first != covered) {
+            uploadWatch[u.media] = covered to now
+            scheduleUploadRetry(stallMs + 500)   // sprawdź znowu, gdy minie czas zastoju
+            return
+        }
+        if (now - w.second < stallMs) { scheduleUploadRetry(stallMs - (now - w.second) + 500); return }
+        uploadWatch[u.media] = covered to now
+        scheduleUploadRetry(stallMs + 500)
+        val missing = plan.uncoveredSegments { u.done.optInt(it, 0) }
+        if (missing.isEmpty()) return
+        val healthy = (plan.relays + plan.extra.keys + storageRelays()).distinct()
+            .filter { relays[it]?.isConnected == true && u.done.optInt(it, 0) >= 0 }
+            // najpierw te, które skończyły już swoją część (dodatkowe odcinki idą u nich od razu), potem najświeższe
+            .sortedWith(compareByDescending<String> { u.done.optInt(it, 0) >= plan.sizeOf(it) }.thenByDescending { uploadOkAt["${u.media}|$it"] ?: 0L })
+        if (healthy.isEmpty()) return
+        var p = plan
+        missing.forEachIndexed { i, seg ->
+            val target = healthy.filter { seg !in p.segmentsOf(it) }.let { c -> c.getOrNull(i % c.size.coerceAtLeast(1)) } ?: return@forEachIndexed
+            p = p.withExtra(target, listOf(seg))
+        }
+        if (p != plan) {
+            CrashLog.note("Wysyłka pliku stoi — brakujące kawałki (${missing.size}) przejmują inne przekaźniki")
+            db.setUploadPlan(u.media, p.toJson())
+        }
+    }
+
+    /** Stan wysyłki pliku na jednym przekaźniku — do panelu administratora. */
+    data class RelayUpload(val host: String, val done: Int, val need: Int, val connected: Boolean, val rejected: Boolean, val error: String?)
+
+    fun uploadRelays(msgId: String): List<RelayUpload> {
+        val u = db.uploadForMsg(msgId) ?: return emptyList()
+        val plan = planOf(u) ?: return emptyList()
+        return uploadTargets(u, plan).map { url ->
+            val d = u.done.optInt(url, 0)
+            RelayUpload(url.removePrefix("wss://").removePrefix("ws://"), d.coerceAtLeast(0), uploadNeed(url, u, plan),
+                relays[url]?.isConnected == true, d < 0, uploadErr["${u.media}|$url"])
+        }
+    }
+
     /** Dla testów: znany limit odpowiedzi przekaźnika i rozkład paczek wysyłanego pliku. */
     internal fun mediaCapOf(url: String): Int? = prefs.getString("rl:$url", null)?.substringBefore(':')?.toIntOrNull()
     internal fun uploadPlanFor(msgId: String): ChunkPlan? = db.uploadForMsg(msgId)?.let { ChunkPlan.fromJson(it.done.optJSONObject("_p"), it.chunks) }
@@ -3468,7 +3618,7 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
         if (all.isEmpty()) return null
         val few = all.take(MEDIA_RELAYS)
         return when {
-            fastSendActive() -> ChunkPlan.build(chunks, all, 3) { relayCap(it) }
+            fastSendActive() -> ChunkPlan.build(chunks, all, 2) { relayCap(it) }
             chunks <= few.minOf { relayCap(it) } -> ChunkPlan.build(chunks, few, 3) { relayCap(it) }
             else -> ChunkPlan.build(chunks, all, 2) { relayCap(it) }
         }
@@ -3601,10 +3751,15 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 if (!u.msg.startsWith("story:")) File(u.path).delete()
                 continue
             }
-            val plan = planOf(u)
-            for (url in uploadTargets(u, plan)) {
-                val d = u.done.optInt(url, 0)
-                if (d >= uploadNeed(url, u, plan) || d < 0) continue
+            var plan = planOf(u)
+            if (plan != null && !plan.legacy) {
+                rescueStall(u, plan, uploadCovered(u))
+                plan = planOf(db.upload(u.media) ?: continue)
+            }
+            val fresh = db.upload(u.media) ?: continue
+            for (url in uploadTargets(fresh, plan)) {
+                val d = fresh.done.optInt(url, 0)
+                if (d >= uploadNeed(url, fresh, plan) || d < 0) continue
                 val relay = relays[url] ?: continue
                 if (!relay.isConnected) continue
                 val key = url + "|" + u.media
@@ -3639,13 +3794,16 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                     ids[idx] = ev.id
                     var r = relay.publish(ev.toJson(), ev.id, 30_000)
                     var tries = 0
-                    while (!r.first && r.second.startsWith("rate-limited") && tries++ < 4) {
-                        delay(2000L * tries); r = relay.publish(ev.toJson(), ev.id, 30_000)
+                    // limit przekaźnika: czekamy coraz dłużej (do ok. 2 min), zamiast od razu odpuszczać
+                    while (!r.first && r.second.startsWith("rate-limited") && tries++ < 6) {
+                        delay(min(30_000L, 3000L shl (tries - 1))); r = relay.publish(ev.toJson(), ev.id, 30_000)
                     }
                     r
                 }
                 val fail = results.firstOrNull { !it.first && !it.second.startsWith("duplicate") }
                 if (fail != null) {
+                    noteUploadError(mediaId, relay.url, fail.second)
+                    if (!PERMANENT_ERRORS.any { fail.second.startsWith(it) }) scheduleUploadRetry(20_000)
                     if (PERMANENT_ERRORS.any { fail.second.startsWith(it) }) {
                         Log.w(TAG, "${relay.url} odrzucił media: ${fail.second}")
                         db.setUploadDone(mediaId, relay.url, -1)
@@ -3658,6 +3816,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
                 }
                 done += batch.size
                 db.setUploadDone(mediaId, relay.url, done)
+                uploadOkAt["$mediaId|${relay.url}"] = System.currentTimeMillis()
+                uploadErr.remove("$mediaId|${relay.url}")
                 db.mergeUploadIds(mediaId, u.chunks, batch.associateWith { ids[it] ?: "" }.filterValues { it.isNotEmpty() })
                 val fresh = db.upload(mediaId) ?: return
                 val covered = uploadCovered(fresh)
@@ -3667,6 +3827,8 @@ class Core(val ctx: Context, val profile: String = "main") : Relay.Listener, Lan
             }
         }
         releaseUpload(db.upload(mediaId) ?: return)
+        // ten przekaźnik skończył swoją część, a pliku wciąż nie ma w całości — sprawdź za chwilę, czy coś nie stoi
+        db.upload(mediaId)?.let { if (uploadCovered(it) < it.chunks) scheduleUploadRetry(stallMs + 2_000) }
         if (uploadComplete(u.msg) && !u.msg.startsWith("story:")) {
             val m = db.message(u.msg)
             if (m == null || m.path == null) file.delete()

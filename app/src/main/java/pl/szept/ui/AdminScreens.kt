@@ -112,7 +112,7 @@ private fun RecipientPicker(selectedChats: MutableList<String>, extra: MutableLi
             else { if (pk !in extra) extra.add(pk); code = "" }
         }) { Text(tr("Dodaj")) }
     }
-    Text(tr("Odbiorcy: {0} ", count) + plural(count, "osoba", "osoby", tr("osób")), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+    Text(tr("Odbiorcy: ") + plural(count, tr("osoba"), tr("osoby"), tr("osób")), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
 }
 
 /** Panel administratora: tylko po haśle. */
@@ -129,9 +129,21 @@ fun AdminScreen(nav: Nav) {
     val chats = remember { mutableStateListOf<String>() }
     val extra = remember { mutableStateListOf<String>() }
     var text by remember { mutableStateOf("") }
-    val jobs by core.adminJobs.collectAsState()
-    var progress by remember { mutableStateOf(mapOf<String, Int>()) }
-    LaunchedEffect(jobs) { while (jobs.isNotEmpty()) { progress = withContext(Dispatchers.IO) { core.adminProgress() }; delay(1500) } }
+    val jobsFlow by core.adminJobs.collectAsState()
+    // wysyłki z bazy (widać je także po ponownym uruchomieniu) + stan każdego przekaźnika
+    var jobs by remember { mutableStateOf(listOf<pl.szept.core.Core.AdminJob>()) }
+    var relayState by remember { mutableStateOf(mapOf<String, List<pl.szept.core.Core.RelayUpload>>()) }
+    var cancelJob by remember { mutableStateOf<pl.szept.core.Core.AdminJob?>(null) }
+    LaunchedEffect(jobsFlow) {
+        while (true) {
+            withContext(Dispatchers.IO) {
+                val j = core.adminJobList()
+                jobs = j
+                relayState = j.associate { it.id to core.uploadRelays(it.id) }
+            }
+            delay(2000)
+        }
+    }
     val apk = remember { File(ctx.applicationInfo.sourceDir) }
 
     Scaffold(topBar = { BackBar(tr("Panel administratora"), nav) }) { pad ->
@@ -193,7 +205,7 @@ fun AdminScreen(nav: Nav) {
                         scope.launch {
                             try {
                                 val n = core.adminSend(core.recipientsOf(chats, extra), text, apk, BuildConfig.VERSION_NAME)
-                                toast(ctx, tr("Wysyłam aktualizację do {0} ", n) + plural(n, "osoby", tr("osób"), tr("osób"))); text = ""
+                                toast(ctx, tr("Wysyłam aktualizację do ") + plural(n, tr("osoby"), tr("osób"), tr("osób"))); text = ""
                             } catch (e: Exception) { toast(ctx, e.message ?: tr("Nie udało się")) }
                         }
                     }, Modifier.fillMaxWidth()) { Icon(Icons.Default.SystemUpdate, null); Spacer(Modifier.width(8.dp)); Text(tr("Wyślij aktualizację")) }
@@ -205,7 +217,7 @@ fun AdminScreen(nav: Nav) {
                     OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text(tr("Treść")) }, minLines = 3)
                     Button(onClick = {
                         scope.launch {
-                            try { val n = core.adminSend(core.recipientsOf(chats, extra), text); toast(ctx, tr("Wysłano do {0} ", n) + plural(n, "osoby", tr("osób"), tr("osób"))); text = "" }
+                            try { val n = core.adminSend(core.recipientsOf(chats, extra), text); toast(ctx, tr("Wysłano do ") + plural(n, tr("osoby"), tr("osób"), tr("osób"))); text = "" }
                             catch (e: Exception) { toast(ctx, e.message ?: tr("Nie udało się")) }
                         }
                     }, enabled = text.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(tr("Wyślij jako Szept")) }
@@ -219,14 +231,41 @@ fun AdminScreen(nav: Nav) {
             if (jobs.isNotEmpty()) {
                 HorizontalDivider(Modifier.padding(vertical = 12.dp))
                 Text(tr("W toku"), fontWeight = FontWeight.Bold)
-                jobs.forEach { (id, label) ->
-                    Text(label, style = MaterialTheme.typography.bodySmall)
-                    LinearProgressIndicator(progress = { (progress[id] ?: 0) / 100f }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                jobs.forEach { job ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(job.label + " · " + job.progress + "%", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { cancelJob = job }) { Text(tr("Anuluj")) }
+                    }
+                    LinearProgressIndicator(progress = { job.progress / 100f }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    // każdy przekaźnik: ile paczek przyjął i co ostatnio odpowiedział
+                    relayState[job.id].orEmpty().forEach { r ->
+                        val state = when {
+                            r.rejected -> "⛔ " + tr("odmówił") + (r.error?.let { ": $it" } ?: "")
+                            r.done >= r.need -> "✓"
+                            !r.connected -> "✗ " + tr("bez połączenia")
+                            r.error != null -> "⚠ " + r.error
+                            else -> "↑"
+                        }
+                        Text("${r.host}: ${r.done}/${r.need} $state", style = MaterialTheme.typography.labelSmall,
+                            color = if (r.rejected || r.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2)
+                    }
+                    Spacer(Modifier.height(6.dp))
                 }
-                Text(tr("Wysyłka trwa także po wyjściu z tego ekranu."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Wysyłka trwa także po wyjściu z tego ekranu. Odbiorcy dostają aktualizację, gdy pasek dojdzie do 100%."),
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider(Modifier.padding(vertical = 12.dp))
             TextButton(onClick = { core.adminLogout() }) { Text(tr("Wyloguj z panelu administratora")) }
+            cancelJob?.let { job ->
+                StyleAlertDialog(
+                    onDismissRequest = { cancelJob = null },
+                    title = { Text(tr("Anulować wysyłkę?")) },
+                    text = { Text(tr("„{0}” — plik przestanie się wgrywać i nikt go nie dostanie. Możesz wysłać jeszcze raz.", job.label)) },
+                    confirmButton = { TextButton(onClick = { core.adminCancel(job.id); cancelJob = null; jobs = jobs - job }) { Text(tr("Anuluj wysyłkę")) } },
+                    dismissButton = { TextButton(onClick = { cancelJob = null }) { Text(tr("Zostaw")) } },
+                )
+            }
         }
     }
 }

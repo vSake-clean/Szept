@@ -24,6 +24,8 @@ data class ChunkPlan(
     val copies: Int,
     val extra: Map<String, List<Int>> = emptyMap(),
     val legacy: Boolean = false,
+    /** Od 3.4.1: kopie (wszystko po pierwszym odcinku) idą od końca — spotykają się w połowie z wolniejszym przekaźnikiem. */
+    val rev: Boolean = false,
 ) {
     val n: Int get() = relays.size.coerceAtLeast(1)
     /** Długość odcinka. */
@@ -46,7 +48,7 @@ data class ChunkPlan(
     /** Numery paczek, które ma dostać przekaźnik, w kolejności wysyłania. */
     fun orderOf(url: String): List<Int> =
         if (legacy && url in relays) (0 until chunks).toList()
-        else segmentsOf(url).flatMap { segRange(it).toList() }
+        else segmentsOf(url).flatMapIndexed { i, s -> if (rev && i > 0) segRange(s).reversed() else segRange(s).toList() }
 
     /** Ile paczek ma dostać przekaźnik. */
     fun sizeOf(url: String): Int = if (legacy && url in relays) chunks else segmentsOf(url).sumOf { segRange(it).count() }
@@ -77,6 +79,19 @@ data class ChunkPlan(
         return have.count { it }
     }
 
+    /** Odcinki, w których brakuje choć jednej paczki przy postępie [done] (jak w [covered]). */
+    fun uncoveredSegments(done: (String) -> Int): List<Int> {
+        if (legacy || chunks <= 0) return emptyList()
+        val have = BooleanArray(chunks)
+        for (url in (relays + extra.keys).distinct()) {
+            val d = done(url)
+            if (d <= 0) continue
+            val order = orderOf(url)
+            for (k in 0 until minOf(d, order.size)) have[order[k]] = true
+        }
+        return (0 until n).filter { s -> segRange(s).any { !have[it] } }
+    }
+
     /** Odcinki, których nie ma już żaden sprawny przekaźnik (wszystkie ich przekaźniki odmówiły). */
     fun orphans(failed: Set<String>): List<Int> =
         if (legacy) emptyList()
@@ -89,6 +104,7 @@ data class ChunkPlan(
     fun toJson(): JSONObject = JSONObject().apply {
         put("r", JSONArray(relays)); put("c", copies)
         if (legacy) put("l", 1)
+        if (rev) put("o", 1)
         if (extra.isNotEmpty()) put("x", JSONObject().apply { extra.forEach { (k, v) -> put(k, JSONArray(v)) } })
     }
 
@@ -113,7 +129,7 @@ data class ChunkPlan(
                         extra[k] = List(a.length()) { a.optInt(it, -1) }.filter { it in 0 until n }.distinct().take(n)
                     }
                 }
-                ChunkPlan(relays, chunks, o.optInt("c", 1).coerceIn(1, n), extra, o.optInt("l") == 1)
+                ChunkPlan(relays, chunks, o.optInt("c", 1).coerceIn(1, n), extra, o.optInt("l") == 1, o.optInt("o") == 1)
             } catch (e: Exception) { null }
         }
 
@@ -139,7 +155,7 @@ data class ChunkPlan(
             val (k, copies) = best ?: (relays.size to 1)
             // zachowaj kolejność preferencji wśród wybranych
             val keep = byCap.take(k).toSet()
-            return ChunkPlan(relays.filter { it in keep }, chunks, copies)
+            return ChunkPlan(relays.filter { it in keep }, chunks, copies, rev = true)
         }
 
         /**

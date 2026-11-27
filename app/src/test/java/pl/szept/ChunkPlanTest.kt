@@ -52,6 +52,23 @@ class ChunkPlanTest {
     }
 
     @Test
+    fun copiesGoFromTheEnd() {
+        // 3.4.1: kopia idzie od końca odcinka — spotyka się w połowie z wolniejszym przekaźnikiem
+        val p = ChunkPlan.build(120, relays.take(4), 2) { 500 }
+        assertTrue(p.rev)
+        val order = p.orderOf("wss://b.pl")
+        assertEquals(p.segRange(1).toList(), order.take(30))
+        assertEquals(p.segRange(0).reversed().toList(), order.drop(30))
+        // stary plan (bez „o”) zachowuje dawną kolejność — wysyłki z 3.4 dokończą się poprawnie
+        val old = ChunkPlan.fromJson(org.json.JSONObject(p.toJson().toString()).apply { remove("o") }, 120)!!
+        assertEquals(p.segRange(0).toList(), old.orderOf("wss://b.pl").drop(30))
+        // brakujące odcinki
+        assertEquals(listOf(0, 1, 2, 3), p.uncoveredSegments { 0 })
+        assertEquals(listOf(3), p.uncoveredSegments { if (it == "wss://d.pl") 0 else 30 })
+        check(p)
+    }
+
+    @Test
     fun smallFileFullCopies() {
         // zwykłe zdjęcie: pełna kopia na 3 przekaźnikach, każdy zaczyna od innego kawałka
         val p = ChunkPlan.build(40, relays.take(3), 3) { 500 }

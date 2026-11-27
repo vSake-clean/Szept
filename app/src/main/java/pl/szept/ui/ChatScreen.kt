@@ -908,7 +908,7 @@ fun ChatScreen(nav: Nav, chatId: String, act: MainActivity, focus: String? = nul
             val k = remember(knownCalls) { core.groupCalls.joinable(chatId.removePrefix("g:")) }
             if (k != null) Surface(color = Color(0xFF2E7D32), modifier = Modifier.fillMaxWidth().clickable { startGroupCall(chatId.removePrefix("g:"), k.video) }) {
                 Text(
-                    (if (k.video) "📹" else "📞") + tr(" Trwa rozmowa grupowa ({0} ", k.members.size) + plural(k.members.size, "osoba", "osoby", tr("osób")) + tr(") — dotknij, aby dołączyć"),
+                    (if (k.video) "📹" else "📞") + tr(" Trwa rozmowa grupowa (") + plural(k.members.size, tr("osoba"), tr("osoby"), tr("osób")) + tr(") — dotknij, aby dołączyć"),
                     color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge,
                 )
             }

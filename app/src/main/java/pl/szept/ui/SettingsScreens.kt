@@ -78,6 +78,14 @@ import pl.szept.nostr.Relay
 
 /** Zmiany w kolejnych wersjach (najnowsza na górze). Każda nowa wersja dopisuje tu swój wpis. */
 val CHANGELOG: List<Pair<String, List<String>>> = listOf(
+    "3.4.1" to listOf(
+        tr("Wysyłka aktualizacji z panelu administratora nie staje: przekaźnik, który nie odpowiada albo odmawia, oddaje swoją część innym, a po chwilowym błędzie wysyłka sama rusza dalej."),
+        tr("Ponowne „Wyślij aktualizację” tej samej wersji dopisuje odbiorców do trwającej wysyłki, zamiast wgrywać plik drugi raz. Gdy plik jest już wysłany, kolejne osoby dostają go od razu."),
+        tr("„Wymuś aktualizację” korzysta z pliku tej samej wersji, który już się wysyła albo jest wysłany."),
+        tr("„W toku” pokazuje procent, stan każdego przekaźnika (ile paczek, ostatni błąd) i przycisk „Anuluj”; lista nie znika po ponownym uruchomieniu aplikacji."),
+        tr("Szybka wysyłka robi 2 kopie zamiast 3 (mniej danych), a zapasowa kopia idzie od końca pliku — całość jest gotowa szybciej."),
+        tr("Poprawiony podwójny licznik, np. „Odbiorcy: 3 3 osoby”."),
+    ),
     "3.4" to listOf(
         tr("Wybór języka: polski 🇵🇱 albo English (flaga Anglii) — cały Szept, łącznie z grami i powiadomieniami. Po instalacji kreator startuje w języku telefonu."),
         tr("Kreator pierwszego uruchomienia zaczyna się od języka, a potem prowadzi przez wygląd. Po tej aktualizacji każdy zobaczy go jeszcze raz — konto, nazwa, ID, rozmowy i grupy zostają bez zmian."),
@@ -352,7 +360,7 @@ fun ConnectionScreen(nav: Nav) {
             item {
                 Card(Modifier.fillMaxWidth().padding(12.dp)) {
                     Text(
-                        if (connected > 0) tr("✓ Szept działa — połączono z {0} ", connected) + plural(connected, tr("przekaźnikiem"), tr("przekaźnikami"), tr("przekaźnikami"))
+                        if (connected > 0) tr("✓ Szept działa — połączono z ") + plural(connected, tr("przekaźnikiem"), tr("przekaźnikami"), tr("przekaźnikami"))
                         else tr("Brak połączenia. Sprawdź internet."),
                         Modifier.padding(14.dp), style = MaterialTheme.typography.titleSmall,
                     )

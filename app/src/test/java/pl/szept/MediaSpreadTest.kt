@@ -94,4 +94,37 @@ class MediaSpreadTest {
         nets.forEach { it.close() }
         println("DUŻE PLIKI PRZEZ PRZEKAŹNIKI Z LIMITEM OK")
     }
+
+    /** Jeden przekaźnik z planu w ogóle nie odpowiada — jego część przejmują pozostałe (zastój nie blokuje wysyłki). */
+    @Test
+    fun deadRelayDoesNotBlockUpload() = runBlocking {
+        val cap = 30
+        val nets = List(3) { LocalRelay(ctx, "dead_${it}_${System.nanoTime()}.db").apply { maxLimit = cap } }
+        // martwy przekaźnik na początku listy (port, na którym nic nie słucha)
+        val dead = "ws://127.0.0.1:" + java.net.ServerSocket(0).use { it.localPort }
+        val urls = listOf(dead) + nets.map { "ws://127.0.0.1:" + it.start(0) }
+        fun core(name: String) = Core(ctx, name + System.nanoTime()).apply {
+            createIdentity(name); setRelays(urls); appVisible = true; stallMs = 3_000; start()
+        }
+        val a = core("Nadawca")
+        val b = core("Odbiorca")
+        waitFor("nadawca zna limity") { urls.drop(1).all { a.mediaCapOf(it) == cap } }
+        a.addContact(b.myPub, "Odbiorca"); b.addContact(a.myPub, "Nadawca")
+        a.setFastSendMode(2)
+        val f = File(ctx.cacheDir, "martwy.bin").apply { writeBytes(ByteArray(100 * 44_000).also { java.util.Random(3).nextBytes(it) }) }
+        val sha0 = sha(f)
+        val m = a.send(dmChatId(b.myPub), Kind.FILE, "mimo martwego przekaźnika", Core.Attachment(f, "application/octet-stream", "martwy.bin", null, 0, 0, 0))
+        waitFor("odbiorca pobrał plik mimo martwego przekaźnika", 120_000) { b.db.message(m.id)?.path != null }
+        assertEquals(sha0, sha(File(b.db.message(m.id)!!.path!!)))
+        val plan = b.db.message(m.id)!!.media!!.chunkPlan()!!
+        println("plan: ${plan.relays.size} przekaźniki, kopie ${plan.copies}, przejęte: ${plan.extra}")
+        assertTrue("martwy przekaźnik w planie", dead in plan.relays)
+        assertTrue("część martwego przejął inny przekaźnik", plan.extra.isNotEmpty())
+        // panel administratora widzi stan każdego przekaźnika
+        val st = a.uploadRelays(m.id)
+        assertTrue(st.any { !it.connected })
+        listOf(a, b).forEach { it.stop() }
+        nets.forEach { it.close() }
+        println("MARTWY PRZEKAŹNIK NIE BLOKUJE WYSYŁKI OK")
+    }
 }

@@ -2,6 +2,14 @@
 
 Każda nowa wersja dopisuje tu (i w aplikacji: Ustawienia → Co nowego) swój numer i zmiany.
 
+## 3.4.1
+- Wysyłka aktualizacji z panelu administratora nie staje: przekaźnik, który nie odpowiada albo odmawia, oddaje swoją część innym, a po chwilowym błędzie wysyłka sama rusza dalej.
+- Ponowne „Wyślij aktualizację” tej samej wersji dopisuje odbiorców do trwającej wysyłki, zamiast wgrywać plik drugi raz. Gdy plik jest już wysłany, kolejne osoby dostają go od razu.
+- „Wymuś aktualizację” korzysta z pliku tej samej wersji, który już się wysyła albo jest wysłany.
+- „W toku” pokazuje procent, stan każdego przekaźnika (ile paczek, ostatni błąd) i przycisk „Anuluj”; lista nie znika po ponownym uruchomieniu aplikacji.
+- Szybka wysyłka robi 2 kopie zamiast 3 (mniej danych), a zapasowa kopia idzie od końca pliku — całość jest gotowa szybciej.
+- Poprawiony podwójny licznik, np. „Odbiorcy: 3 3 osoby”.
+
 ## 3.4
 - Wybór języka: polski 🇵🇱 albo English (flaga Anglii) — cały Szept, łącznie z grami i powiadomieniami. Po instalacji kreator startuje w języku telefonu.
 - Kreator pierwszego uruchomienia zaczyna się od języka, a potem prowadzi przez wygląd. Po tej aktualizacji każdy zobaczy go jeszcze raz — konto, nazwa, ID, rozmowy i grupy zostają bez zmian.
