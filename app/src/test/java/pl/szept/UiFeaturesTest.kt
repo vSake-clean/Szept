@@ -41,6 +41,9 @@ import pl.szept.ui.UiPrefs
 class UiFeaturesTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
+    // wygląd jak po świeżej instalacji — ustawienia w pamięci zostają po poprzednich testach w tym samym procesie
+    init { pl.szept.ui.UiPrefs.reload(org.robolectric.RuntimeEnvironment.getApplication()) }
+
     private fun waitText(t: String, timeout: Long = 10_000) {
         val end = System.currentTimeMillis() + timeout
         while (System.currentTimeMillis() < end) {

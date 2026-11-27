@@ -38,6 +38,9 @@ import java.io.File
 class GamesUiTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
+    // wygląd jak po świeżej instalacji — ustawienia w pamięci zostają po poprzednich testach w tym samym procesie
+    init { pl.szept.ui.UiPrefs.reload(org.robolectric.RuntimeEnvironment.getApplication()) }
+
     private val shots = System.getenv("SZEPT_SHOTS")?.let { File(it).apply { mkdirs() } }
 
     /** Gra na pełnym ekranie to stan globalny — każdy test zaczyna bez niej. */

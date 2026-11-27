@@ -26,7 +26,9 @@ import pl.szept.ui.Screen
 class LanguageUiTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
-    init { pl.szept.ui.UiPrefs.style = "classic" }   // wygląd niezależny od innych testów
+    // wygląd jak po świeżej instalacji — ustawienia w pamięci zostają po poprzednich testach w tym samym procesie
+    init { pl.szept.ui.UiPrefs.reload(org.robolectric.RuntimeEnvironment.getApplication()) }
+
 
     @After fun back() = I18n.set(rule.activity, "pl")
 
